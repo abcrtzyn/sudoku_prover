@@ -42,91 +42,12 @@ set_option linter.style.longLine false
 
 
 
-
--- from Gemini
-/- import Mathlib.Data.Fin.Basic
-import Mathlib.Data.Set.Finite
-
--- Index and Digit are the numbers 0-8
-def Index := Fin 9
-def Digit := Fin 9
-
--- A Grid is a total function where every cell is assigned exactly one Digit.
-def Grid := Index → Index → Digit
-
--- A 'Unit' is a set of 9 coordinate pairs (a row, column, or box).
-def Unit := Set (Index × Index)
-
--- The key constraint: a Unit is valid if the Grid's values over those
--- 9 cells form a Bijection with the set of all possible Digits.
-def IsValidUnit (g : Grid) (u : Unit) : Prop :=
-  ∀ d : Digit, ∃! cell : Index × Index, cell ∈ u ∧ g cell.1 cell.2 = d
-
--- Defining the shapes
-def Row (i : Index) : Unit := { cell | cell.1 = i }
-def Col (j : Index) : Unit := { cell | cell.2 = j }
-def Block (bi bj : Fin 3) : Unit :=
-  { cell | cell.1 / 3 = bi ∧ cell.2 / 3 = bj }
-
--- SatisfiesSudoku is the conjunction of all 27 unit constraints.
-def SatisfiesSudoku (g : Grid) : Prop :=
-  (∀ i, IsValidUnit g (Row i)) ∧
-  (∀ j, IsValidUnit g (Col j)) ∧
-  (∀ bi bj, IsValidUnit g (Block bi bj))
-
-
-
--- def Mapping := Index → Index → Set Digit
-
--- def Satisfiable (F : Mapping) : Prop :=
--- ∃ g : Grid, (∀ r c, g r c ∈ F r c) ∧ SatisfiesSudoku g
-
-
--- theorem Sudoku_Collapse (F : Mapping) :
-  -- HYPOTHESIS:
-  -- (Satisfiable F ∧ My17Clues F) →
-
-  -- CONCLUSION:
-  -- ∃! f : Grid, (∀ r c, f r c ∈ F r c) ∧ SatisfiesSudoku f
-
--- A Reduction Rule takes a mapping and returns a new mapping.
-def ReductionRule := Mapping → Mapping
-
--- The "Preservation" property:
--- Any valid grid g that was in F must still be in F' after the rule is applied.
-def IsValidReduction (rule : ReductionRule) : Prop :=
-  ∀ (F : Mapping) (g : Grid),
-    (∀ r c, g r c ∈ F r c) ∧ SatisfiesSudoku g →
-    (∀ r c, g r c ∈ (rule F) r c)
-
-def pruneNakedSingle (F : Mapping) (r c : Index) (digit : Digit) : Mapping :=
-  if F r c = {digit} then
-    λ r' c' =>
-      if (r', c') = (r, c) then {digit}
-      else if InSameUnit (r, c) (r', c') then (F r' c') \ {digit}
-      else F r' c'
-  else F
-
-theorem SolveWithReduction (F_start : Mapping) :
-  let F_final := applyAllRules F_start
-  (∀ r c, ∃! d, d ∈ F_final r c) →
-  (∀ g h, g ∈ F_final → h ∈ F_final → g = h)
-
-
-  -/
-
-
--- theorem x ∈ S ->
-
-macro "intro_spec" h:ident : tactic =>
-  `(tactic| (intro f hf; specialize $h f hf))
-
-
 inductive Symbols
 | one
 | two
 | three
 | four
+
 
 -- instance: Fintype Symbols where
 -- elems := {Symbols.one, Symbols.two, Symbols.three, Symbols.four}
@@ -157,178 +78,173 @@ def UniqueRegion (f: Nat -> Symbols) (r: Set Nat) :=  Set.InjOn f r
 
 
 structure TestPuzzle (solution: Nat -> Symbols) where
-  row1: UniqueRegion solution { 1, 2, 3, 4}
-  row2: UniqueRegion solution { 5, 6, 7, 8}
-  row3: UniqueRegion solution { 9,10,11,12}
-  row4: UniqueRegion solution {13,14,15,16}
-  col1: UniqueRegion solution { 1, 5, 9,13}
-  col2: UniqueRegion solution { 2, 6,10,14}
-  col3: UniqueRegion solution { 3, 7,11,15}
-  col4: UniqueRegion solution { 4, 8,12,16}
-  box1: UniqueRegion solution { 1, 2, 5, 6}
-  box2: UniqueRegion solution { 3, 4, 7, 8}
-  box3: UniqueRegion solution { 9,10,13,14}
-  box4: UniqueRegion solution {11,12,15,16}
-  given3: solution 3 = Symbols.four
-  given5: solution 5 = Symbols.four
-  given7: solution 7 = Symbols.three
-  given10: solution 10 = Symbols.four
-  given12: solution 12 = Symbols.three
-  given14: solution 14 = Symbols.one
-  outside_grid: ∀ x, x = 0 ∨ x > 16 -> solution x = Symbols.one -- just need something to call default
+  row1: UniqueRegion solution { 0, 1, 2, 3}
+  row2: UniqueRegion solution { 4, 5, 6, 7}
+  row3: UniqueRegion solution { 8, 9,10,11}
+  row4: UniqueRegion solution {12,13,14,15}
+  col1: UniqueRegion solution { 0, 4, 8,12}
+  col2: UniqueRegion solution { 1, 5, 9,13}
+  col3: UniqueRegion solution { 2, 6,10,14}
+  col4: UniqueRegion solution { 3, 7,11,15}
+  box1: UniqueRegion solution { 0, 1, 4, 5}
+  box2: UniqueRegion solution { 2, 3, 6, 7}
+  box3: UniqueRegion solution { 8, 9,12,13}
+  box4: UniqueRegion solution {10,11,14,15}
+  given2: solution 2 = Symbols.four
+  given4: solution 4 = Symbols.four
+  given6: solution 6 = Symbols.three
+  given9: solution 9 = Symbols.four
+  given11: solution 11 = Symbols.three
+  given13: solution 13 = Symbols.one
+  outside_grid: ∀ x, x > 15 -> solution x = Symbols.one -- just need something to call default
 
 -- 1 3 4 2
 -- 4 2 3 1
 -- 2 4 1 3
 -- 3 1 2 4
 
-theorem Solve
-  {S : Set (Nat → Symbols)}
-  (H : ∀ f, f ∈ S ↔ TestPuzzle f)     -- Hypothesis: All f in S are valid
-  -- (H_bounds : ∀ f ∈ S, ∀ x, f x ∈ F x)  -- Hypothesis: S is a subset of what F allows
-  -- (H_collapsed : ∀ x, ∃! d, d ∈ F x)    -- Hypothesis: F is fully solved (singletons)
-  : ∃! (g: Nat -> Symbols), g ∈ S := by
+theorem Solve {S : Set (Nat → Symbols)} (H : ∀ f, f ∈ S ↔ TestPuzzle f): ∃! (g: Nat -> Symbols), g ∈ S := by
   -- have c6n4: ∀ f ∈ S, f 6 ≠ Symbols.four := by
   --   intro f hf
   --   specialize H f hf
   --   rw [<- H.given5]
   --   apply H.row2.ne <;> simp
-  have c6: ∀ f ∈ S, f 6 = Symbols.two := by
+  have c5: ∀ f ∈ S, f 5 = Symbols.two := by
     intro f hf
     replace H := (H f).mp hf
-    cases h: f 6 with
+    cases h: f 5 with
     | two => rfl
-    | one => absurd h; rw [<- H.given14]; apply H.col2.ne <;> simp
-    | three => absurd h; rw [<- H.given7]; apply H.row2.ne <;> simp
-    | four => absurd h; rw [<- H.given5]; apply H.box1.ne <;> simp
-  have c2: ∀ f ∈ S, f 2 = Symbols.three := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 2 with
-    | three => rfl
-    | one => absurd h; rw [<- H.given14]; apply H.col2.ne <;> simp
-    | two => absurd h; rw [<- (c6 f hf)]; apply H.col2.ne <;> simp
-    | four => absurd h; rw [<- H.given10]; apply H.col2.ne <;> simp
-  have c1: ∀ f ∈ S, f 1 = Symbols.one := by
+    | one => absurd h; rw [<- H.given13]; apply H.col2.ne <;> simp
+    | three => absurd h; rw [<- H.given6]; apply H.row2.ne <;> simp
+    | four => absurd h; rw [<- H.given4]; apply H.box1.ne <;> simp
+  have c1: ∀ f ∈ S, f 1 = Symbols.three := by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 1 with
-    | one => rfl
-    | two => absurd h; rw [<- (c6 f hf)]; apply H.box1.ne <;> simp
-    | three => absurd h; rw [<- (c2 f hf)]; apply H.box1.ne <;> simp
-    | four => absurd h; rw [<- H.given5]; apply H.box1.ne <;> simp
-  have c4: ∀ f ∈ S, f 4 = Symbols.two := by
+    | three => rfl
+    | one => absurd h; rw [<- H.given13]; apply H.col2.ne <;> simp
+    | two => absurd h; rw [<- (c5 f hf)]; apply H.col2.ne <;> simp
+    | four => absurd h; rw [<- H.given9]; apply H.col2.ne <;> simp
+  have c0: ∀ f ∈ S, f 0 = Symbols.one := by
     intro f hf
     replace H := (H f).mp hf
-    cases h: f 4 with
+    cases h: f 0 with
+    | one => rfl
+    | two => absurd h; rw [<- (c5 f hf)]; apply H.box1.ne <;> simp
+    | three => absurd h; rw [<- (c1 f hf)]; apply H.box1.ne <;> simp
+    | four => absurd h; rw [<- H.given4]; apply H.box1.ne <;> simp
+  have c3: ∀ f ∈ S, f 3 = Symbols.two := by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 3 with
     | two => rfl
-    | one => absurd h; rw [<- (c1 f hf)]; apply H.row1.ne <;> simp
-    | three => absurd h; rw [<- (c2 f hf)]; apply H.row1.ne <;> simp
-    | four => absurd h; rw [<- H.given3]; apply H.row1.ne <;> simp
-  have c8: ∀ f ∈ S, f 8 = Symbols.one := by
+    | one => absurd h; rw [<- (c0 f hf)]; apply H.row1.ne <;> simp
+    | three => absurd h; rw [<- (c1 f hf)]; apply H.row1.ne <;> simp
+    | four => absurd h; rw [<- H.given2]; apply H.row1.ne <;> simp
+  have c7: ∀ f ∈ S, f 7 = Symbols.one := by
     intro f hf
     replace H := (H f).mp hf
-    cases h: f 8 with
+    cases h: f 7 with
     | one => rfl
-    | two => absurd h; rw [<- (c6 f hf)]; apply H.row2.ne <;> simp
-    | three => absurd h; rw [<- H.given7]; apply H.row2.ne <;> simp
-    | four => absurd h; rw [<- H.given5]; apply H.row2.ne <;> simp
-  have c16: ∀ f ∈ S, f 16 = Symbols.four := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 16 with
-    | four => rfl
-    | one => absurd h; rw [<- (c8 f hf)]; apply H.col4.ne <;> simp
-    | two => absurd h; rw [<- (c4 f hf)]; apply H.col4.ne <;> simp
-    | three => absurd h; rw [<- H.given12]; apply H.col4.ne <;> simp
-  have c15: ∀ f ∈ S, f 15 = Symbols.two := by
+    | two => absurd h; rw [<- (c5 f hf)]; apply H.row2.ne <;> simp
+    | three => absurd h; rw [<- H.given6]; apply H.row2.ne <;> simp
+    | four => absurd h; rw [<- H.given4]; apply H.row2.ne <;> simp
+  have c15: ∀ f ∈ S, f 15 = Symbols.four := by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 15 with
-    | two => rfl
-    | one => absurd h; rw [<- H.given14]; apply H.row4.ne <;> simp
-    | three => absurd h; rw [<- H.given12]; apply H.box4.ne <;> simp
-    | four => absurd h; rw [<- (c16 f hf)]; apply H.row4.ne <;> simp
-  have c11: ∀ f ∈ S, f 11 = Symbols.one := by
+    | four => rfl
+    | one => absurd h; rw [<- (c7 f hf)]; apply H.col4.ne <;> simp
+    | two => absurd h; rw [<- (c3 f hf)]; apply H.col4.ne <;> simp
+    | three => absurd h; rw [<- H.given11]; apply H.col4.ne <;> simp
+  have c14: ∀ f ∈ S, f 14 = Symbols.two := by
     intro f hf
     replace H := (H f).mp hf
-    cases h: f 11 with
+    cases h: f 14 with
+    | two => rfl
+    | one => absurd h; rw [<- H.given13]; apply H.row4.ne <;> simp
+    | three => absurd h; rw [<- H.given11]; apply H.box4.ne <;> simp
+    | four => absurd h; rw [<- (c15 f hf)]; apply H.row4.ne <;> simp
+  have c10: ∀ f ∈ S, f 10 = Symbols.one := by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 10 with
     | one => rfl
-    | two => absurd h; rw [<- (c15 f hf)]; apply H.box4.ne <;> simp
-    | three => absurd h; rw [<- H.given12]; apply H.box4.ne <;> simp
-    | four => absurd h; rw [<- (c16 f hf)]; apply H.box4.ne <;> simp
-  have c9: ∀ f ∈ S, f 9 = Symbols.two := by
+    | two => absurd h; rw [<- (c14 f hf)]; apply H.box4.ne <;> simp
+    | three => absurd h; rw [<- H.given11]; apply H.box4.ne <;> simp
+    | four => absurd h; rw [<- (c15 f hf)]; apply H.box4.ne <;> simp
+  have c8: ∀ f ∈ S, f 8 = Symbols.two := by
     intro f hf
     replace H := (H f).mp hf
-    cases h: f 9 with
+    cases h: f 8 with
     | two => rfl
-    | one => absurd h; rw [<- (c11 f hf)]; apply H.row3.ne <;> simp
-    | three => absurd h; rw [<- H.given12]; apply H.row3.ne <;> simp
-    | four => absurd h; rw [<- H.given10]; apply H.row3.ne <;> simp
-  have c13: ∀ f ∈ S, f 13 = Symbols.three := by
+    | one => absurd h; rw [<- (c10 f hf)]; apply H.row3.ne <;> simp
+    | three => absurd h; rw [<- H.given11]; apply H.row3.ne <;> simp
+    | four => absurd h; rw [<- H.given9]; apply H.row3.ne <;> simp
+  have c12: ∀ f ∈ S, f 12 = Symbols.three := by
     intro f hf
     replace H := (H f).mp hf
-    cases h: f 13 with
+    cases h: f 12 with
     | three => rfl
-    | one => absurd h; rw [<- H.given14]; apply H.box3.ne <;> simp
-    | two => absurd h; rw [<- (c9 f hf)]; apply H.box3.ne <;> simp
-    | four => absurd h; rw [<- H.given10]; apply H.box3.ne <;> simp
+    | one => absurd h; rw [<- H.given13]; apply H.box3.ne <;> simp
+    | two => absurd h; rw [<- (c8 f hf)]; apply H.box3.ne <;> simp
+    | four => absurd h; rw [<- H.given9]; apply H.box3.ne <;> simp
+  -- create th function g and use it
   let g : Nat → Symbols := fun x =>
   match x with
-  | 1 => Symbols.one
-  | 2 => Symbols.three
-  | 3 => Symbols.four
-  | 4 => Symbols.two
-  | 5 => Symbols.four
-  | 6 => Symbols.two
-  | 7 => Symbols.three
-  | 8 => Symbols.one
-  | 9 => Symbols.two
-  | 10 => Symbols.four
-  | 11 => Symbols.one
+  | 0 => Symbols.one
+  | 1 => Symbols.three
+  | 2 => Symbols.four
+  | 3 => Symbols.two
+  | 4 => Symbols.four
+  | 5 => Symbols.two
+  | 6 => Symbols.three
+  | 7 => Symbols.one
+  | 8 => Symbols.two
+  | 9 => Symbols.four
+  | 10 => Symbols.one
+  | 11 => Symbols.three
   | 12 => Symbols.three
-  | 13 => Symbols.three
-  | 14 => Symbols.one
-  | 15 => Symbols.two
-  | 16 => Symbols.four
+  | 13 => Symbols.one
+  | 14 => Symbols.two
+  | 15 => Symbols.four
   | _ => Symbols.one -- here is the default
   use g
   constructor
   · simp only
     apply (H g).mpr
+    -- prove that g obeys the constraints of the puzzle
     constructor
-    iterate 12 simp [UniqueRegion, Set.InjOn]
-    iterate 6 simp [g]
+    iterate 12 simp [UniqueRegion, Set.InjOn] -- all the unique regions
+    iterate 6 simp [g] -- all the given digits
+    -- and outside the grid
     intro n hn
     unfold g
     split <;> try simp only [reduceCtorEq] <;> (absurd hn; decide)
+  -- prove that forall h, h = g
   intro h hh
-  ext x
-  by_cases xin: x ∈ ({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}: Set Nat)
-  · match x with
-    | 1 => exact c1 h hh
-    | 2 => exact c2 h hh
-    | 3 => exact ((H h).mp hh).given3
-    | 4 => exact c4 h hh
-    | 5 => exact ((H h).mp hh).given5
-    | 6 => exact c6 h hh
-    | 7 => exact ((H h).mp hh).given7
-    | 8 => exact c8 h hh
-    | 9 => exact c9 h hh
-    | 10 => exact ((H h).mp hh).given10
-    | 11 => exact c11 h hh
-    | 12 => exact ((H h).mp hh).given12
-    | 13 => exact c13 h hh
-    | 14 => exact ((H h).mp hh).given14
-    | 15 => exact c15 h hh
-    | 16 => exact c16 h hh
   replace H := (H h).mp hh
+  ext x
+  by_cases xin: x < 16
+  · interval_cases x
+    · exact c0 h hh
+    · exact c1 h hh
+    · exact H.given2
+    · exact c3 h hh
+    · exact H.given4
+    · exact c5 h hh
+    · exact H.given6
+    · exact c7 h hh
+    · exact c8 h hh
+    · exact H.given9
+    · exact c10 h hh
+    · exact H.given11
+    · exact c12 h hh
+    · exact H.given13
+    · exact c14 h hh
+    · exact c15 h hh
   rw [H.outside_grid]
   · unfold g
     split <;> try simp only [reduceCtorEq] <;> (absurd xin; decide)
-  contrapose xin
   push_neg at xin
-  cases xin
-  interval_cases x
-  · contradiction
-  iterate 16 decide
+  apply xin
