@@ -23,6 +23,7 @@ instance : Fintype Symbols4 where
   elems := {Symbols4.one, .two, .three, .four}
   complete x := by cases x <;> simp
 
+@[simp]
 lemma card_Symbols4: Fintype.card Symbols4 = 4 := by
   simp [Fintype.card, Finset.univ, Fintype.elems]
 

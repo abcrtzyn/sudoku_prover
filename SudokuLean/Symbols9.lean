@@ -33,7 +33,7 @@ instance : Fintype Symbols9 where
   elems := {Symbols9.one, .two, .three, .four, .five, .six, .seven, .eight, .nine}
   complete x := by cases x <;> simp
 
-
+@[simp]
 lemma card_Symbols9: Fintype.card Symbols9 = 9 := by
   simp [Fintype.card, Finset.univ, Fintype.elems]
 

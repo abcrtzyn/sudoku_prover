@@ -7,6 +7,8 @@ import Mathlib.Data.Fintype.Defs
 import Mathlib.Data.Fintype.Card
 import Mathlib.Data.Set.Card
 import Mathlib.Tactic.IntervalCases
+import Mathlib.Data.Fintype.Card
+import Mathlib.Tactic.Fincases
 import SudokuLean.Symbols4
 import SudokuLean.Symbols9
 -- import MathLib.Data.Finset.Defs
@@ -48,18 +50,26 @@ set_option linter.style.longLine false
 def UniqueRegion {α} (f: Nat -> α) (r: Set Nat) :=  Set.InjOn f r
 
 -- any unique region that is the same size as the digits is bijective, not just injective
--- theorem unique_region_same_bijection (f: Nat -> Symbols4) (r: Set Nat) (h: UniqueRegion f r) (hs: r.ncard = 4): Set.BijOn f r Set.univ := by
---   constructor
---   · simp [Set.MapsTo]
---   constructor
---   · apply h
+theorem unique_region_same_bijection {α} [fa: Fintype α] {f: Nat -> α} {r: Set Nat} (h: UniqueRegion f r) (hs: r.ncard = Fintype.card α): Set.BijOn f r Set.univ := by
+  constructor
+  · simp [Set.MapsTo]
+  constructor
+  · apply h
+  sorry
 
---   apply Set.toFinset
---   apply Finset.surjOn_of_injOn_of_card_le
+-- this theorem does some of the heavy lifting to use the above theorem
+theorem unique_region_same_size_surjective {α} [Fintype α] {r: Set Nat} {f: Nat -> α} (unique_region: UniqueRegion f r) (card_same: r.ncard = Fintype.card α := by simp) (d: α): ∃ x ∈ r, f x = d := by
+  have h: Set.SurjOn f r Set.univ := by
+    apply Set.BijOn.surjOn
+    refine unique_region_same_bijection unique_region ?_
+    assumption
+  unfold Set.SurjOn at h
+  have h1: d ∈ f '' r := by
+    apply h
+    simp
+  simp at h1
+  assumption
 
---   -- simp [Set.SurjOn, Set.image]
---   -- ext x
---   -- simp
 
 
 -- when you hypothesize that f x = d and f y = d, where x and y are in the same region
@@ -69,7 +79,11 @@ theorem digit_in_region {α} {f: Nat -> α} {r: Set Nat} {d: α} (unique_region:
   rw [<- d_conflict]
   apply unique_region.ne <;> assumption
 
-
+-- when you hypothesize that f x = d and f x = e, where d ≠ e
+-- this proves that false
+theorem digit_in_cell {α} {f: Nat -> α} {target: Nat} {d: α} {e: α} (target_d: f target = d) (target_e: f target = e) (h4: d ≠ e := by decide): False := by
+  rw [target_d] at target_e
+  contradiction
 
 
 
@@ -101,12 +115,14 @@ structure TestPuzzle (solution: Nat -> Symbols4) where
 -- 2 4 1 3
 -- 3 1 2 4
 
+macro "split_disjunctive_4" h:ident : tactic =>
+  `(tactic| rcases $h:ident with $h | $h | $h | $h)
+macro "split_disjunctive_9" h:ident : tactic =>
+  `(tactic| rcases $h:ident with $h | $h | $h | $h | $h | $h | $h | $h | $h)
+
+
+
 theorem SolveTestPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ TestPuzzle f): ∃! (g: Nat -> Symbols4), g ∈ S := by
-  -- have c6n4: ∀ f ∈ S, f 6 ≠ Symbols4.four := by
-  --   intro f hf
-  --   specialize H f hf
-  --   rw [<- H.given5]
-  --   apply H.row2.ne <;> simp
   have c5: ∀ f ∈ S, f 5 = 2 := by
     intro f hf
     replace H := (H f).mp hf
@@ -118,11 +134,14 @@ theorem SolveTestPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ Tes
   have c1: ∀ f ∈ S, f 1 = 3 := by
     intro f hf
     replace H := (H f).mp hf
-    cases h: f 1 with
-    | three => rfl
-    | one => exfalso; exact digit_in_region H.col2 h H.given13
-    | two => exfalso; exact digit_in_region H.col2 h (c5 f hf)
-    | four => exfalso; exact digit_in_region H.col2 h H.given9
+    let h := unique_region_same_size_surjective H.col2 (by simp) 3
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
+      true_and] at h
+    split_disjunctive_4 h
+    · assumption
+    · exfalso; exact digit_in_cell h (c5 f hf)
+    · exfalso; exact digit_in_cell h H.given9
+    · exfalso; exact digit_in_cell h H.given13
   have c0: ∀ f ∈ S, f 0 = 1 := by
     intro f hf
     replace H := (H f).mp hf
