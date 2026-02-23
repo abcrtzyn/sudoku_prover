@@ -101,7 +101,7 @@ theorem digit_in_cell {α} {f: Nat -> α} {target: Nat} {d: α} {e: α}
 
 -- when there are two cells in region with the same candidates,
 -- this is a structure to store that information
-
+-- to make your life easier, keep c1 a lower index than c2 and d a lower symbols that e
 structure Pair {α} {f: Nat -> α} {region: Set Nat} (unique_region: UniqueRegion f region)
   (c1 c2: Nat) (d e: α) where
   c1nc2: c1 ≠ c2
@@ -149,6 +149,37 @@ theorem Pair.in_region {α} {f: Nat -> α} {r} {c1 c2: Nat} {d e: α} {target: N
         | inl c2d => exfalso; refine digit_in_region c1d ur c2d p.c1nc2 p.c1_in_region p.c2_in_region
       -- which doesn't work either
       refine digit_in_region target_d ur c2d target_n_c2 target_r p.c2_in_region
+
+-- the following are used to resolve pairs when you figure out one of the digits
+-- there are 4 cases
+theorem Pair.resolve_with_c1_d {α} {f: Nat -> α} {r: Set Nat} {c1 c2: Nat} {d e: α} {ur: UniqueRegion f r}:
+  Pair ur c1 c2 d e -> f c1 = d -> f c2 = e := by
+  intro p h1
+  cases p.c2_possible with
+  | inl h => exfalso; exact digit_in_region h1 ur h p.c1nc2 p.c1_in_region p.c2_in_region
+  | inr h => assumption
+
+theorem Pair.resolve_with_c1_e {α} {f: Nat -> α} {r: Set Nat} {c1 c2: Nat} {d e: α} {ur: UniqueRegion f r}:
+  Pair ur c1 c2 d e -> f c1 = e -> f c2 = d := by
+  intro p h1
+  cases p.c2_possible with
+  | inr h => exfalso; exact digit_in_region h1 ur h p.c1nc2 p.c1_in_region p.c2_in_region
+  | inl h => assumption
+
+theorem Pair.resolve_with_c2_d {α} {f: Nat -> α} {r: Set Nat} {c1 c2: Nat} {d e: α} {ur: UniqueRegion f r}:
+  Pair ur c1 c2 d e -> f c2 = d -> f c1 = e := by
+  intro p h1
+  cases p.c1_possible with
+  | inl h => exfalso; exact digit_in_region h ur h1 p.c1nc2 p.c1_in_region p.c2_in_region
+  | inr h => assumption
+
+theorem Pair.resolve_with_c2_e {α} {f: Nat -> α} {r: Set Nat} {c1 c2: Nat} {d e: α} {ur: UniqueRegion f r}:
+  Pair ur c1 c2 d e -> f c2 = e -> f c1 = d := by
+  intro p h1
+  cases p.c1_possible with
+  | inr h => exfalso; exact digit_in_region h ur h1 p.c1nc2 p.c1_in_region p.c2_in_region
+  | inl h => assumption
+
 
 theorem create_hidden_pair {α} {f: Nat -> α} {c1 c2: Nat} {d e: α} {r} (ur: UniqueRegion f r)
   (c1nc2: c1 ≠ c2 := by decide) (c1_in_region: c1 ∈ r := by decide) (c2_in_region: c2 ∈ r := by decide) (dne: d ≠ e := by decide):

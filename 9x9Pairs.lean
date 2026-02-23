@@ -384,6 +384,7 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single
   have c29: ∀ f ∈ S, f 29 = 3 := by sorry
     -- naked single
+  have c34: ∀ f ∈ S, f 34 = 6 := by sorry
   have c52: ∀ f ∈ S, f 52 = 3 := by sorry
     -- naked single
   have c48: ∀ f ∈ S, f 48 = 6 := by sorry
@@ -397,31 +398,40 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
   have c0: ∀ f ∈ S, f 0 = 2 := by sorry
     -- hidden single ↓
   have c22: ∀ f ∈ S, f 22 = 3 := by sorry
-  have c23: ∀ f ∈ S, f 23 = 5 := by sorry
+  have c23: ∀ f ∈ S, f 23 = 5 := by
+    intro f hf
+    replace H := (H f).mp hf
+    cases (c23c50pair f hf).c1_possible with
+    | inl h => exfalso; exact digit_in_region h H.box2 (c3 f hf)
+    | inr h => assumption
+  have c50: ∀ f ∈ S, f 50 = 4 := by
+    -- resolve pair c23c50
+    intro f hf
+    replace H := (H f).mp hf
+    exact (c23c50pair f hf).resolve_with_c1_e (c23 f hf)
+
+  clear c23c50pair
   have c66: ∀ f ∈ S, f 66 = 5 := by sorry
   have c4: ∀ f ∈ S, f 4 = 6 := by sorry
     -- naked single ↓
   have c9: ∀ f ∈ S, f 9 = 8 := by sorry
   have c21: ∀ f ∈ S, f 21 = 8 := by sorry
-  have c50: ∀ f ∈ S, f 50 = 4 := by sorry
-    -- resolve pair c23c50
   have c67: ∀ f ∈ S, f 67 = 4 := by sorry
+  have c40: ∀ f ∈ S, f 40 = 5 := by sorry
   have c14: ∀ f ∈ S, f 14 = 9 := by sorry
   have c18: ∀ f ∈ S, f 18 = 4 := by sorry
   have c30: ∀ f ∈ S, f 30 = 9 := by sorry
-  have c40: ∀ f ∈ S, f 40 = 5 := by sorry
   have c46: ∀ f ∈ S, f 46 = 2 := by sorry
   have c13: ∀ f ∈ S, f 13 = 2 := by sorry
   have c28: ∀ f ∈ S, f 28 = 4 := by sorry
+  have c33: ∀ f ∈ S, f 33 = 2 := by sorry
   have c31: ∀ f ∈ S, f 31 = 1 := by sorry
   have c42: ∀ f ∈ S, f 42 = 4 := by sorry
   have c51: ∀ f ∈ S, f 51 = 5 := by sorry
   have c57: ∀ f ∈ S, f 57 = 3 := by sorry
   have c59: ∀ f ∈ S, f 59 = 1 := by sorry
   have c32: ∀ f ∈ S, f 32 = 8 := by sorry
-  have c33: ∀ f ∈ S, f 33 = 2 := by sorry
   have c58: ∀ f ∈ S, f 58 = 9 := by sorry
-  have c34: ∀ f ∈ S, f 34 = 6 := by sorry
   -- create th function g and use it
   let digits: Array Symbols9 :=
   #[2,3,5,4,6,7,8,9,1,
