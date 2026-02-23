@@ -9,6 +9,7 @@ import Mathlib.Data.Set.Card
 import Mathlib.Tactic.IntervalCases
 import Mathlib.Data.Fintype.Card
 import Mathlib.Tactic.Fincases
+import Mathlib.Data.List.Nodup
 import SudokuLean.Symbols4
 import SudokuLean.Symbols9
 -- import MathLib.Data.Finset.Defs
@@ -57,6 +58,16 @@ theorem unique_region_same_bijection {α} [fa: Fintype α] {f: Nat -> α} {r: Se
   · apply h
   sorry
 
+
+theorem injOn_by_card {α β} [DecidableEq β] (f : α → β) (s : Set α) [Fintype s] :
+  (s.toFinset.image f).card = s.toFinset.card → Set.InjOn f s := by
+  intro h
+  let h123 := Finset.card_image_iff.mp h
+  simp only [Set.coe_toFinset] at h123
+  exact h123
+
+
+
 -- this theorem does some of the heavy lifting to use the above theorem
 theorem unique_region_same_size_surjective {α} [Fintype α] {r: Set Nat} {f: Nat -> α} (unique_region: UniqueRegion f r) (card_same: r.ncard = Fintype.card α := by simp) (d: α): ∃ x ∈ r, f x = d := by
   have h: Set.SurjOn f r Set.univ := by
@@ -74,194 +85,101 @@ theorem unique_region_same_size_surjective {α} [Fintype α] {r: Set Nat} {f: Na
 
 -- when you hypothesize that f x = d and f y = d, where x and y are in the same region
 -- this proves that false
-theorem digit_in_region {α} {f: Nat -> α} {r: Set Nat} {d: α} (unique_region: UniqueRegion f r) {target: Nat} {conflict: Nat} (d_target: f target = d) (d_conflict: f conflict = d) (h4: target ≠ conflict := by decide) (h0: target ∈ r := by decide) (h1: conflict ∈ r := by decide): False := by
+theorem digit_in_region {α} {f: Nat -> α} {r: Set Nat} {d: α} {target: Nat} {conflict: Nat}
+  (d_target: f target = d) (unique_region: UniqueRegion f r) (d_conflict: f conflict = d)
+  (h4: target ≠ conflict := by decide) (h0: target ∈ r := by decide) (h1: conflict ∈ r := by decide): False := by
   absurd d_target
   rw [<- d_conflict]
   apply unique_region.ne <;> assumption
 
 -- when you hypothesize that f x = d and f x = e, where d ≠ e
 -- this proves that false
-theorem digit_in_cell {α} {f: Nat -> α} {target: Nat} {d: α} {e: α} (target_d: f target = d) (target_e: f target = e) (h4: d ≠ e := by decide): False := by
+theorem digit_in_cell {α} {f: Nat -> α} {target: Nat} {d: α} {e: α}
+  (target_d: f target = d) (target_e: f target = e) (h4: d ≠ e := by decide): False := by
   rw [target_d] at target_e
   contradiction
 
+-- when there are two cells in region with the same candidates,
+-- this is a structure to store that information
+
+structure Pair {α} {f: Nat -> α} {region: Set Nat} (unique_region: UniqueRegion f region)
+  (c1 c2: Nat) (d e: α) where
+  c1nc2: c1 ≠ c2
+  c1_in_region: c1 ∈ region
+  c2_in_region: c2 ∈ region
+  dne: d ≠ e
+  c1_possible: f c1 ∈ ({d,e}: Set α)
+  c2_possible: f c2 ∈ ({d,e}: Set α)
+
+-- if there is a pair in a region looking at a target cell in the region, the digit d is not in target.
+-- useful theorem in order to not go through all the cases.
+theorem Pair.in_region {α} {f: Nat -> α} {r} {c1 c2: Nat} {d e: α} {target: Nat} {s: α} (target_d: f target = s) (ur: UniqueRegion f r) (p: Pair ur c1 c2 d e)
+  (target_r: target ∈ r := by decide) (target_n_c1: target ≠ c1 := by decide)
+  (target_n_c2: target ≠ c2 := by decide) (s_is_in_pair: s ∈ ({d,e}: Set α):= by simp): False := by
+  -- basically just have to show each of the cases.
+  -- example in comments d = 1, e = 2
+  cases s_is_in_pair with
+  | inl td =>
+    -- if target is 1
+    rw [td] at target_d
+    cases p.c1_possible with
+    -- c1 can not be 1
+    | inl c1d => refine digit_in_region target_d ur c1d target_n_c1 target_r p.c1_in_region
+    -- c1 must be 2
+    | inr c1e =>
+      -- but then c2 must be 1
+      have c2d: f c2 = d := by
+        cases p.c2_possible with
+        | inl c2d => assumption
+        | inr c2e => exfalso; refine digit_in_region c1e ur c2e p.c1nc2 p.c1_in_region p.c2_in_region
+      -- which doesn't work either
+      refine digit_in_region target_d ur c2d target_n_c2 target_r p.c2_in_region
+  | inr te =>
+    -- if target is 2
+    rw [te] at target_d
+    cases p.c1_possible with
+    -- c1 can not be 2
+    | inr c1e => refine digit_in_region target_d ur c1e target_n_c1 target_r p.c1_in_region
+    -- c1 must be 1
+    | inl c1d =>
+      -- but then c2 must be 2
+      have c2d: f c2 = e := by
+        cases p.c2_possible with
+        | inr c2e => assumption
+        | inl c2d => exfalso; refine digit_in_region c1d ur c2d p.c1nc2 p.c1_in_region p.c2_in_region
+      -- which doesn't work either
+      refine digit_in_region target_d ur c2d target_n_c2 target_r p.c2_in_region
+
+theorem create_hidden_pair {α} {f: Nat -> α} {c1 c2: Nat} {d e: α} {r} (ur: UniqueRegion f r)
+  (c1nc2: c1 ≠ c2 := by decide) (c1_in_region: c1 ∈ r := by decide) (c2_in_region: c2 ∈ r := by decide) (dne: d ≠ e := by decide):
+  (f c1 = d ∨ f c2 = d) ∧ (f c1 = e ∨ f c2 = e) -> Pair ur c1 c2 d e := by
+  intro h
+  -- we have to take the hypothesis h and twist it
+  have h1: (f c1 = d ∨ f c1 = e) ∧ (f c2 = d ∨ f c2 = e) := by
+    -- the only way to do that is by trying all the cases
+    -- yes, you could prove the conjunction seperately, but you would have to do the same cases both ways.
+    cases h with | intro hd he
+    cases hd with
+    | inl c1d => cases he with
+      | inl c1e => exfalso; exact digit_in_cell c1d c1e dne
+      | inr c2e =>
+        constructor
+        · left; assumption
+        · right; assumption
+    | inr c2d => cases he with
+      | inr c2e => exfalso; exact digit_in_cell c2d c2e dne
+      | inl c1e =>
+        constructor
+        · right; assumption
+        · left; assumption
+  clear h
+  cases h1 with | intro c1v c2v
+  constructor
+  repeat assumption
 
 
-
-
-structure TestPuzzle (solution: Nat -> Symbols4) where
-  row1: UniqueRegion solution { 0, 1, 2, 3}
-  row2: UniqueRegion solution { 4, 5, 6, 7}
-  row3: UniqueRegion solution { 8, 9,10,11}
-  row4: UniqueRegion solution {12,13,14,15}
-  col1: UniqueRegion solution { 0, 4, 8,12}
-  col2: UniqueRegion solution { 1, 5, 9,13}
-  col3: UniqueRegion solution { 2, 6,10,14}
-  col4: UniqueRegion solution { 3, 7,11,15}
-  box1: UniqueRegion solution { 0, 1, 4, 5}
-  box2: UniqueRegion solution { 2, 3, 6, 7}
-  box3: UniqueRegion solution { 8, 9,12,13}
-  box4: UniqueRegion solution {10,11,14,15}
-  given2: solution 2 = 4
-  given4: solution 4 = 4
-  given6: solution 6 = 3
-  given9: solution 9 = 4
-  given11: solution 11 = 3
-  given13: solution 13 = 1
-  outside_grid: ∀ x, x > 15 -> solution x = Symbols4.one -- just need something to call default
-
--- 1 3 4 2
--- 4 2 3 1
--- 2 4 1 3
--- 3 1 2 4
 
 macro "split_disjunctive_4" h:ident : tactic =>
   `(tactic| rcases $h:ident with $h | $h | $h | $h)
 macro "split_disjunctive_9" h:ident : tactic =>
   `(tactic| rcases $h:ident with $h | $h | $h | $h | $h | $h | $h | $h | $h)
-
-
-
-theorem SolveTestPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ TestPuzzle f): ∃! (g: Nat -> Symbols4), g ∈ S := by
-  have c5: ∀ f ∈ S, f 5 = 2 := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 5 with
-    | two => rfl
-    | one => exfalso; exact digit_in_region H.col2 h H.given13
-    | three => exfalso; exact digit_in_region H.row2 h H.given6
-    | four => exfalso; exact digit_in_region H.box1 h H.given4
-  have c1: ∀ f ∈ S, f 1 = 3 := by
-    intro f hf
-    replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.col2 (by simp) 3
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
-    split_disjunctive_4 h
-    · assumption
-    · exfalso; exact digit_in_cell h (c5 f hf)
-    · exfalso; exact digit_in_cell h H.given9
-    · exfalso; exact digit_in_cell h H.given13
-  have c0: ∀ f ∈ S, f 0 = 1 := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 0 with
-    | one => rfl
-    | two => exfalso; exact digit_in_region H.box1 h (c5 f hf)
-    | three => exfalso; exact digit_in_region H.box1 h (c1 f hf)
-    | four => exfalso; exact digit_in_region H.box1 h H.given4
-  have c3: ∀ f ∈ S, f 3 = 2 := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 3 with
-    | two => rfl
-    | one => exfalso; exact digit_in_region H.row1 h (c0 f hf)
-    | three => exfalso; exact digit_in_region H.row1 h (c1 f hf)
-    | four => exfalso; exact digit_in_region H.row1 h H.given2
-  have c7: ∀ f ∈ S, f 7 = 1 := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 7 with
-    | one => rfl
-    | two => exfalso; exact digit_in_region H.row2 h (c5 f hf)
-    | three => exfalso; exact digit_in_region H.row2 h H.given6
-    | four => exfalso; exact digit_in_region H.row2 h H.given4
-  have c15: ∀ f ∈ S, f 15 = 4 := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 15 with
-    | four => rfl
-    | one => exfalso; exact digit_in_region H.col4 h (c7 f hf)
-    | two => exfalso; exact digit_in_region H.col4 h (c3 f hf)
-    | three => exfalso; exact digit_in_region H.col4 h H.given11
-  have c14: ∀ f ∈ S, f 14 = 2 := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 14 with
-    | two => rfl
-    | one => exfalso; exact digit_in_region H.row4 h H.given13
-    | three => exfalso; exact digit_in_region H.box4 h H.given11
-    | four => exfalso; exact digit_in_region H.row4 h (c15 f hf)
-  have c10: ∀ f ∈ S, f 10 = 1 := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 10 with
-    | one => rfl
-    | two => exfalso; exact digit_in_region H.box4 h (c14 f hf)
-    | three => exfalso; exact digit_in_region H.box4 h H.given11
-    | four => exfalso; exact digit_in_region H.box4 h (c15 f hf)
-  have c8: ∀ f ∈ S, f 8 = 2 := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 8 with
-    | two => rfl
-    | one => exfalso; exact digit_in_region H.row3 h (c10 f hf)
-    | three => exfalso; exact digit_in_region H.row3 h H.given11
-    | four => exfalso; exact digit_in_region H.row3 h H.given9
-  have c12: ∀ f ∈ S, f 12 = 3 := by
-    intro f hf
-    replace H := (H f).mp hf
-    cases h: f 12 with
-    | three => rfl
-    | one => exfalso; exact digit_in_region H.box3 h H.given13
-    | two => exfalso; exact digit_in_region H.box3 h (c8 f hf)
-    | four => exfalso; exact digit_in_region H.box3 h H.given9
-  -- create th function g and use it
-  let g : Nat → Symbols4 := fun x =>
-  match x with
-  | 0 => Symbols4.one
-  | 1 => Symbols4.three
-  | 2 => Symbols4.four
-  | 3 => Symbols4.two
-  | 4 => Symbols4.four
-  | 5 => Symbols4.two
-  | 6 => Symbols4.three
-  | 7 => Symbols4.one
-  | 8 => Symbols4.two
-  | 9 => Symbols4.four
-  | 10 => Symbols4.one
-  | 11 => Symbols4.three
-  | 12 => Symbols4.three
-  | 13 => Symbols4.one
-  | 14 => Symbols4.two
-  | 15 => Symbols4.four
-  | _ => Symbols4.one -- here is the default
-  use g
-  constructor
-  · simp only
-    apply (H g).mpr
-    -- prove that g obeys the constraints of the puzzle
-    constructor
-    iterate 12 simp [UniqueRegion, Set.InjOn] -- all the unique regions
-    iterate 6 simp [g] -- all the given digits
-    -- and outside the grid
-    intro n hn
-    unfold g
-    split <;> try simp only [reduceCtorEq] <;> (absurd hn; decide)
-  -- prove that forall h, h = g
-  intro h hh
-  replace H := (H h).mp hh
-  ext x
-  by_cases xin: x < 16
-  · interval_cases x
-    · exact c0 h hh
-    · exact c1 h hh
-    · exact H.given2
-    · exact c3 h hh
-    · exact H.given4
-    · exact c5 h hh
-    · exact H.given6
-    · exact c7 h hh
-    · exact c8 h hh
-    · exact H.given9
-    · exact c10 h hh
-    · exact H.given11
-    · exact c12 h hh
-    · exact H.given13
-    · exact c14 h hh
-    · exact c15 h hh
-  rw [H.outside_grid]
-  · unfold g
-    split <;> try simp only [reduceCtorEq] <;> (absurd xin; decide)
-  push_neg at xin
-  apply xin
