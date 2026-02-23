@@ -19,6 +19,13 @@ set_option linter.style.whitespace false
 set_option linter.style.longLine false
 
 
+macro "split_disjunctive_4" h:ident : tactic =>
+  `(tactic| rcases $h:ident with $h | $h | $h | $h)
+macro "split_disjunctive_9" h:ident : tactic =>
+  `(tactic| rcases $h:ident with $h | $h | $h | $h | $h | $h | $h | $h | $h)
+
+
+
 
 -- ∃ F(c) k
 -- s.t. for all c, F(c) ∈ powerset digits - {∅}
@@ -208,9 +215,21 @@ theorem create_hidden_pair {α} {f: Nat -> α} {c1 c2: Nat} {d e: α} {r} (ur: U
   constructor
   repeat assumption
 
+-- pointing pairs (box to line)
+-- box/line reduction (line to box)
+-- these occur where 2 or 3 cells in a region can be a value and the 2 cells are also in another region
+-- example is best
+-- c1 c2 are in box4 and row6,
+-- in box4 the only places for D to go is in c1 or c2
+-- then every cell in row6 that is not c1 or c2 is not D
+-- pointing pair is the same as doing outer snyder marks
 
-
-macro "split_disjunctive_4" h:ident : tactic =>
-  `(tactic| rcases $h:ident with $h | $h | $h | $h)
-macro "split_disjunctive_9" h:ident : tactic =>
-  `(tactic| rcases $h:ident with $h | $h | $h | $h | $h | $h | $h | $h | $h)
+-- structure PointingPair {α} {f: Nat -> α} {region1: Set Nat} {region2: Set Nat}
+--   (unique_region1: UniqueRegion f region1) (unique_region2: UniqueRegion f region2)
+--   (c1 c2: Nat) (d: α) where
+--   c1nc2: c1 ≠ c2
+--   c1_in_region1: c1 ∈ region1
+--   c2_in_region1: c2 ∈ region1
+--   c1_in_region2: c1 ∈ region2
+--   c2_in_region2: c2 ∈ region2
+--   property: f c1 = d ∨ f c2 = d
