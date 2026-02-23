@@ -58,6 +58,30 @@ instance : OfNat Symbols9 9 where ofNat := Symbols9.nine
 @[simp] theorem Symbols9_eight_eq_8 : Symbols9.eight = (8 : Symbols9) := rfl
 @[simp] theorem Symbols9_nine_eq_9  : Symbols9.nine  = (9 : Symbols9) := rfl
 
+instance : LT Symbols9 where
+  lt a b := a.toNat < b.toNat
+
+instance : LE Symbols9 where
+  le a b := a.toNat ≤ b.toNat
+
+instance (a b : Symbols9) : Decidable (a < b) :=
+  inferInstanceAs (Decidable (a.toNat < b.toNat))
+
+instance (a b : Symbols9) : Decidable (a ≤ b) :=
+  inferInstanceAs (Decidable (a.toNat ≤ b.toNat))
+
+instance: LinearOrder Symbols9 where
+  le_refl a := Nat.le_refl _
+  le_trans a b c := Nat.le_trans
+  lt_iff_le_not_ge a b := Nat.lt_iff_le_and_not_ge
+  le_antisymm a b h1 h2 := by
+    have: a.toNat = b.toNat := Nat.le_antisymm h1 h2
+    cases a <;> cases b <;> injection this <;> (try contradiction) <;> rfl
+  le_total a b := Nat.le_total a.toNat b.toNat
+  toDecidableLE := inferInstance
+  toDecidableEq := inferInstance
+  toDecidableLT := inferInstance
+
 
 instance : HAdd Symbols9 Symbols9 Nat where
   hAdd a b := a.toNat + b.toNat
