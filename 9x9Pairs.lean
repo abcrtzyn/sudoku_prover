@@ -1,37 +1,12 @@
 import SudokuLean.Basic
+import SudokuLean.BaselineConstraints
 
 set_option linter.style.whitespace false
 
 
 -- this is the 18 clue tough from Andrew Stuart Sudoku Wiki
 structure TestPuzzle2 (solution: Nat -> Symbols9) where
-  row1: UniqueRegion solution { 0, 1, 2, 3, 4, 5, 6, 7, 8}
-  row2: UniqueRegion solution { 9,10,11,12,13,14,15,16,17}
-  row3: UniqueRegion solution {18,19,20,21,22,23,24,25,26}
-  row4: UniqueRegion solution {27,28,29,30,31,32,33,34,35}
-  row5: UniqueRegion solution {36,37,38,39,40,41,42,43,44}
-  row6: UniqueRegion solution {45,46,47,48,49,50,51,52,53}
-  row7: UniqueRegion solution {54,55,56,57,58,59,60,61,62}
-  row8: UniqueRegion solution {63,64,65,66,67,68,69,70,71}
-  row9: UniqueRegion solution {72,73,74,75,76,77,78,79,80}
-  col1: UniqueRegion solution { 0, 9,18,27,36,45,54,63,72}
-  col2: UniqueRegion solution { 1,10,19,28,37,46,55,64,73}
-  col3: UniqueRegion solution { 2,11,20,29,38,47,56,65,74}
-  col4: UniqueRegion solution { 3,12,21,30,39,48,57,66,75}
-  col5: UniqueRegion solution { 4,13,22,31,40,49,58,67,76}
-  col6: UniqueRegion solution { 5,14,23,32,41,50,59,68,77}
-  col7: UniqueRegion solution { 6,15,24,33,42,51,60,69,78}
-  col8: UniqueRegion solution { 7,16,25,34,43,52,61,70,79}
-  col9: UniqueRegion solution { 8,17,26,35,44,53,62,71,80}
-  box1: UniqueRegion solution { 0, 1, 2, 9,10,11,18,19,20}
-  box2: UniqueRegion solution { 3, 4, 5,12,13,14,21,22,23}
-  box3: UniqueRegion solution { 6, 7, 8,15,16,17,24,25,26}
-  box4: UniqueRegion solution {27,28,29,36,37,38,45,46,47}
-  box5: UniqueRegion solution {30,31,32,39,40,41,48,49,50}
-  box6: UniqueRegion solution {33,34,35,42,43,44,51,52,53}
-  box7: UniqueRegion solution {54,55,56,63,64,65,72,73,74}
-  box8: UniqueRegion solution {57,58,59,66,67,68,75,76,77}
-  box9: UniqueRegion solution {60,61,62,69,70,71,78,79,80}
+  b: NormalSudoku solution
   given1:  solution  1 = Symbols9.three
   given5:  solution  5 = Symbols9.seven
   given10: solution 10 = Symbols9.six
@@ -69,135 +44,135 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in box 1
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.box1 (by simp) 5
+    let h := unique_region_same_size_surjective H.b.box1 (by simp) 5
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
-    · exfalso; apply digit_in_region h H.col1 H.given27
+    · exfalso; apply digit_in_region h H.b.col1 H.given27
     · exfalso; apply digit_in_cell h H.given1
     · assumption
-    · exfalso; apply digit_in_region h H.col1 H.given27
+    · exfalso; apply digit_in_region h H.b.col1 H.given27
     · exfalso; apply digit_in_cell h H.given10
     · exfalso; apply digit_in_cell h H.given11
-    · exfalso; apply digit_in_region h H.col1 H.given27
+    · exfalso; apply digit_in_region h H.b.col1 H.given27
     · exfalso; apply digit_in_cell h H.given19
     · exfalso; apply digit_in_cell h H.given20
   have c24: ∀ f ∈ S, f 24 = 7 := by
     -- hidden single in box 3
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.box3 (by simp) 7
+    let h := unique_region_same_size_surjective H.b.box3 (by simp) 7
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
-    · exfalso; apply digit_in_region h H.row1 H.given5
-    · exfalso; apply digit_in_region h H.row1 H.given5
-    · exfalso; apply digit_in_region h H.row1 H.given5
+    · exfalso; apply digit_in_region h H.b.row1 H.given5
+    · exfalso; apply digit_in_region h H.b.row1 H.given5
+    · exfalso; apply digit_in_region h H.b.row1 H.given5
     · exfalso; apply digit_in_cell h H.given15
     · exfalso; apply digit_in_cell h H.given16
-    · exfalso; apply digit_in_region h H.col9 H.given35
+    · exfalso; apply digit_in_region h H.b.col9 H.given35
     · assumption
-    · exfalso; apply digit_in_region h H.col8 H.given70
-    · exfalso; apply digit_in_region h H.col9 H.given35
+    · exfalso; apply digit_in_region h H.b.col8 H.given70
+    · exfalso; apply digit_in_region h H.b.col9 H.given35
   have c36: ∀ f ∈ S, f 36 = 6 := by
     -- hidden single in box 4
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.box4 (by simp) 6
+    let h := unique_region_same_size_surjective H.b.box4 (by simp) 6
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h H.given27
-    · exfalso; apply digit_in_region h H.col2 H.given10
-    · exfalso; apply digit_in_region h H.col3 H.given65
+    · exfalso; apply digit_in_region h H.b.col2 H.given10
+    · exfalso; apply digit_in_region h H.b.col3 H.given65
     · assumption
-    · exfalso; apply digit_in_region h H.col2 H.given10
-    · exfalso; apply digit_in_region h H.col3 H.given65
+    · exfalso; apply digit_in_region h H.b.col2 H.given10
+    · exfalso; apply digit_in_region h H.b.col3 H.given65
     · exfalso; apply digit_in_cell h H.given45
-    · exfalso; apply digit_in_region h H.col2 H.given10
-    · exfalso; apply digit_in_region h H.col3 H.given65
+    · exfalso; apply digit_in_region h H.b.col2 H.given10
+    · exfalso; apply digit_in_region h H.b.col3 H.given65
   have c49: ∀ f ∈ S, f 49 = 7 := by
     -- hidden single in box 5
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.box5 (by simp) 7
+    let h := unique_region_same_size_surjective H.b.box5 (by simp) 7
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
-    · exfalso; apply digit_in_region h H.row4 H.given35
-    · exfalso; apply digit_in_region h H.row4 H.given35
-    · exfalso; apply digit_in_region h H.row4 H.given35
+    · exfalso; apply digit_in_region h H.b.row4 H.given35
+    · exfalso; apply digit_in_region h H.b.row4 H.given35
+    · exfalso; apply digit_in_region h H.b.row4 H.given35
     · exfalso; apply digit_in_cell h H.given39
-    · exfalso; apply digit_in_region h H.row5 H.given37
+    · exfalso; apply digit_in_region h H.b.row5 H.given37
     · exfalso; apply digit_in_cell h H.given41
-    · exfalso; apply digit_in_region h H.col4 H.given75
+    · exfalso; apply digit_in_region h H.b.col4 H.given75
     · assumption
-    · exfalso; apply digit_in_region h H.col6 H.given5
+    · exfalso; apply digit_in_region h H.b.col6 H.given5
   have c54: ∀ f ∈ S, f 54 = 7 := by
     -- hidden single in box 7
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.box7 (by simp) 7
+    let h := unique_region_same_size_surjective H.b.box7 (by simp) 7
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
     · assumption
-    · exfalso; apply digit_in_region h H.col2 H.given37
-    · exfalso; apply digit_in_region h H.col3 H.given11
-    · exfalso; apply digit_in_region h H.row8 H.given70
-    · exfalso; apply digit_in_region h H.row8 H.given70
-    · exfalso; apply digit_in_region h H.row8 H.given70
-    · exfalso; apply digit_in_region h H.row9 H.given75
-    · exfalso; apply digit_in_region h H.row9 H.given75
-    · exfalso; apply digit_in_region h H.row9 H.given75
+    · exfalso; apply digit_in_region h H.b.col2 H.given37
+    · exfalso; apply digit_in_region h H.b.col3 H.given11
+    · exfalso; apply digit_in_region h H.b.row8 H.given70
+    · exfalso; apply digit_in_region h H.b.row8 H.given70
+    · exfalso; apply digit_in_region h H.b.row8 H.given70
+    · exfalso; apply digit_in_region h H.b.row9 H.given75
+    · exfalso; apply digit_in_region h H.b.row9 H.given75
+    · exfalso; apply digit_in_region h H.b.row9 H.given75
   have c6: ∀ f ∈ S, f 6 = 8 := by
     -- hidden single in box 3
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.box3 (by simp) 8
+    let h := unique_region_same_size_surjective H.b.box3 (by simp) 8
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
     · assumption
-    · exfalso; apply digit_in_region h H.col8 H.given61
-    · exfalso; apply digit_in_region h H.col9 H.given53
+    · exfalso; apply digit_in_region h H.b.col8 H.given61
+    · exfalso; apply digit_in_region h H.b.col9 H.given53
     · exfalso; apply digit_in_cell h H.given15
-    · exfalso; apply digit_in_region h H.col8 H.given61
-    · exfalso; apply digit_in_region h H.col9 H.given53
+    · exfalso; apply digit_in_region h H.b.col8 H.given61
+    · exfalso; apply digit_in_region h H.b.col9 H.given53
     · exfalso; apply digit_in_cell h (c24 f hf)
-    · exfalso; apply digit_in_region h H.col8 H.given61
-    · exfalso; apply digit_in_region h H.col9 H.given53
+    · exfalso; apply digit_in_region h H.b.col8 H.given61
+    · exfalso; apply digit_in_region h H.b.col9 H.given53
   have c8: ∀ f ∈ S, f 8 = 1 := by
     -- hidden single in box 3
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.box3 (by simp) 1
+    let h := unique_region_same_size_surjective H.b.box3 (by simp) 1
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h (c6 f hf)
-    · exfalso; apply digit_in_region h H.col8 H.given43
+    · exfalso; apply digit_in_region h H.b.col8 H.given43
     · assumption
     · exfalso; apply digit_in_cell h H.given15
     · exfalso; apply digit_in_cell h H.given16
-    · exfalso; apply digit_in_region h H.row2 H.given12
+    · exfalso; apply digit_in_region h H.b.row2 H.given12
     · exfalso; apply digit_in_cell h (c24 f hf)
-    · exfalso; apply digit_in_region h H.row3 H.given19
-    · exfalso; apply digit_in_region h H.row3 H.given19
+    · exfalso; apply digit_in_region h H.b.row3 H.given19
+    · exfalso; apply digit_in_region h H.b.row3 H.given19
   have c78: ∀ f ∈ S, f 78 = 1 := by
     -- hidden single in column 7
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.col7 (by simp) 1
+    let h := unique_region_same_size_surjective H.b.col7 (by simp) 1
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h (c6 f hf)
     · exfalso; apply digit_in_cell h H.given15
     · exfalso; apply digit_in_cell h (c24 f hf)
-    · exfalso; apply digit_in_region h H.box6 H.given43
-    · exfalso; apply digit_in_region h H.box6 H.given43
-    · exfalso; apply digit_in_region h H.box6 H.given43
+    · exfalso; apply digit_in_region h H.b.box6 H.given43
+    · exfalso; apply digit_in_region h H.b.box6 H.given43
+    · exfalso; apply digit_in_region h H.b.box6 H.given43
     · exfalso; apply digit_in_cell h H.given60
     · exfalso; apply digit_in_cell h H.given69
     · assumption
@@ -205,75 +180,75 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in column 7
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.col9 (by simp) 6
+    let h := unique_region_same_size_surjective H.b.col9 (by simp) 6
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h (c8 f hf)
-    · exfalso; apply digit_in_region h H.row2 H.given10
+    · exfalso; apply digit_in_region h H.b.row2 H.given10
     · assumption
     · exfalso; apply digit_in_cell h H.given35
-    · exfalso; apply digit_in_region h H.row5 (c36 f hf)
+    · exfalso; apply digit_in_region h H.b.row5 (c36 f hf)
     · exfalso; apply digit_in_cell h H.given53
-    · exfalso; apply digit_in_region h H.box9 H.given60
-    · exfalso; apply digit_in_region h H.box9 H.given60
-    · exfalso; apply digit_in_region h H.box9 H.given60
+    · exfalso; apply digit_in_region h H.b.box9 H.given60
+    · exfalso; apply digit_in_region h H.b.box9 H.given60
+    · exfalso; apply digit_in_region h H.b.box9 H.given60
   have c63: ∀ f ∈ S, f 63 = 1 := by
     -- hidden single in column 1
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.col1 (by simp) 1
+    let h := unique_region_same_size_surjective H.b.col1 (by simp) 1
     simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
       true_and] at h
     split_disjunctive_9 h
-    · exfalso; apply digit_in_region h H.box1 H.given19
-    · exfalso; apply digit_in_region h H.box1 H.given19
-    · exfalso; apply digit_in_region h H.box1 H.given19
+    · exfalso; apply digit_in_region h H.b.box1 H.given19
+    · exfalso; apply digit_in_region h H.b.box1 H.given19
+    · exfalso; apply digit_in_region h H.b.box1 H.given19
     · exfalso; apply digit_in_cell h H.given27
     · exfalso; apply digit_in_cell h (c36 f hf)
     · exfalso; apply digit_in_cell h H.given45
     · exfalso; apply digit_in_cell h (c54 f hf)
     · assumption
-    · exfalso; apply digit_in_region h H.row9 (c78 f hf)
+    · exfalso; apply digit_in_region h H.b.row9 (c78 f hf)
   have c25: ∀ f ∈ S, f 25 = 2 := by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 25 with
-    | one => exfalso; exact digit_in_region h H.box3 (c8 f hf)
+    | one => exfalso; exact digit_in_region h H.b.box3 (c8 f hf)
     | two => rfl
-    | three => exfalso; exact digit_in_region h H.box3 H.given15
-    | four => exfalso; exact digit_in_region h H.col8 H.given79
-    | five => exfalso; exact digit_in_region h H.box3 H.given16
-    | six => exfalso; exact digit_in_region h H.box3 (c26 f hf)
-    | seven => exfalso; exact digit_in_region h H.box3 (c24 f hf)
-    | eight => exfalso; exact digit_in_region h H.box3 (c6 f hf)
-    | nine => exfalso; exact digit_in_region h H.row3 H.given20
+    | three => exfalso; exact digit_in_region h H.b.box3 H.given15
+    | four => exfalso; exact digit_in_region h H.b.col8 H.given79
+    | five => exfalso; exact digit_in_region h H.b.box3 H.given16
+    | six => exfalso; exact digit_in_region h H.b.box3 (c26 f hf)
+    | seven => exfalso; exact digit_in_region h H.b.box3 (c24 f hf)
+    | eight => exfalso; exact digit_in_region h H.b.box3 (c6 f hf)
+    | nine => exfalso; exact digit_in_region h H.b.row3 H.given20
   have c7: ∀ f ∈ S, f 7 = 9 := by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 7 with
-    | one => exfalso; exact digit_in_region h H.box3 (c8 f hf)
-    | two => exfalso; exact digit_in_region h H.box3 (c25 f hf)
-    | three => exfalso; exact digit_in_region h H.box3 H.given15
-    | four => exfalso; exact digit_in_region h H.col8 H.given79
-    | five => exfalso; exact digit_in_region h H.box3 H.given16
-    | six => exfalso; exact digit_in_region h H.box3 (c26 f hf)
-    | seven => exfalso; exact digit_in_region h H.box3 (c24 f hf)
-    | eight => exfalso; exact digit_in_region h H.box3 (c6 f hf)
+    | one => exfalso; exact digit_in_region h H.b.box3 (c8 f hf)
+    | two => exfalso; exact digit_in_region h H.b.box3 (c25 f hf)
+    | three => exfalso; exact digit_in_region h H.b.box3 H.given15
+    | four => exfalso; exact digit_in_region h H.b.col8 H.given79
+    | five => exfalso; exact digit_in_region h H.b.box3 H.given16
+    | six => exfalso; exact digit_in_region h H.b.box3 (c26 f hf)
+    | seven => exfalso; exact digit_in_region h H.b.box3 (c24 f hf)
+    | eight => exfalso; exact digit_in_region h H.b.box3 (c6 f hf)
     | nine => rfl
   have c17: ∀ f ∈ S, f 17 = 4 := by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 17 with
-    | one => exfalso; exact digit_in_region h H.box3 (c8 f hf)
-    | two => exfalso; exact digit_in_region h H.box3 (c25 f hf)
-    | three => exfalso; exact digit_in_region h H.box3 H.given15
+    | one => exfalso; exact digit_in_region h H.b.box3 (c8 f hf)
+    | two => exfalso; exact digit_in_region h H.b.box3 (c25 f hf)
+    | three => exfalso; exact digit_in_region h H.b.box3 H.given15
     | four => rfl
-    | five => exfalso; exact digit_in_region h H.box3 H.given16
-    | six => exfalso; exact digit_in_region h H.box3 (c26 f hf)
-    | seven => exfalso; exact digit_in_region h H.box3 (c24 f hf)
-    | eight => exfalso; exact digit_in_region h H.box3 (c6 f hf)
-    | nine => exfalso; exact digit_in_region h H.box3 (c7 f hf)
+    | five => exfalso; exact digit_in_region h H.b.box3 H.given16
+    | six => exfalso; exact digit_in_region h H.b.box3 (c26 f hf)
+    | seven => exfalso; exact digit_in_region h H.b.box3 (c24 f hf)
+    | eight => exfalso; exact digit_in_region h H.b.box3 (c6 f hf)
+    | nine => exfalso; exact digit_in_region h H.b.box3 (c7 f hf)
   have c44: ∀ f ∈ S, f 44 = 9 := by sorry
     -- hidden single
   have c72: ∀ f ∈ S, f 72 = 3 := by sorry
@@ -294,7 +269,7 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- naked single
   have c62: ∀ f ∈ S, f 62 = 2 := by sorry
     -- naked single
-  have c28c33pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).row4 28 33 2 4 := by
+  have c28c33pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).b.row4 28 33 2 4 := by
     intro f hf
     replace H := (H f).mp hf
     constructor
@@ -303,83 +278,83 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     · decide
     · decide
     · cases h: f 28 with
-      | one => exfalso; exact digit_in_region h H.col2 H.given19
+      | one => exfalso; exact digit_in_region h H.b.col2 H.given19
       | two => simp
-      | three => exfalso; exact digit_in_region h H.col2 H.given1
+      | three => exfalso; exact digit_in_region h H.b.col2 H.given1
       | four => simp
-      | five => exfalso; exact digit_in_region h H.col2 (c55 f hf)
-      | six => exfalso; exact digit_in_region h H.col2 H.given10
-      | seven => exfalso; exact digit_in_region h H.col2 H.given37
-      | eight => exfalso; exact digit_in_region h H.col2 H.given64
-      | nine => exfalso; exact digit_in_region h H.col2 (c73 f hf)
+      | five => exfalso; exact digit_in_region h H.b.col2 (c55 f hf)
+      | six => exfalso; exact digit_in_region h H.b.col2 H.given10
+      | seven => exfalso; exact digit_in_region h H.b.col2 H.given37
+      | eight => exfalso; exact digit_in_region h H.b.col2 H.given64
+      | nine => exfalso; exact digit_in_region h H.b.col2 (c73 f hf)
     · cases h: f 33 with
-      | one => exfalso; exact digit_in_region h H.col7 (c78 f hf)
+      | one => exfalso; exact digit_in_region h H.b.col7 (c78 f hf)
       | two => simp
-      | three => exfalso; exact digit_in_region h H.col7 H.given15
+      | three => exfalso; exact digit_in_region h H.b.col7 H.given15
       | four => simp
-      | five => exfalso; exact digit_in_region h H.row4 H.given27
-      | six => exfalso; exact digit_in_region h H.col7 H.given60
-      | seven => exfalso; exact digit_in_region h H.col7 (c24 f hf)
-      | eight => exfalso; exact digit_in_region h H.col7 (c6 f hf)
-      | nine => exfalso; exact digit_in_region h H.col7 H.given69
-  have c40c67pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).col5 40 67 4 5 := by
+      | five => exfalso; exact digit_in_region h H.b.row4 H.given27
+      | six => exfalso; exact digit_in_region h H.b.col7 H.given60
+      | seven => exfalso; exact digit_in_region h H.b.col7 (c24 f hf)
+      | eight => exfalso; exact digit_in_region h H.b.col7 (c6 f hf)
+      | nine => exfalso; exact digit_in_region h H.b.col7 H.given69
+  have c40c67pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).b.col5 40 67 4 5 := by
     intro f hf
     replace H := (H f).mp hf
     constructor
     repeat decide
     · cases h: f 40 with
-      | one => exfalso; exact digit_in_region h H.row5 H.given43
-      | two => exfalso; exact digit_in_region h H.row5 H.given39
-      | three => exfalso; exact digit_in_region h H.row5 H.given41
+      | one => exfalso; exact digit_in_region h H.b.row5 H.given43
+      | two => exfalso; exact digit_in_region h H.b.row5 H.given39
+      | three => exfalso; exact digit_in_region h H.b.row5 H.given41
       | four => simp
       | five => simp
-      | six => exfalso; exact digit_in_region h H.row5 (c36 f hf)
-      | seven => exfalso; exact digit_in_region h H.row5 H.given37
-      | eight => exfalso; exact digit_in_region h H.row5 (c38 f hf)
-      | nine => exfalso; exact digit_in_region h H.row5 (c44 f hf)
+      | six => exfalso; exact digit_in_region h H.b.row5 (c36 f hf)
+      | seven => exfalso; exact digit_in_region h H.b.row5 H.given37
+      | eight => exfalso; exact digit_in_region h H.b.row5 (c38 f hf)
+      | nine => exfalso; exact digit_in_region h H.b.row5 (c44 f hf)
     · cases h: f 67 with
-      | one => exfalso; exact digit_in_region h H.row8 (c63 f hf)
-      | two => exfalso; exact digit_in_region h H.row8 H.given68
-      | three => exfalso; exact digit_in_region h H.row8 (c71 f hf)
+      | one => exfalso; exact digit_in_region h H.b.row8 (c63 f hf)
+      | two => exfalso; exact digit_in_region h H.b.row8 H.given68
+      | three => exfalso; exact digit_in_region h H.b.row8 (c71 f hf)
       | four => simp
       | five => simp
-      | six => exfalso; exact digit_in_region h H.row8 H.given65
-      | seven => exfalso; exact digit_in_region h H.row8 H.given70
-      | eight => exfalso; exact digit_in_region h H.row8 H.given64
-      | nine => exfalso; exact digit_in_region h H.row8 H.given69
-  have c23c50pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).col6 23 50 4 5 := by
+      | six => exfalso; exact digit_in_region h H.b.row8 H.given65
+      | seven => exfalso; exact digit_in_region h H.b.row8 H.given70
+      | eight => exfalso; exact digit_in_region h H.b.row8 H.given64
+      | nine => exfalso; exact digit_in_region h H.b.row8 H.given69
+  have c23c50pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).b.col6 23 50 4 5 := by
     -- hidden pair in col 6
     intro f hf
     replace H := (H f).mp hf
-    apply create_hidden_pair H.col6
+    apply create_hidden_pair H.b.col6
     constructor
-    · let h := unique_region_same_size_surjective H.col6 (by simp) 4
+    · let h := unique_region_same_size_surjective H.b.col6 (by simp) 4
       simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
         true_and] at h
       split_disjunctive_9 h
       · exfalso; exact digit_in_cell h H.given5
-      · exfalso; exact digit_in_region h H.row2 (c17 f hf)
+      · exfalso; exact digit_in_region h H.b.row2 (c17 f hf)
       · left; assumption
         -- first instance of using a pair to cross out a candidate
-      · exfalso; refine Pair.in_region h H.row4 (c28c33pair f hf)
+      · exfalso; refine Pair.in_region h H.b.row4 (c28c33pair f hf)
       · exfalso; exact digit_in_cell h H.given41
       · right; assumption
-      · exfalso; exact digit_in_region h H.row7 (c56 f hf)
+      · exfalso; exact digit_in_region h H.b.row7 (c56 f hf)
       · exfalso; exact digit_in_cell h H.given68
-      · exfalso; exact digit_in_region h H.row9 H.given79
-    · let h := unique_region_same_size_surjective H.col6 (by simp) 5
+      · exfalso; exact digit_in_region h H.b.row9 H.given79
+    · let h := unique_region_same_size_surjective H.b.col6 (by simp) 5
       simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
         true_and] at h
       split_disjunctive_9 h
       · exfalso; exact digit_in_cell h H.given5
-      · exfalso; exact digit_in_region h H.row2 H.given16
+      · exfalso; exact digit_in_region h H.b.row2 H.given16
       · left; assumption
-      · exfalso; refine digit_in_region h H.row4 H.given27
+      · exfalso; refine digit_in_region h H.b.row4 H.given27
       · exfalso; exact digit_in_cell h H.given41
       · right; assumption
-      · exfalso; exact digit_in_region h H.row7 (c55 f hf)
+      · exfalso; exact digit_in_region h H.b.row7 (c55 f hf)
       · exfalso; exact digit_in_cell h H.given68
-      · exfalso; exact digit_in_region h H.row9 (c80 f hf)
+      · exfalso; exact digit_in_region h H.b.row9 (c80 f hf)
   have c47: ∀ f ∈ S, f 47 = 1 := by sorry
     -- hidden single
   have c29: ∀ f ∈ S, f 29 = 3 := by sorry
@@ -402,7 +377,7 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     intro f hf
     replace H := (H f).mp hf
     cases (c23c50pair f hf).c1_possible with
-    | inl h => exfalso; exact digit_in_region h H.box2 (c3 f hf)
+    | inl h => exfalso; exact digit_in_region h H.b.box2 (c3 f hf)
     | inr h => assumption
   have c50: ∀ f ∈ S, f 50 = 4 := by
     -- resolve pair c23c50
@@ -451,7 +426,8 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     apply (H g).mpr
     -- prove that g obeys the constraints of the puzzle
     constructor
-    iterate 27 apply injOn_by_card; decide
+    · constructor
+      iterate 27 apply injOn_by_card; decide
     iterate 26 decide
     -- and outside the grid
     intro n hn
