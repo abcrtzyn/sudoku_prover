@@ -10,8 +10,7 @@ import Mathlib.Tactic.IntervalCases
 import Mathlib.Data.Fintype.Card
 import Mathlib.Tactic.Fincases
 import Mathlib.Data.List.Nodup
-import SudokuLean.Symbols4
-import SudokuLean.Symbols9
+
 -- import MathLib.Data.Finset.Defs
 -- import Mathlib.Data.Finset.Dedup
 

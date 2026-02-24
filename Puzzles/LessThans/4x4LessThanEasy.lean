@@ -1,4 +1,5 @@
 import SudokuLean.Basic
+import SudokuLean.Symbols4
 
 set_option linter.style.whitespace false
 

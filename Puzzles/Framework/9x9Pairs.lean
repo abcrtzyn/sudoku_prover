@@ -1,5 +1,6 @@
 import SudokuLean.Basic
 import SudokuLean.BaselineConstraints
+import SudokuLean.Symbols9
 
 set_option linter.style.whitespace false
 
