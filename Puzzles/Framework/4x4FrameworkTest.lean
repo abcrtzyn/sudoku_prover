@@ -43,9 +43,9 @@ theorem SolveTestPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ Tes
   have c1: ∀ f ∈ S, f 1 = 3 := by
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.col2 (by simp) 3
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.col2).surjOn (Set.mem_univ 3)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_4 h
     · assumption
     · exfalso; exact digit_in_cell h (c5 f hf)

@@ -8,32 +8,32 @@ set_option linter.style.whitespace false
 -- this is the 18 clue tough from Andrew Stuart Sudoku Wiki
 structure TestPuzzle2 (solution: Nat -> Symbols9) where
   b: NormalSudoku solution
-  given1:  solution  1 = Symbols9.three
-  given5:  solution  5 = Symbols9.seven
-  given10: solution 10 = Symbols9.six
-  given11: solution 11 = Symbols9.seven
-  given12: solution 12 = Symbols9.one
-  given15: solution 15 = Symbols9.three
-  given16: solution 16 = Symbols9.five
-  given19: solution 19 = Symbols9.one
-  given20: solution 20 = Symbols9.nine
-  given27: solution 27 = Symbols9.five
-  given35: solution 35 = Symbols9.seven
-  given37: solution 37 = Symbols9.seven
-  given39: solution 39 = Symbols9.two
-  given41: solution 41 = Symbols9.three
-  given43: solution 43 = Symbols9.one
-  given45: solution 45 = Symbols9.nine
-  given53: solution 53 = Symbols9.eight
-  given60: solution 60 = Symbols9.six
-  given61: solution 61 = Symbols9.eight
-  given64: solution 64 = Symbols9.eight
-  given65: solution 65 = Symbols9.six
-  given68: solution 68 = Symbols9.two
-  given69: solution 69 = Symbols9.nine
-  given70: solution 70 = Symbols9.seven
-  given75: solution 75 = Symbols9.seven
-  given79: solution 79 = Symbols9.four
+  given1:  solution  1 = 3
+  given5:  solution  5 = 7
+  given10: solution 10 = 6
+  given11: solution 11 = 7
+  given12: solution 12 = 1
+  given15: solution 15 = 3
+  given16: solution 16 = 5
+  given19: solution 19 = 1
+  given20: solution 20 = 9
+  given27: solution 27 = 5
+  given35: solution 35 = 7
+  given37: solution 37 = 7
+  given39: solution 39 = 2
+  given41: solution 41 = 3
+  given43: solution 43 = 1
+  given45: solution 45 = 9
+  given53: solution 53 = 8
+  given60: solution 60 = 6
+  given61: solution 61 = 8
+  given64: solution 64 = 8
+  given65: solution 65 = 6
+  given68: solution 68 = 2
+  given69: solution 69 = 9
+  given70: solution 70 = 7
+  given75: solution 75 = 7
+  given79: solution 79 = 4
   outside_grid: ∀ x, x ≥ 81 -> solution x = Symbols9.one -- just need something to call default
 
 
@@ -45,9 +45,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in box 1
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.box1 (by simp) 5
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.box1).surjOn (Set.mem_univ 5)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_region h H.b.col1 H.given27
     · exfalso; apply digit_in_cell h H.given1
@@ -62,9 +62,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in box 3
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.box3 (by simp) 7
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.box3).surjOn (Set.mem_univ 7)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_region h H.b.row1 H.given5
     · exfalso; apply digit_in_region h H.b.row1 H.given5
@@ -79,9 +79,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in box 4
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.box4 (by simp) 6
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.box4).surjOn (Set.mem_univ 6)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h H.given27
     · exfalso; apply digit_in_region h H.b.col2 H.given10
@@ -96,9 +96,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in box 5
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.box5 (by simp) 7
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.box5).surjOn (Set.mem_univ 7)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_region h H.b.row4 H.given35
     · exfalso; apply digit_in_region h H.b.row4 H.given35
@@ -113,9 +113,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in box 7
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.box7 (by simp) 7
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.box7).surjOn (Set.mem_univ 7)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · assumption
     · exfalso; apply digit_in_region h H.b.col2 H.given37
@@ -130,9 +130,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in box 3
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.box3 (by simp) 8
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.box3).surjOn (Set.mem_univ 8)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · assumption
     · exfalso; apply digit_in_region h H.b.col8 H.given61
@@ -147,9 +147,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in box 3
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.box3 (by simp) 1
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.box3).surjOn (Set.mem_univ 1)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h (c6 f hf)
     · exfalso; apply digit_in_region h H.b.col8 H.given43
@@ -164,9 +164,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in column 7
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.col7 (by simp) 1
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.col7).surjOn (Set.mem_univ 1)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h (c6 f hf)
     · exfalso; apply digit_in_cell h H.given15
@@ -181,9 +181,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in column 7
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.col9 (by simp) 6
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.col9).surjOn (Set.mem_univ 6)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h (c8 f hf)
     · exfalso; apply digit_in_region h H.b.row2 H.given10
@@ -198,9 +198,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- hidden single in column 1
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.b.col1 (by simp) 1
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.b.col1).surjOn (Set.mem_univ 1)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_region h H.b.box1 H.given19
     · exfalso; apply digit_in_region h H.b.box1 H.given19
@@ -270,14 +270,13 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     -- naked single
   have c62: ∀ f ∈ S, f 62 = 2 := by sorry
     -- naked single
-  have c28c33pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).b.row4 28 33 2 4 := by
+  -- pair in row 4
+  have c28c33pair: ∀ f (hf:f ∈ S), Set.BijOn f {28, 33} {2, 4} := by
     intro f hf
     replace H := (H f).mp hf
-    constructor
-    · decide
-    · decide
-    · decide
-    · decide
+    apply locked_set_from_naked_set (H.b.row4)
+    intro c h
+    rcases h with rfl | rfl
     · cases h: f 28 with
       | one => exfalso; exact digit_in_region h H.b.col2 H.given19
       | two => simp
@@ -298,11 +297,12 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
       | seven => exfalso; exact digit_in_region h H.b.col7 (c24 f hf)
       | eight => exfalso; exact digit_in_region h H.b.col7 (c6 f hf)
       | nine => exfalso; exact digit_in_region h H.b.col7 H.given69
-  have c40c67pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).b.col5 40 67 4 5 := by
+  have c40c67pair: ∀ f (hf:f ∈ S), Set.BijOn f {40, 67} {4, 5} := by
     intro f hf
     replace H := (H f).mp hf
-    constructor
-    repeat decide
+    apply locked_set_from_naked_set (H.b.col5)
+    intro c h
+    rcases h with rfl | rfl
     · cases h: f 40 with
       | one => exfalso; exact digit_in_region h H.b.row5 H.given43
       | two => exfalso; exact digit_in_region h H.b.row5 H.given39
@@ -323,36 +323,38 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
       | seven => exfalso; exact digit_in_region h H.b.row8 H.given70
       | eight => exfalso; exact digit_in_region h H.b.row8 H.given64
       | nine => exfalso; exact digit_in_region h H.b.row8 H.given69
-  have c23c50pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).b.col6 23 50 4 5 := by
+  have c23c50pair: ∀ f (hf:f ∈ S), Set.BijOn f {23, 50} {4, 5} := by
     -- hidden pair in col 6
     intro f hf
     replace H := (H f).mp hf
-    apply create_hidden_pair H.b.col6
-    constructor
-    · let h := unique_region_same_size_surjective H.b.col6 (by simp) 4
-      simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-        true_and] at h
+    apply locked_set_from_hidden_set (H.b.col6)
+    intro d this
+    let region_bij := (region_full_set_bijective H.b.col6)
+    rcases this with rfl | rfl
+    · let h := region_bij.surjOn (Set.mem_univ 4)
+      simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+        exists_eq_or_imp, ↓existsAndEq, true_and] at h
       split_disjunctive_9 h
       · exfalso; exact digit_in_cell h H.given5
       · exfalso; exact digit_in_region h H.b.row2 (c17 f hf)
-      · left; assumption
+      · exact ⟨_, by simp, h⟩
         -- first instance of using a pair to cross out a candidate
-      · exfalso; refine Pair.in_region h H.b.row4 (c28c33pair f hf)
+      · exfalso; refine locked_set_in_region h H.b.row4 (c28c33pair f hf)
       · exfalso; exact digit_in_cell h H.given41
-      · right; assumption
+      · exact ⟨_, by simp, h⟩
       · exfalso; exact digit_in_region h H.b.row7 (c56 f hf)
       · exfalso; exact digit_in_cell h H.given68
       · exfalso; exact digit_in_region h H.b.row9 H.given79
-    · let h := unique_region_same_size_surjective H.b.col6 (by simp) 5
-      simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-        true_and] at h
+    · let h := region_bij.surjOn (Set.mem_univ 5)
+      simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+        exists_eq_or_imp, ↓existsAndEq, true_and] at h
       split_disjunctive_9 h
       · exfalso; exact digit_in_cell h H.given5
       · exfalso; exact digit_in_region h H.b.row2 H.given16
-      · left; assumption
+      · exact ⟨_, by simp, h⟩
       · exfalso; refine digit_in_region h H.b.row4 H.given27
       · exfalso; exact digit_in_cell h H.given41
-      · right; assumption
+      · exact ⟨_, by simp, h⟩
       · exfalso; exact digit_in_region h H.b.row7 (c55 f hf)
       · exfalso; exact digit_in_cell h H.given68
       · exfalso; exact digit_in_region h H.b.row9 (c80 f hf)
@@ -377,15 +379,15 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
   have c23: ∀ f ∈ S, f 23 = 5 := by
     intro f hf
     replace H := (H f).mp hf
-    cases (c23c50pair f hf).c1_possible with
+    replace h := (c23c50pair f hf).mapsTo (x := 23) (by simp)
+    cases h with
     | inl h => exfalso; exact digit_in_region h H.b.box2 (c3 f hf)
     | inr h => assumption
   have c50: ∀ f ∈ S, f 50 = 4 := by
     -- resolve pair c23c50
     intro f hf
     replace H := (H f).mp hf
-    exact (c23c50pair f hf).resolve_with_c1_e (c23 f hf)
-
+    simpa using locked_set_reducton (c23c50pair f hf) (c23 f hf)
   clear c23c50pair
   have c66: ∀ f ∈ S, f 66 = 5 := by sorry
   have c4: ∀ f ∈ S, f 4 = 6 := by sorry

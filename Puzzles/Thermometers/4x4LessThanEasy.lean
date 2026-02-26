@@ -29,11 +29,12 @@ structure LessThanPuzzle (solution: Nat -> Symbols4) where
 
 theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ LessThanPuzzle f):
   ∃! (g: Nat -> Symbols4), g ∈ S := by
-  have c3c7pair_col4: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).col4 3 7 1 2 := by
+  have c3c7pair: ∀ f (hf:f ∈ S), Set.BijOn f {3, 7} {1, 2} := by
     intro f hf
     replace H := (H f).mp hf
-    constructor
-    iterate 4 decide
+    apply locked_set_from_naked_set (H.col4)
+    intro c h
+    rcases h with rfl | rfl
     cases h: f 3 with
     | one => decide
     | two => decide
@@ -44,39 +45,32 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     | two => decide
     | three => exfalso; exact digit_in_region h H.col4 H.given11
     | four => exfalso; exact digit_in_region h H.box2 H.given2
-  have c3c7pair_box2: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).box2 3 7 1 2 := by
-    -- transfer pair into box 2
-    intro f hf
-    replace H := (H f).mp hf
-    constructor
-    iterate 4 decide
-    · exact (c3c7pair_col4 f hf).c1_possible
-    · exact (c3c7pair_col4 f hf).c2_possible
   have c15: ∀ f ∈ S, f 15 = 4 := by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 15 with
-    | one => exfalso; exact Pair.in_region h H.col4 (c3c7pair_col4 f hf)
-    | two => exfalso; exact Pair.in_region h H.col4 (c3c7pair_col4 f hf)
+    | one => exfalso; exact locked_set_in_region h H.col4 (c3c7pair f hf)
+    | two => exfalso; exact locked_set_in_region h H.col4 (c3c7pair f hf)
     | three => exfalso; exact digit_in_region h H.col4 H.given11
     | four => decide
   have c6: ∀ f ∈ S, f 6 = 3 := by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 6 with
-    | one => exfalso; exact Pair.in_region h H.box2 (c3c7pair_box2 f hf)
-    | two => exfalso; exact Pair.in_region h H.box2 (c3c7pair_box2 f hf)
+    | one => exfalso; exact locked_set_in_region h H.box2 (c3c7pair f hf)
+    | two => exfalso; exact locked_set_in_region h H.box2 (c3c7pair f hf)
     | three => decide
     | four => exfalso; exact digit_in_region h H.box2 H.given2
   have c1n4: ∀ f ∈ S, f 1 ≠ 4 := by
     intro f hf
     replace H := (H f).mp hf
     intro h; exact digit_in_region h H.row1 H.given2
-  have c0c3pair: ∀ f (hf:f ∈ S), Pair ((H f).mp hf).row1 0 3 1 2 := by
+  have c0c3pair: ∀ f (hf:f ∈ S), Set.BijOn f {0, 3} {1, 2} := by
     intro f hf
     replace H := (H f).mp hf
-    constructor
-    iterate 4 decide
+    apply locked_set_from_naked_set (H.row1)
+    intro c h
+    rcases h with rfl | rfl
     cases h: f 0 with
     | one => decide
     | two => decide
@@ -99,8 +93,8 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     intro f hf
     replace H := (H f).mp hf
     cases h: f 1 with
-    | one => exfalso; exact Pair.in_region h H.row1 (c0c3pair f hf)
-    | two => exfalso; exact Pair.in_region h H.row1 (c0c3pair f hf)
+    | one => exfalso; exact locked_set_in_region h H.row1 (c0c3pair f hf)
+    | two => exfalso; exact locked_set_in_region h H.row1 (c0c3pair f hf)
     | three => decide
     | four => exfalso; exact digit_in_region h H.row1 H.given2
   have c14: ∀ f ∈ S, f 14 = 2 := by
@@ -166,20 +160,19 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   have c0: ∀ f ∈ S, f 0 = 1 := by
     intro f hf
     replace H := (H f).mp hf
-    cases h: f 0 with
-    | one => decide
-    | two => exfalso; exact digit_in_region h H.box1 (c5 f hf)
-    | three => exfalso; exact digit_in_region h H.box1 (c1 f hf)
-    | four => exfalso; exact digit_in_region h H.box1 (c4 f hf)
+    replace h := (c0c3pair f hf).mapsTo (x := 0) (by simp)
+    cases h with
+    | inl h => assumption
+    | inr h => exfalso; exact digit_in_region h H.box1 (c5 f hf)
   have c3: ∀ f ∈ S, f 3 = 2 := by
     intro f hf
     replace H := (H f).mp hf
-    apply Pair.resolve_with_c1_d (c0c3pair f hf) (c0 f hf)
+    simpa using locked_set_reducton (c0c3pair f hf) (c0 f hf)
   have c7: ∀ f ∈ S, f 7 = 1 := by
     intro f hf
     replace H := (H f).mp hf
-    apply Pair.resolve_with_c1_e (c3c7pair_col4 f hf) (c3 f hf)
-  clear c3c7pair_box2 c3c7pair_col4 c1n4 c0c3pair
+    simpa using locked_set_reducton (c3c7pair f hf) (c3 f hf)
+  clear c3c7pair c1n4 c0c3pair
   -- done solving, lets finish it out
   let digits: Array Symbols4 :=
     #[1,3,4,2,

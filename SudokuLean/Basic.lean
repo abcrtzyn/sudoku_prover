@@ -56,14 +56,6 @@ macro "split_disjunctive_9" h:ident : tactic =>
 -- Regions are allowed to be smaller than the size of the grid
 def UniqueRegion {α} (f: Nat -> α) (r: Set Nat) :=  Set.InjOn f r
 
--- any unique region that is the same size as the digits is bijective, not just injective
-theorem unique_region_same_bijection {α} [fa: Fintype α] {f: Nat -> α} {r: Set Nat} (h: UniqueRegion f r) (hs: r.ncard = Fintype.card α): Set.BijOn f r Set.univ := by
-  constructor
-  · simp [Set.MapsTo]
-  constructor
-  · apply h
-  sorry
-
 
 theorem injOn_by_card {α β} [DecidableEq β] (f : α → β) (s : Set α) [Fintype s] :
   (s.toFinset.image f).card = s.toFinset.card → Set.InjOn f s := by
@@ -71,21 +63,6 @@ theorem injOn_by_card {α β} [DecidableEq β] (f : α → β) (s : Set α) [Fin
   let h123 := Finset.card_image_iff.mp h
   simp only [Set.coe_toFinset] at h123
   exact h123
-
-
-
--- this theorem does some of the heavy lifting to use the above theorem
-theorem unique_region_same_size_surjective {α} [Fintype α] {r: Set Nat} {f: Nat -> α} (unique_region: UniqueRegion f r) (card_same: r.ncard = Fintype.card α := by simp) (d: α): ∃ x ∈ r, f x = d := by
-  have h: Set.SurjOn f r Set.univ := by
-    apply Set.BijOn.surjOn
-    refine unique_region_same_bijection unique_region ?_
-    assumption
-  unfold Set.SurjOn at h
-  have h1: d ∈ f '' r := by
-    apply h
-    simp
-  simp at h1
-  assumption
 
 
 
@@ -105,114 +82,7 @@ theorem digit_in_cell {α} {f: Nat -> α} {target: Nat} {d: α} {e: α}
   rw [target_d] at target_e
   contradiction
 
--- when there are two cells in region with the same candidates,
--- this is a structure to store that information
--- to make your life easier, keep c1 a lower index than c2 and d a lower symbols that e
-structure Pair {α} {f: Nat -> α} {region: Set Nat} (unique_region: UniqueRegion f region)
-  (c1 c2: Nat) (d e: α) where
-  c1nc2: c1 ≠ c2
-  c1_in_region: c1 ∈ region
-  c2_in_region: c2 ∈ region
-  dne: d ≠ e
-  c1_possible: f c1 ∈ ({d,e}: Set α)
-  c2_possible: f c2 ∈ ({d,e}: Set α)
 
--- if there is a pair in a region looking at a target cell in the region, the digit d is not in target.
--- useful theorem in order to not go through all the cases.
-theorem Pair.in_region {α} {f: Nat -> α} {r} {c1 c2: Nat} {d e: α} {target: Nat} {s: α} (target_d: f target = s) (ur: UniqueRegion f r) (p: Pair ur c1 c2 d e)
-  (target_r: target ∈ r := by decide) (target_n_c1: target ≠ c1 := by decide)
-  (target_n_c2: target ≠ c2 := by decide) (s_is_in_pair: s ∈ ({d,e}: Set α):= by simp): False := by
-  -- basically just have to show each of the cases.
-  -- example in comments d = 1, e = 2
-  cases s_is_in_pair with
-  | inl td =>
-    -- if target is 1
-    rw [td] at target_d
-    cases p.c1_possible with
-    -- c1 can not be 1
-    | inl c1d => refine digit_in_region target_d ur c1d target_n_c1 target_r p.c1_in_region
-    -- c1 must be 2
-    | inr c1e =>
-      -- but then c2 must be 1
-      have c2d: f c2 = d := by
-        cases p.c2_possible with
-        | inl c2d => assumption
-        | inr c2e => exfalso; refine digit_in_region c1e ur c2e p.c1nc2 p.c1_in_region p.c2_in_region
-      -- which doesn't work either
-      refine digit_in_region target_d ur c2d target_n_c2 target_r p.c2_in_region
-  | inr te =>
-    -- if target is 2
-    rw [te] at target_d
-    cases p.c1_possible with
-    -- c1 can not be 2
-    | inr c1e => refine digit_in_region target_d ur c1e target_n_c1 target_r p.c1_in_region
-    -- c1 must be 1
-    | inl c1d =>
-      -- but then c2 must be 2
-      have c2d: f c2 = e := by
-        cases p.c2_possible with
-        | inr c2e => assumption
-        | inl c2d => exfalso; refine digit_in_region c1d ur c2d p.c1nc2 p.c1_in_region p.c2_in_region
-      -- which doesn't work either
-      refine digit_in_region target_d ur c2d target_n_c2 target_r p.c2_in_region
-
--- the following are used to resolve pairs when you figure out one of the digits
--- there are 4 cases
-theorem Pair.resolve_with_c1_d {α} {f: Nat -> α} {r: Set Nat} {c1 c2: Nat} {d e: α} {ur: UniqueRegion f r}:
-  Pair ur c1 c2 d e -> f c1 = d -> f c2 = e := by
-  intro p h1
-  cases p.c2_possible with
-  | inl h => exfalso; exact digit_in_region h1 ur h p.c1nc2 p.c1_in_region p.c2_in_region
-  | inr h => assumption
-
-theorem Pair.resolve_with_c1_e {α} {f: Nat -> α} {r: Set Nat} {c1 c2: Nat} {d e: α} {ur: UniqueRegion f r}:
-  Pair ur c1 c2 d e -> f c1 = e -> f c2 = d := by
-  intro p h1
-  cases p.c2_possible with
-  | inr h => exfalso; exact digit_in_region h1 ur h p.c1nc2 p.c1_in_region p.c2_in_region
-  | inl h => assumption
-
-theorem Pair.resolve_with_c2_d {α} {f: Nat -> α} {r: Set Nat} {c1 c2: Nat} {d e: α} {ur: UniqueRegion f r}:
-  Pair ur c1 c2 d e -> f c2 = d -> f c1 = e := by
-  intro p h1
-  cases p.c1_possible with
-  | inl h => exfalso; exact digit_in_region h ur h1 p.c1nc2 p.c1_in_region p.c2_in_region
-  | inr h => assumption
-
-theorem Pair.resolve_with_c2_e {α} {f: Nat -> α} {r: Set Nat} {c1 c2: Nat} {d e: α} {ur: UniqueRegion f r}:
-  Pair ur c1 c2 d e -> f c2 = e -> f c1 = d := by
-  intro p h1
-  cases p.c1_possible with
-  | inr h => exfalso; exact digit_in_region h ur h1 p.c1nc2 p.c1_in_region p.c2_in_region
-  | inl h => assumption
-
-
-theorem create_hidden_pair {α} {f: Nat -> α} {c1 c2: Nat} {d e: α} {r} (ur: UniqueRegion f r)
-  (c1nc2: c1 ≠ c2 := by decide) (c1_in_region: c1 ∈ r := by decide) (c2_in_region: c2 ∈ r := by decide) (dne: d ≠ e := by decide):
-  (f c1 = d ∨ f c2 = d) ∧ (f c1 = e ∨ f c2 = e) -> Pair ur c1 c2 d e := by
-  intro h
-  -- we have to take the hypothesis h and twist it
-  have h1: (f c1 = d ∨ f c1 = e) ∧ (f c2 = d ∨ f c2 = e) := by
-    -- the only way to do that is by trying all the cases
-    -- yes, you could prove the conjunction seperately, but you would have to do the same cases both ways.
-    cases h with | intro hd he
-    cases hd with
-    | inl c1d => cases he with
-      | inl c1e => exfalso; exact digit_in_cell c1d c1e dne
-      | inr c2e =>
-        constructor
-        · left; assumption
-        · right; assumption
-    | inr c2d => cases he with
-      | inr c2e => exfalso; exact digit_in_cell c2d c2e dne
-      | inl c1e =>
-        constructor
-        · right; assumption
-        · left; assumption
-  clear h
-  cases h1 with | intro c1v c2v
-  constructor
-  repeat assumption
 
 -- pointing pairs (box to line)
 -- box/line reduction (line to box)
@@ -222,13 +92,126 @@ theorem create_hidden_pair {α} {f: Nat -> α} {c1 c2: Nat} {d e: α} {r} (ur: U
 -- in box4 the only places for D to go is in c1 or c2
 -- then every cell in row6 that is not c1 or c2 is not D
 -- pointing pair is the same as doing outer snyder marks
+-- any to cells can be a pointing pair, as long as you prove the property
 
--- structure PointingPair {α} {f: Nat -> α} {region1: Set Nat} {region2: Set Nat}
---   (unique_region1: UniqueRegion f region1) (unique_region2: UniqueRegion f region2)
---   (c1 c2: Nat) (d: α) where
---   c1nc2: c1 ≠ c2
---   c1_in_region1: c1 ∈ region1
---   c2_in_region1: c2 ∈ region1
---   c1_in_region2: c1 ∈ region2
---   c2_in_region2: c2 ∈ region2
---   property: f c1 = d ∨ f c2 = d
+def SupportSet {α} (f: Nat -> α) (cells: Set Nat) (d: α) := ∃ c ∈ cells, f c = d
+
+-- pointing set in region
+-- used to rule out a digit in a cell because a pointing set is in that region
+theorem SupportSet.in_region {α} {f: Nat -> α} {r} {S: Set Nat} {target: Nat} {s: α}
+  (target_d: f target = s) (ur: UniqueRegion f r) (p: SupportSet f S s) (sr: S ⊆ r)
+  (target_r: target ∈ r := by decide) (target_nin_set: target ∉ S := by decide): False := by
+  -- not even a cases proof, the power of sets for the win.
+  cases p with | intro c1 c1h
+  cases c1h with | intro c1S c1v
+  have this: target ≠ c1 := by
+    intro h
+    rw [h] at target_nin_set
+    contradiction
+  refine digit_in_region target_d ur c1v this target_r (sr c1S)
+
+
+theorem locked_set_from_naked_set {α} {f: Nat -> α} {cells: Set Nat} {digits: Set α} {region: Set Nat}
+  (ur: UniqueRegion f region)
+  (naked_prop: ∀ c ∈ cells, f c ∈ digits)
+  (cells_in_region: cells ⊆ region := by simp [Set.subset_def])
+  (sized: cells.ncard = digits.ncard := by simp):
+  Set.BijOn f cells digits := by
+  -- we have to use this twice, might as well have it now
+  have subinjection: Set.InjOn f cells := Set.InjOn.mono cells_in_region ur
+  constructor
+  · exact naked_prop
+  constructor
+  · apply subinjection
+  · sorry -- need some lemma that says if magnitudes are the same and injection, good
+
+
+theorem locked_set_from_hidden_set {α} {f: Nat -> α} {cells: Set Nat} {digits: Set α} {region: Set Nat}
+  (ur: UniqueRegion f region) (hidden_prop: ∀ d ∈ digits, ∃ c ∈ cells, f c = d)
+  (cells_in_region: cells ⊆ region := by simp [Set.subset_def]) (sized: cells.ncard = digits.ncard := by simp):
+  Set.BijOn f cells digits := by
+  have subinjection: Set.InjOn f cells := Set.InjOn.mono cells_in_region ur
+  sorry
+
+
+-- in a surrounding region, remove digits from those cells
+theorem locked_set_in_region {α} {f: Nat -> α} {cells: Set Nat} {digits: Set α}
+  {target: Nat} {s: α}
+  (target_s: f target = s)
+  {region: Set Nat} (ur: UniqueRegion f region)
+  (bij: Set.BijOn f cells digits)
+  (cells_in_region: cells ⊆ region := by simp [Set.subset_def])
+  (s_in_digits: s ∈ digits := by decide)
+  (target_r: target ∈ region := by decide)
+  (target_nin_set: target ∉ cells := by decide):
+  False := by
+  apply bij.surjOn at s_in_digits
+  simp only [Set.mem_image] at s_in_digits
+  rcases s_in_digits with ⟨x, ⟨xc, xf⟩⟩
+  rw [<- target_s] at xf
+  apply ur (cells_in_region xc) (target_r) at xf
+  rw [xf] at xc
+  contradiction
+
+theorem locked_set_reducton {α} {f: Nat -> α} {cells: Set Nat} {digits: Set α}
+  (bij: Set.BijOn f cells digits)
+  {c: Nat} {d: α}
+  (h_found : f c = d)
+  (hc: c ∈ cells := by decide):
+  Set.BijOn f (cells \ {c}) (digits \ {d}) := by
+  rcases bij with ⟨maps, ⟨inj, surj⟩⟩
+  constructor
+  · intro x xc
+    cases xc with | intro h1 not_c
+    constructor
+    · apply maps
+      apply h1
+    · contrapose not_c
+      rw [<- h_found] at not_c
+      apply inj h1 hc not_c
+  constructor
+  · intro x1 ⟨x1_cells, x1_notc⟩ x2 ⟨x2_cells, x2_notc⟩
+    apply inj x1_cells x2_cells
+  · intro y ⟨y_digits, y_notd⟩
+    specialize surj y_digits
+    simp only [Set.mem_image] at surj
+    rcases surj with ⟨x, ⟨xh, xh1⟩⟩
+    exists x
+    constructor
+    · constructor
+      · apply xh
+      · contrapose y_notd
+        rw [<- y_notd] at h_found
+        rw [xh1] at h_found
+        apply h_found
+    · apply xh1
+
+-- theorem locked_set_single {α} {f: Nat -> α} {c: Nat} {d: α}
+--   (h: Set.BijOn f {c} {d}): f c = d := h.mapsTo (by simp)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- this theorem specifically applies the locked set principle to a region that is the full set of digits of 1 to 9
+theorem region_full_set_bijective {α} [Fintype α] {r: Set Nat} {f: Nat -> α}
+  (unique_region: UniqueRegion f r) (card_same: r.ncard = Fintype.card α := by simp):
+  Set.BijOn f r Set.univ := by
+  refine locked_set_from_naked_set unique_region ?_ ?_ ?_
+  · simp only [Set.mem_univ, implies_true]
+  · simp only [subset_refl]
+  · simp only [Set.ncard_univ, Nat.card_eq_fintype_card]
+    assumption
+
+
+
+  -- Can remove digits not in D from cells C

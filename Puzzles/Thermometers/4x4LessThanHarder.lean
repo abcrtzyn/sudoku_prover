@@ -35,9 +35,9 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     -- hidden single 1, every cell in the col must be greater than 1
     intro f hf
     replace H := (H f).mp hf
-    let h := unique_region_same_size_surjective H.col4 (by simp) 1
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq,
-      true_and] at h
+    let h := (region_full_set_bijective H.col4).surjOn (Set.mem_univ 1)
+    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
+      exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_4 h
     · assumption
     · exfalso; exact not_lt_bot (h ▸ H.lt3_7)
@@ -79,11 +79,13 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   have thermoA: ∀ f ∈ S, Thermometer f [0,1,2] := by
     intro f hf
     replace H := (H f).mp hf
-    simp only [Thermometer, List.map_cons, List.map_nil, List.isChain_cons_cons,
-      List.IsChain.singleton, and_true]
     constructor
-    · exact H.lt0_1
-    · exact H.lt1_2
+    · decide
+    · simp only [List.map_cons, List.map_nil, List.isChain_cons_cons,
+      List.IsChain.singleton, and_true]
+      constructor
+      · exact H.lt0_1
+      · exact H.lt1_2
   have c0min: ∀ f ∈ S, 2 ≤ f 0 := by
     intro f hf
     replace H := (H f).mp hf
@@ -96,24 +98,26 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   -- now to fill the thermo
   have c0: ∀ f ∈ S, f 0 = 2 := by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) (by decide)
-      (c0min f hf) (c2max f hf) (by decide) 0 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
+    (c0min f hf) (c2max f hf) (by decide) 0 (by decide))
   have c1: ∀ f ∈ S, f 1 = 3 := by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) (by decide)
-      (c0min f hf) (c2max f hf) (by decide) 1 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
+    (c0min f hf) (c2max f hf) (by decide) 1 (by decide))
   have c2: ∀ f ∈ S, f 2 = 4 := by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) (by decide)
-      (c0min f hf) (c2max f hf) (by decide) 2 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
+    (c0min f hf) (c2max f hf) (by decide) 2 (by decide))
   clear thermoA c0min c2max
   -- new thermo
   have thermoA: ∀ f ∈ S, Thermometer f [7,6] := by
     intro f hf
     replace H := (H f).mp hf
-    simp only [Thermometer, List.map_cons, List.map_nil, List.isChain_cons_cons,
-      List.IsChain.singleton, and_true, gt_iff_lt]
-    exact H.lt6_7
+    constructor
+    · decide
+    · simp only [List.map_cons, List.map_nil, List.isChain_cons_cons,
+        List.IsChain.singleton, and_true]
+      exact H.lt6_7
   have c7min: ∀ f ∈ S, 2 ≤ f 7 := by
     intro f hf
     replace H := (H f).mp hf
@@ -127,12 +131,12 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   -- now to fill the thermo
   have c6: ∀ f ∈ S, f 6 = 3 := by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) (by decide)
-      (c7min f hf) (c6max f hf) (by decide) 1 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
+    (c7min f hf) (c6max f hf) (by decide) 1 (by decide))
   have c7: ∀ f ∈ S, f 7 = 2 := by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) (by decide)
-      (c7min f hf) (c6max f hf) (by decide) 0 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
+    (c7min f hf) (c6max f hf) (by decide) 0 (by decide))
   have c4: ∀ f ∈ S, f 4 = 4 := by
     intro f hf
     replace H := (H f).mp hf
