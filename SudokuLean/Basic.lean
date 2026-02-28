@@ -99,7 +99,7 @@ def SupportSet {α} (f: Nat -> α) (cells: Set Nat) (d: α) := ∃ c ∈ cells, 
 -- pointing set in region
 -- used to rule out a digit in a cell because a pointing set is in that region
 theorem SupportSet.in_region {α} {f: Nat -> α} {r} {S: Set Nat} {target: Nat} {s: α}
-  (target_d: f target = s) (ur: UniqueRegion f r) (p: SupportSet f S s) (sr: S ⊆ r)
+  (target_d: f target = s) (ur: UniqueRegion f r) (p: SupportSet f S s) (sr: S ⊆ r := by simp [Set.subset_def])
   (target_r: target ∈ r := by decide) (target_nin_set: target ∉ S := by decide): False := by
   -- not even a cases proof, the power of sets for the win.
   cases p with | intro c1 c1h
@@ -110,7 +110,7 @@ theorem SupportSet.in_region {α} {f: Nat -> α} {r} {S: Set Nat} {target: Nat} 
     contradiction
   refine digit_in_region target_d ur c1v this target_r (sr c1S)
 
-
+-- does not matter which region that is used, as long at it has injectivity. We need to know that these 2 cells have to be different for some reason
 theorem locked_set_from_naked_set {α} {f: Nat -> α} {cells: Set Nat} {digits: Set α} {region: Set Nat}
   (ur: UniqueRegion f region)
   (naked_prop: ∀ c ∈ cells, f c ∈ digits)
@@ -152,6 +152,17 @@ theorem locked_set_in_region {α} {f: Nat -> α} {cells: Set Nat} {digits: Set �
   apply ur (cells_in_region xc) (target_r) at xf
   rw [xf] at xc
   contradiction
+
+-- in a surrounding region, remove digits from those cells
+theorem locked_set_in_cell {α} {f: Nat -> α} {cells: Set Nat} {digits: Set α}
+  {target: Nat} {s: α}
+  (target_s: f target = s)
+  (bij: Set.BijOn f cells digits)
+  (s_nin_digits: s ∉ digits := by decide)
+  (target_in_set: target ∈ cells := by decide):
+  False := by
+  absurd s_nin_digits
+  apply (target_s ▸ (bij.mapsTo target_in_set))
 
 theorem locked_set_reducton {α} {f: Nat -> α} {cells: Set Nat} {digits: Set α}
   (bij: Set.BijOn f cells digits)
