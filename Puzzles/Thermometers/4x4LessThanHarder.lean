@@ -1,6 +1,7 @@
 import SudokuLean.Basic
 import SudokuLean.Thermometer
 import SudokuLean.Symbols4
+import SudokuLean.Tactics
 
 set_option linter.style.whitespace false
 
@@ -31,7 +32,8 @@ structure LessThanLatin (solution: Nat -> Symbols4) where
 
 theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ LessThanLatin f):
   ∃! (g: Nat -> Symbols4), g ∈ S := by
-  have c3: ∀ f ∈ S, f 3 = 1 := by
+  have k : IsSound S [] := by intro c d h; cases h
+  replace k := add_fact k 3 1 (by
     -- hidden single 1, every cell in the col must be greater than 1
     intro f hf
     replace H := (H f).mp hf
@@ -43,6 +45,7 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     · exfalso; exact not_lt_bot (h ▸ H.lt3_7)
     · exfalso; exact not_lt_bot (h ▸ H.lt7_11)
     · exfalso; exact not_lt_bot (h ▸ H.lt14_15)
+  )
   -- fill in row1, from bottom to top
   -- this process involves tracking the minimums upwards and then tracking the maximums downwards
   -- now I have a theorem to do the heavy lifting
@@ -50,7 +53,7 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   --   intro f hf
   --   replace H := (H f).mp hf
   --   cases h: (f 0) <;> try decide
-  --   · exfalso; exact digit_in_region h H.row1 (c3 f hf)
+  --   · exfalso; exact digit_in_region h H.row1 ((get_d k 3 1) f hf)
   -- have c1min: ∀ f ∈ S, 3 ≤ f 1 := by
   --   intro f hf
   --   replace H := (H f).mp hf
@@ -60,20 +63,20 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   --   replace H := (H f).mp hf
   --   apply top_unique
   --   exact Nat.lt_of_le_of_lt (le_trans (by decide) (c1min f hf)) H.lt1_2
-  -- have c1: ∀ f ∈ S, f 1 = 3 := by
+  -- replace k := add_fact k 1 3 (by
   --   intro f hf
   --   replace H := (H f).mp hf
   --   refine le_antisymm (Nat.le_of_lt_succ ?_) ?_
   --   simp only [Nat.succ_eq_add_one]
-  --   apply ((c2 f hf) ▸ H.lt1_2)
+  --   apply (((get_d k 2 4) f hf) ▸ H.lt1_2)
   --   apply c1min f hf
   -- clear c1min
-  -- have c0: ∀ f ∈ S, f 0 = 2 := by
+  -- replace k := add_fact k 0 2 (by
   --   intro f hf
   --   replace H := (H f).mp hf
   --   refine le_antisymm (Nat.le_of_lt_succ ?_) ?_
   --   simp only [Nat.succ_eq_add_one]
-  --   apply ((c1 f hf) ▸ H.lt0_1)
+  --   apply (((get_d k 1 ) f hf) ▸ H.lt0_1)
   --   apply c0min f hf
   -- clear c0min
   have thermoA: ∀ f ∈ S, Thermometer f [0,1,2] := by
@@ -90,24 +93,27 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 0) <;> try decide
-    · exfalso; exact digit_in_region h H.row1 (c3 f hf)
+    · exfalso; exact digit_in_region h H.row1 ((get_d k 3 1) f hf)
   have c2max: ∀ f ∈ S, f 2 ≤ 4 := by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 2) <;> try decide
   -- now to fill the thermo
-  have c0: ∀ f ∈ S, f 0 = 2 := by
+  replace k := add_fact k 0 2 (by
     intro f hf
     apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
     (c0min f hf) (c2max f hf) (by decide) 0 (by decide))
-  have c1: ∀ f ∈ S, f 1 = 3 := by
+  )
+  replace k := add_fact k 1 3 (by
     intro f hf
     apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
     (c0min f hf) (c2max f hf) (by decide) 1 (by decide))
-  have c2: ∀ f ∈ S, f 2 = 4 := by
+  )
+  replace k := add_fact k 2 4 (by
     intro f hf
     apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
     (c0min f hf) (c2max f hf) (by decide) 2 (by decide))
+  )
   clear thermoA c0min c2max
   -- new thermo
   have thermoA: ∀ f ∈ S, Thermometer f [7,6] := by
@@ -122,102 +128,114 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 7) <;> try decide
-    · exfalso; exact digit_in_region h H.col4 (c3 f hf)
+    · exfalso; exact digit_in_region h H.col4 ((get_d k 3 1) f hf)
   have c6max: ∀ f ∈ S, f 6 ≤ 3 := by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 6) <;> try decide
-    · exfalso; exact digit_in_region h H.col3 (c2 f hf)
+    · exfalso; exact digit_in_region h H.col3 ((get_d k 2 4) f hf)
   -- now to fill the thermo
-  have c6: ∀ f ∈ S, f 6 = 3 := by
+  replace k := add_fact k 6 3 (by
     intro f hf
     apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
     (c7min f hf) (c6max f hf) (by decide) 1 (by decide))
-  have c7: ∀ f ∈ S, f 7 = 2 := by
+  )
+  replace k := add_fact k 7 2 (by
     intro f hf
     apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
     (c7min f hf) (c6max f hf) (by decide) 0 (by decide))
-  have c4: ∀ f ∈ S, f 4 = 4 := by
+  )
+  replace k := add_fact k 4 4 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 4)
-    · exfalso; exact absurd H.lt0_4 (by rw [c0 f hf, h]; decide)
-    · exfalso; exact absurd H.lt0_4 (by rw [c0 f hf, h]; decide)
-    · exfalso; exact digit_in_region h H.row2 (c6 f hf)
+    · exfalso; exact absurd H.lt0_4 (by rw [(get_d k 0 2) f hf, h]; decide)
+    · exfalso; exact absurd H.lt0_4 (by rw [(get_d k 0 2) f hf, h]; decide)
+    · exfalso; exact digit_in_region h H.row2 ((get_d k 6 3) f hf)
     · rfl
-  have c5: ∀ f ∈ S, f 5 = 1 := by
+  )
+  replace k := add_fact k 5 1 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 5)
     · rfl
-    · exfalso; exact digit_in_region h H.row2 (c7 f hf)
-    · exfalso; exact digit_in_region h H.row2 (c6 f hf)
-    · exfalso; exact digit_in_region h H.row2 (c4 f hf)
+    · exfalso; exact digit_in_region h H.row2 ((get_d k 7 2) f hf)
+    · exfalso; exact digit_in_region h H.row2 ((get_d k 6 3) f hf)
+    · exfalso; exact digit_in_region h H.row2 ((get_d k 4 4) f hf)
+  )
   clear thermoA c7min c6max
-  have c8: ∀ f ∈ S, f 8 = 3 := by
+  replace k := add_fact k 8 3 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 8)
     · exfalso; exact not_lt_bot (h ▸ H.lt8_12)
-    · exfalso; exact digit_in_region h H.col1 (c0 f hf)
+    · exfalso; exact digit_in_region h H.col1 ((get_d k 0 2) f hf)
     · rfl
-    · exfalso; exact digit_in_region h H.col1 (c4 f hf)
-  have c12: ∀ f ∈ S, f 12 = 1 := by
+    · exfalso; exact digit_in_region h H.col1 ((get_d k 4 4) f hf)
+  )
+  replace k := add_fact k 12 1 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 12)
     · rfl
-    · exfalso; exact digit_in_region h H.col1 (c0 f hf)
-    · exfalso; exact digit_in_region h H.col1 (c8 f hf)
-    · exfalso; exact digit_in_region h H.col1 (c4 f hf)
-  have c14: ∀ f ∈ S, f 14 = 2 := by
+    · exfalso; exact digit_in_region h H.col1 ((get_d k 0 2) f hf)
+    · exfalso; exact digit_in_region h H.col1 ((get_d k 8 3) f hf)
+    · exfalso; exact digit_in_region h H.col1 ((get_d k 4 4) f hf)
+  )
+  replace k := add_fact k 14 2 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 14)
-    · exfalso; exact digit_in_region h H.row4 (c12 f hf)
+    · exfalso; exact digit_in_region h H.row4 ((get_d k 12 1) f hf)
     · rfl
-    · exfalso; exact digit_in_region h H.col3 (c6 f hf)
-    · exfalso; exact digit_in_region h H.col3 (c2 f hf)
-  have c10: ∀ f ∈ S, f 10 = 1 := by
+    · exfalso; exact digit_in_region h H.col3 ((get_d k 6 3) f hf)
+    · exfalso; exact digit_in_region h H.col3 ((get_d k 2 4) f hf)
+  )
+  replace k := add_fact k 10 1 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 10)
     · rfl
-    · exfalso; exact digit_in_region h H.col3 (c14 f hf)
-    · exfalso; exact digit_in_region h H.col3 (c6 f hf)
-    · exfalso; exact digit_in_region h H.col3 (c2 f hf)
-  have c11: ∀ f ∈ S, f 11 = 4 := by
+    · exfalso; exact digit_in_region h H.col3 ((get_d k 14 2) f hf)
+    · exfalso; exact digit_in_region h H.col3 ((get_d k 6 3) f hf)
+    · exfalso; exact digit_in_region h H.col3 ((get_d k 2 4) f hf)
+  )
+  replace k := add_fact k 11 4 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 11)
-    · exfalso; exact digit_in_region h H.col4 (c3 f hf)
-    · exfalso; exact digit_in_region h H.col4 (c7 f hf)
-    · exfalso; exact digit_in_region h H.row3 (c8 f hf)
+    · exfalso; exact digit_in_region h H.col4 ((get_d k 3 1) f hf)
+    · exfalso; exact digit_in_region h H.col4 ((get_d k 7 2) f hf)
+    · exfalso; exact digit_in_region h H.row3 ((get_d k 8 3) f hf)
     · rfl
-  have c15: ∀ f ∈ S, f 15 = 3 := by
+  )
+  replace k := add_fact k 15 3 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 15)
-    · exfalso; exact digit_in_region h H.col4 (c3 f hf)
-    · exfalso; exact digit_in_region h H.col4 (c7 f hf)
+    · exfalso; exact digit_in_region h H.col4 ((get_d k 3 1) f hf)
+    · exfalso; exact digit_in_region h H.col4 ((get_d k 7 2) f hf)
     · rfl
-    · exfalso; exact digit_in_region h H.col4 (c11 f hf)
-  have c9: ∀ f ∈ S, f 9 = 2 := by
+    · exfalso; exact digit_in_region h H.col4 ((get_d k 11 4) f hf)
+  )
+  replace k := add_fact k 9 2 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 9)
-    · exfalso; exact digit_in_region h H.row3 (c10 f hf)
+    · exfalso; exact digit_in_region h H.row3 ((get_d k 10 1) f hf)
     · rfl
-    · exfalso; exact digit_in_region h H.row3 (c8 f hf)
-    · exfalso; exact digit_in_region h H.row3 (c11 f hf)
-  have c13: ∀ f ∈ S, f 13 = 4 := by
+    · exfalso; exact digit_in_region h H.row3 ((get_d k 8 3) f hf)
+    · exfalso; exact digit_in_region h H.row3 ((get_d k 11 4) f hf)
+  )
+  replace k := add_fact k 13 4 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: (f 13)
-    · exfalso; exact digit_in_region h H.row4 (c12 f hf)
-    · exfalso; exact digit_in_region h H.row4 (c14 f hf)
-    · exfalso; exact digit_in_region h H.row4 (c15 f hf)
+    · exfalso; exact digit_in_region h H.row4 ((get_d k 12 1) f hf)
+    · exfalso; exact digit_in_region h H.row4 ((get_d k 14 2) f hf)
+    · exfalso; exact digit_in_region h H.row4 ((get_d k 15 3) f hf)
     · rfl
+  )
   -- done solving, lets finish it out
   let digits: Array Symbols4 :=
     #[2,3,4,1,
@@ -251,22 +269,22 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   ext x
   by_cases xin: x < 16
   · interval_cases x
-    · exact c0 h hh
-    · exact c1 h hh
-    · exact c2 h hh
-    · exact c3 h hh
-    · exact c4 h hh
-    · exact c5 h hh
-    · exact c6 h hh
-    · exact c7 h hh
-    · exact c8 h hh
-    · exact c9 h hh
-    · exact c10 h hh
-    · exact c11 h hh
-    · exact c12 h hh
-    · exact c13 h hh
-    · exact c14 h hh
-    · exact c15 h hh
+    · exact (get_d k 0 2) h hh
+    · exact (get_d k 1 3) h hh
+    · exact (get_d k 2 4) h hh
+    · exact (get_d k 3 1) h hh
+    · exact (get_d k 4 4) h hh
+    · exact (get_d k 5 1) h hh
+    · exact (get_d k 6 3) h hh
+    · exact (get_d k 7 2) h hh
+    · exact (get_d k 8 3) h hh
+    · exact (get_d k 9 2) h hh
+    · exact (get_d k 10 1) h hh
+    · exact (get_d k 11 4) h hh
+    · exact (get_d k 12 1) h hh
+    · exact (get_d k 13 4) h hh
+    · exact (get_d k 14 2) h hh
+    · exact (get_d k 15 3) h hh
   rw [H.outside_grid]
   · unfold g
     simp at xin

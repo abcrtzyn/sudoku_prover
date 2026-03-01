@@ -1,6 +1,8 @@
 import SudokuLean.Basic
 import SudokuLean.BaselineConstraints
 import SudokuLean.Symbols9
+import SudokuLean.Tactics
+
 
 set_option linter.style.whitespace false
 
@@ -41,7 +43,9 @@ structure TestPuzzle2 (solution: Nat -> Symbols9) where
 
 theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ TestPuzzle2 f):
   ∃! (g: Nat -> Symbols9), g ∈ S := by
-  have c2: ∀ f ∈ S, f 2 = 5 := by
+  have k : IsSound S [] := by intro c d h; cases h
+
+  replace k := add_fact k 2 5 (by
     -- hidden single in box 1
     intro f hf
     replace H := (H f).mp hf
@@ -58,7 +62,8 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     · exfalso; apply digit_in_region h H.b.col1 H.given27
     · exfalso; apply digit_in_cell h H.given19
     · exfalso; apply digit_in_cell h H.given20
-  have c24: ∀ f ∈ S, f 24 = 7 := by
+  )
+  replace k := add_fact k 24 7 (by
     -- hidden single in box 3
     intro f hf
     replace H := (H f).mp hf
@@ -75,7 +80,8 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     · assumption
     · exfalso; apply digit_in_region h H.b.col8 H.given70
     · exfalso; apply digit_in_region h H.b.col9 H.given35
-  have c36: ∀ f ∈ S, f 36 = 6 := by
+  )
+  replace k := add_fact k 36 6 (by
     -- hidden single in box 4
     intro f hf
     replace H := (H f).mp hf
@@ -92,7 +98,8 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     · exfalso; apply digit_in_cell h H.given45
     · exfalso; apply digit_in_region h H.b.col2 H.given10
     · exfalso; apply digit_in_region h H.b.col3 H.given65
-  have c49: ∀ f ∈ S, f 49 = 7 := by
+  )
+  replace k := add_fact k 49 7 (by
     -- hidden single in box 5
     intro f hf
     replace H := (H f).mp hf
@@ -109,7 +116,8 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     · exfalso; apply digit_in_region h H.b.col4 H.given75
     · assumption
     · exfalso; apply digit_in_region h H.b.col6 H.given5
-  have c54: ∀ f ∈ S, f 54 = 7 := by
+  )
+  replace k := add_fact k 54 7 (by
     -- hidden single in box 7
     intro f hf
     replace H := (H f).mp hf
@@ -126,7 +134,8 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     · exfalso; apply digit_in_region h H.b.row9 H.given75
     · exfalso; apply digit_in_region h H.b.row9 H.given75
     · exfalso; apply digit_in_region h H.b.row9 H.given75
-  have c6: ∀ f ∈ S, f 6 = 8 := by
+  )
+  replace k := add_fact k 6 8 (by
     -- hidden single in box 3
     intro f hf
     replace H := (H f).mp hf
@@ -140,10 +149,11 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     · exfalso; apply digit_in_cell h H.given15
     · exfalso; apply digit_in_region h H.b.col8 H.given61
     · exfalso; apply digit_in_region h H.b.col9 H.given53
-    · exfalso; apply digit_in_cell h (c24 f hf)
+    · exfalso; apply digit_in_cell h ((get_d k 24 7) f hf)
     · exfalso; apply digit_in_region h H.b.col8 H.given61
     · exfalso; apply digit_in_region h H.b.col9 H.given53
-  have c8: ∀ f ∈ S, f 8 = 1 := by
+  )
+  replace k := add_fact k 8 1 (by
     -- hidden single in box 3
     intro f hf
     replace H := (H f).mp hf
@@ -151,16 +161,17 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
-    · exfalso; apply digit_in_cell h (c6 f hf)
+    · exfalso; apply digit_in_cell h ((get_d k 6 8) f hf)
     · exfalso; apply digit_in_region h H.b.col8 H.given43
     · assumption
     · exfalso; apply digit_in_cell h H.given15
     · exfalso; apply digit_in_cell h H.given16
     · exfalso; apply digit_in_region h H.b.row2 H.given12
-    · exfalso; apply digit_in_cell h (c24 f hf)
+    · exfalso; apply digit_in_cell h ((get_d k 24 7) f hf)
     · exfalso; apply digit_in_region h H.b.row3 H.given19
     · exfalso; apply digit_in_region h H.b.row3 H.given19
-  have c78: ∀ f ∈ S, f 78 = 1 := by
+  )
+  replace k := add_fact k 78 1 (by
     -- hidden single in column 7
     intro f hf
     replace H := (H f).mp hf
@@ -168,16 +179,17 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
-    · exfalso; apply digit_in_cell h (c6 f hf)
+    · exfalso; apply digit_in_cell h ((get_d k 6 8) f hf)
     · exfalso; apply digit_in_cell h H.given15
-    · exfalso; apply digit_in_cell h (c24 f hf)
+    · exfalso; apply digit_in_cell h ((get_d k 24 7) f hf)
     · exfalso; apply digit_in_region h H.b.box6 H.given43
     · exfalso; apply digit_in_region h H.b.box6 H.given43
     · exfalso; apply digit_in_region h H.b.box6 H.given43
     · exfalso; apply digit_in_cell h H.given60
     · exfalso; apply digit_in_cell h H.given69
     · assumption
-  have c26: ∀ f ∈ S, f 26 = 6 := by
+  )
+  replace k := add_fact k 26 6 (by
     -- hidden single in column 7
     intro f hf
     replace H := (H f).mp hf
@@ -185,16 +197,17 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
-    · exfalso; apply digit_in_cell h (c8 f hf)
+    · exfalso; apply digit_in_cell h ((get_d k 8 1) f hf)
     · exfalso; apply digit_in_region h H.b.row2 H.given10
     · assumption
     · exfalso; apply digit_in_cell h H.given35
-    · exfalso; apply digit_in_region h H.b.row5 (c36 f hf)
+    · exfalso; apply digit_in_region h H.b.row5 ((get_d k 36 6) f hf)
     · exfalso; apply digit_in_cell h H.given53
     · exfalso; apply digit_in_region h H.b.box9 H.given60
     · exfalso; apply digit_in_region h H.b.box9 H.given60
     · exfalso; apply digit_in_region h H.b.box9 H.given60
-  have c63: ∀ f ∈ S, f 63 = 1 := by
+  )
+  replace k := add_fact k 63 1 (by
     -- hidden single in column 1
     intro f hf
     replace H := (H f).mp hf
@@ -206,71 +219,85 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     · exfalso; apply digit_in_region h H.b.box1 H.given19
     · exfalso; apply digit_in_region h H.b.box1 H.given19
     · exfalso; apply digit_in_cell h H.given27
-    · exfalso; apply digit_in_cell h (c36 f hf)
+    · exfalso; apply digit_in_cell h ((get_d k 36 6) f hf)
     · exfalso; apply digit_in_cell h H.given45
-    · exfalso; apply digit_in_cell h (c54 f hf)
+    · exfalso; apply digit_in_cell h ((get_d k 54 7) f hf)
     · assumption
-    · exfalso; apply digit_in_region h H.b.row9 (c78 f hf)
-  have c25: ∀ f ∈ S, f 25 = 2 := by
+    · exfalso; apply digit_in_region h H.b.row9 ((get_d k 78 1) f hf)
+  )
+  replace k := add_fact k 25 2 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 25 with
-    | one => exfalso; exact digit_in_region h H.b.box3 (c8 f hf)
+    | one => exfalso; exact digit_in_region h H.b.box3 ((get_d k 8 1) f hf)
     | two => rfl
     | three => exfalso; exact digit_in_region h H.b.box3 H.given15
     | four => exfalso; exact digit_in_region h H.b.col8 H.given79
     | five => exfalso; exact digit_in_region h H.b.box3 H.given16
-    | six => exfalso; exact digit_in_region h H.b.box3 (c26 f hf)
-    | seven => exfalso; exact digit_in_region h H.b.box3 (c24 f hf)
-    | eight => exfalso; exact digit_in_region h H.b.box3 (c6 f hf)
+    | six => exfalso; exact digit_in_region h H.b.box3 ((get_d k 26 6) f hf)
+    | seven => exfalso; exact digit_in_region h H.b.box3 ((get_d k 24 7) f hf)
+    | eight => exfalso; exact digit_in_region h H.b.box3 ((get_d k 6 8) f hf)
     | nine => exfalso; exact digit_in_region h H.b.row3 H.given20
-  have c7: ∀ f ∈ S, f 7 = 9 := by
+  )
+  replace k := add_fact k 7 9 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 7 with
-    | one => exfalso; exact digit_in_region h H.b.box3 (c8 f hf)
-    | two => exfalso; exact digit_in_region h H.b.box3 (c25 f hf)
+    | one => exfalso; exact digit_in_region h H.b.box3 ((get_d k 8 1) f hf)
+    | two => exfalso; exact digit_in_region h H.b.box3 ((get_d k 25 2) f hf)
     | three => exfalso; exact digit_in_region h H.b.box3 H.given15
     | four => exfalso; exact digit_in_region h H.b.col8 H.given79
     | five => exfalso; exact digit_in_region h H.b.box3 H.given16
-    | six => exfalso; exact digit_in_region h H.b.box3 (c26 f hf)
-    | seven => exfalso; exact digit_in_region h H.b.box3 (c24 f hf)
-    | eight => exfalso; exact digit_in_region h H.b.box3 (c6 f hf)
+    | six => exfalso; exact digit_in_region h H.b.box3 ((get_d k 26 6) f hf)
+    | seven => exfalso; exact digit_in_region h H.b.box3 ((get_d k 24 7) f hf)
+    | eight => exfalso; exact digit_in_region h H.b.box3 ((get_d k 6 8) f hf)
     | nine => rfl
-  have c17: ∀ f ∈ S, f 17 = 4 := by
+  )
+  replace k := add_fact k 17 4 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 17 with
-    | one => exfalso; exact digit_in_region h H.b.box3 (c8 f hf)
-    | two => exfalso; exact digit_in_region h H.b.box3 (c25 f hf)
+    | one => exfalso; exact digit_in_region h H.b.box3 ((get_d k 8 1) f hf)
+    | two => exfalso; exact digit_in_region h H.b.box3 ((get_d k 25 2) f hf)
     | three => exfalso; exact digit_in_region h H.b.box3 H.given15
     | four => rfl
     | five => exfalso; exact digit_in_region h H.b.box3 H.given16
-    | six => exfalso; exact digit_in_region h H.b.box3 (c26 f hf)
-    | seven => exfalso; exact digit_in_region h H.b.box3 (c24 f hf)
-    | eight => exfalso; exact digit_in_region h H.b.box3 (c6 f hf)
-    | nine => exfalso; exact digit_in_region h H.b.box3 (c7 f hf)
-  have c44: ∀ f ∈ S, f 44 = 9 := by sorry
+    | six => exfalso; exact digit_in_region h H.b.box3 ((get_d k 26 6) f hf)
+    | seven => exfalso; exact digit_in_region h H.b.box3 ((get_d k 24 7) f hf)
+    | eight => exfalso; exact digit_in_region h H.b.box3 ((get_d k 6 8) f hf)
+    | nine => exfalso; exact digit_in_region h H.b.box3 ((get_d k 7 9) f hf)
+  )
+  replace k := add_fact k 44 9 (by sorry
     -- hidden single
-  have c72: ∀ f ∈ S, f 72 = 3 := by sorry
+  )
+  replace k := add_fact k 72 3 (by sorry
     -- hidden single
-  have c74: ∀ f ∈ S, f 74 = 2 := by sorry
+  )
+  replace k := add_fact k 74 2 (by sorry
     -- naked single
-  have c56: ∀ f ∈ S, f 56 = 4 := by sorry
+  )
+  replace k := add_fact k 56 4 (by sorry
     -- naked single
-  have c80: ∀ f ∈ S, f 80 = 5 := by sorry
+  )
+  replace k := add_fact k 80 5 (by sorry
     -- naked single
-  have c38: ∀ f ∈ S, f 38 = 8 := by sorry
+  )
+  replace k := add_fact k 38 8 (by sorry
     -- naked single
-  have c71: ∀ f ∈ S, f 71 = 3 := by sorry
+  )
+  replace k := add_fact k 71 3 (by sorry
     -- naked single
-  have c73: ∀ f ∈ S, f 73 = 9 := by sorry
+  )
+  replace k := add_fact k 73 9 (by sorry
     -- naked single
-  have c55: ∀ f ∈ S, f 55 = 5 := by sorry
+  )
+  replace k := add_fact k 55 5 (by sorry
     -- naked single
-  have c62: ∀ f ∈ S, f 62 = 2 := by sorry
+  )
+  replace k := add_fact k 62 2 (by sorry
     -- naked single
   -- pair in row 4
+  )
   have c28c33pair: ∀ f (hf:f ∈ S), Set.BijOn f {28, 33} {2, 4} := by
     intro f hf
     replace H := (H f).mp hf
@@ -282,20 +309,20 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
       | two => simp
       | three => exfalso; exact digit_in_region h H.b.col2 H.given1
       | four => simp
-      | five => exfalso; exact digit_in_region h H.b.col2 (c55 f hf)
+      | five => exfalso; exact digit_in_region h H.b.col2 ((get_d k 55 5) f hf)
       | six => exfalso; exact digit_in_region h H.b.col2 H.given10
       | seven => exfalso; exact digit_in_region h H.b.col2 H.given37
       | eight => exfalso; exact digit_in_region h H.b.col2 H.given64
-      | nine => exfalso; exact digit_in_region h H.b.col2 (c73 f hf)
+      | nine => exfalso; exact digit_in_region h H.b.col2 ((get_d k 73 9) f hf)
     · cases h: f 33 with
-      | one => exfalso; exact digit_in_region h H.b.col7 (c78 f hf)
+      | one => exfalso; exact digit_in_region h H.b.col7 ((get_d k 78 1) f hf)
       | two => simp
       | three => exfalso; exact digit_in_region h H.b.col7 H.given15
       | four => simp
       | five => exfalso; exact digit_in_region h H.b.row4 H.given27
       | six => exfalso; exact digit_in_region h H.b.col7 H.given60
-      | seven => exfalso; exact digit_in_region h H.b.col7 (c24 f hf)
-      | eight => exfalso; exact digit_in_region h H.b.col7 (c6 f hf)
+      | seven => exfalso; exact digit_in_region h H.b.col7 ((get_d k 24 7) f hf)
+      | eight => exfalso; exact digit_in_region h H.b.col7 ((get_d k 6 8) f hf)
       | nine => exfalso; exact digit_in_region h H.b.col7 H.given69
   have c40c67pair: ∀ f (hf:f ∈ S), Set.BijOn f {40, 67} {4, 5} := by
     intro f hf
@@ -309,14 +336,14 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
       | three => exfalso; exact digit_in_region h H.b.row5 H.given41
       | four => simp
       | five => simp
-      | six => exfalso; exact digit_in_region h H.b.row5 (c36 f hf)
+      | six => exfalso; exact digit_in_region h H.b.row5 ((get_d k 36 6) f hf)
       | seven => exfalso; exact digit_in_region h H.b.row5 H.given37
-      | eight => exfalso; exact digit_in_region h H.b.row5 (c38 f hf)
-      | nine => exfalso; exact digit_in_region h H.b.row5 (c44 f hf)
+      | eight => exfalso; exact digit_in_region h H.b.row5 ((get_d k 38 8) f hf)
+      | nine => exfalso; exact digit_in_region h H.b.row5 ((get_d k 44 9) f hf)
     · cases h: f 67 with
-      | one => exfalso; exact digit_in_region h H.b.row8 (c63 f hf)
+      | one => exfalso; exact digit_in_region h H.b.row8 ((get_d k 63 1) f hf)
       | two => exfalso; exact digit_in_region h H.b.row8 H.given68
-      | three => exfalso; exact digit_in_region h H.b.row8 (c71 f hf)
+      | three => exfalso; exact digit_in_region h H.b.row8 ((get_d k 71 3) f hf)
       | four => simp
       | five => simp
       | six => exfalso; exact digit_in_region h H.b.row8 H.given65
@@ -336,13 +363,13 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
         exists_eq_or_imp, ↓existsAndEq, true_and] at h
       split_disjunctive_9 h
       · exfalso; exact digit_in_cell h H.given5
-      · exfalso; exact digit_in_region h H.b.row2 (c17 f hf)
+      · exfalso; exact digit_in_region h H.b.row2 ((get_d k 17 4) f hf)
       · exact ⟨_, by simp, h⟩
         -- first instance of using a pair to cross out a candidate
       · exfalso; refine locked_set_in_region h H.b.row4 (c28c33pair f hf)
       · exfalso; exact digit_in_cell h H.given41
       · exact ⟨_, by simp, h⟩
-      · exfalso; exact digit_in_region h H.b.row7 (c56 f hf)
+      · exfalso; exact digit_in_region h H.b.row7 ((get_d k 56 4) f hf)
       · exfalso; exact digit_in_cell h H.given68
       · exfalso; exact digit_in_region h H.b.row9 H.given79
     · let h := region_bij.surjOn (Set.mem_univ 5)
@@ -355,61 +382,63 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
       · exfalso; refine digit_in_region h H.b.row4 H.given27
       · exfalso; exact digit_in_cell h H.given41
       · exact ⟨_, by simp, h⟩
-      · exfalso; exact digit_in_region h H.b.row7 (c55 f hf)
+      · exfalso; exact digit_in_region h H.b.row7 ((get_d k 55 5) f hf)
       · exfalso; exact digit_in_cell h H.given68
-      · exfalso; exact digit_in_region h H.b.row9 (c80 f hf)
-  have c47: ∀ f ∈ S, f 47 = 1 := by sorry
+      · exfalso; exact digit_in_region h H.b.row9 ((get_d k 80 5) f hf)
+  replace k := add_fact k 47 1 (by sorry)
     -- hidden single
-  have c29: ∀ f ∈ S, f 29 = 3 := by sorry
+  replace k := add_fact k 29 3 (by sorry)
     -- naked single
-  have c34: ∀ f ∈ S, f 34 = 6 := by sorry
-  have c52: ∀ f ∈ S, f 52 = 3 := by sorry
+  replace k := add_fact k 34 6 (by sorry)
+  replace k := add_fact k 52 3 (by sorry)
     -- naked single
-  have c48: ∀ f ∈ S, f 48 = 6 := by sorry
+  replace k := add_fact k 48 6 (by sorry)
     -- hidden single
-  have c77: ∀ f ∈ S, f 77 = 6 := by sorry
+  replace k := add_fact k 77 6 (by sorry)
     -- hidden single
-  have c76: ∀ f ∈ S, f 76 = 8 := by sorry
+  replace k := add_fact k 76 8 (by sorry)
     -- naked single
-  have c3: ∀ f ∈ S, f 3 = 4 := by sorry
+  replace k := add_fact k 3 4 (by sorry)
     -- naked single
-  have c0: ∀ f ∈ S, f 0 = 2 := by sorry
+  replace k := add_fact k 0 2 (by sorry)
     -- hidden single ↓
-  have c22: ∀ f ∈ S, f 22 = 3 := by sorry
-  have c23: ∀ f ∈ S, f 23 = 5 := by
+  replace k := add_fact k 22 3 (by sorry)
+  replace k := add_fact k 23 5 (by
     intro f hf
     replace H := (H f).mp hf
     replace h := (c23c50pair f hf).mapsTo (x := 23) (by simp)
     cases h with
-    | inl h => exfalso; exact digit_in_region h H.b.box2 (c3 f hf)
+    | inl h => exfalso; exact digit_in_region h H.b.box2 ((get_d k 3 4) f hf)
     | inr h => assumption
-  have c50: ∀ f ∈ S, f 50 = 4 := by
+  )
+  replace k := add_fact k 50 4 (by
     -- resolve pair c23c50
     intro f hf
     replace H := (H f).mp hf
-    simpa using locked_set_reducton (c23c50pair f hf) (c23 f hf)
+    simpa using locked_set_reducton (c23c50pair f hf) ((get_d k 23 5) f hf)
+  )
   clear c23c50pair
-  have c66: ∀ f ∈ S, f 66 = 5 := by sorry
-  have c4: ∀ f ∈ S, f 4 = 6 := by sorry
+  replace k := add_fact k 66 5 (by sorry)
+  replace k := add_fact k 4 6 (by sorry)
     -- naked single ↓
-  have c9: ∀ f ∈ S, f 9 = 8 := by sorry
-  have c21: ∀ f ∈ S, f 21 = 8 := by sorry
-  have c67: ∀ f ∈ S, f 67 = 4 := by sorry
-  have c40: ∀ f ∈ S, f 40 = 5 := by sorry
-  have c14: ∀ f ∈ S, f 14 = 9 := by sorry
-  have c18: ∀ f ∈ S, f 18 = 4 := by sorry
-  have c30: ∀ f ∈ S, f 30 = 9 := by sorry
-  have c46: ∀ f ∈ S, f 46 = 2 := by sorry
-  have c13: ∀ f ∈ S, f 13 = 2 := by sorry
-  have c28: ∀ f ∈ S, f 28 = 4 := by sorry
-  have c33: ∀ f ∈ S, f 33 = 2 := by sorry
-  have c31: ∀ f ∈ S, f 31 = 1 := by sorry
-  have c42: ∀ f ∈ S, f 42 = 4 := by sorry
-  have c51: ∀ f ∈ S, f 51 = 5 := by sorry
-  have c57: ∀ f ∈ S, f 57 = 3 := by sorry
-  have c59: ∀ f ∈ S, f 59 = 1 := by sorry
-  have c32: ∀ f ∈ S, f 32 = 8 := by sorry
-  have c58: ∀ f ∈ S, f 58 = 9 := by sorry
+  replace k := add_fact k 9 8 (by sorry)
+  replace k := add_fact k 21 8 (by sorry)
+  replace k := add_fact k 67 4 (by sorry)
+  replace k := add_fact k 40 5 (by sorry)
+  replace k := add_fact k 14 9 (by sorry)
+  replace k := add_fact k 18 4 (by sorry)
+  replace k := add_fact k 30 9 (by sorry)
+  replace k := add_fact k 46 2 (by sorry)
+  replace k := add_fact k 13 2 (by sorry)
+  replace k := add_fact k 28 4 (by sorry)
+  replace k := add_fact k 33 2 (by sorry)
+  replace k := add_fact k 31 1 (by sorry)
+  replace k := add_fact k 42 4 (by sorry)
+  replace k := add_fact k 51 5 (by sorry)
+  replace k := add_fact k 57 3 (by sorry)
+  replace k := add_fact k 59 1 (by sorry)
+  replace k := add_fact k 32 8 (by sorry)
+  replace k := add_fact k 58 9 (by sorry)
   -- create th function g and use it
   let digits: Array Symbols9 :=
   #[2,3,5,4,6,7,8,9,1,
@@ -445,87 +474,87 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
   ext x
   by_cases xin: x < 81
   · interval_cases x
-    · exact c0 h hh
+    · exact (get_d k 0 2) h hh
     · exact H.given1
-    · exact c2 h hh
-    · exact c3 h hh
-    · exact c4 h hh
+    · exact (get_d k 2 5) h hh
+    · exact (get_d k 3 4) h hh
+    · exact (get_d k 4 6) h hh
     · exact H.given5
-    · exact c6 h hh
-    · exact c7 h hh
-    · exact c8 h hh
-    · exact c9 h hh
+    · exact (get_d k 6 8) h hh
+    · exact (get_d k 7 9) h hh
+    · exact (get_d k 8 1) h hh
+    · exact (get_d k 9 8) h hh
     · exact H.given10
     · exact H.given11
     · exact H.given12
-    · exact c13 h hh
-    · exact c14 h hh
+    · exact (get_d k 13 2) h hh
+    · exact (get_d k 14 9) h hh
     · exact H.given15
     · exact H.given16
-    · exact c17 h hh
-    · exact c18 h hh
+    · exact (get_d k 17 4) h hh
+    · exact (get_d k 18 4) h hh
     · exact H.given19
     · exact H.given20
-    · exact c21 h hh
-    · exact c22 h hh
-    · exact c23 h hh
-    · exact c24 h hh
-    · exact c25 h hh
-    · exact c26 h hh
+    · exact (get_d k 21 8) h hh
+    · exact (get_d k 22 3) h hh
+    · exact (get_d k 23 5) h hh
+    · exact (get_d k 24 7) h hh
+    · exact (get_d k 25 2) h hh
+    · exact (get_d k 26 6) h hh
     · exact H.given27
-    · exact c28 h hh
-    · exact c29 h hh
-    · exact c30 h hh
-    · exact c31 h hh
-    · exact c32 h hh
-    · exact c33 h hh
-    · exact c34 h hh
+    · exact (get_d k 28 4) h hh
+    · exact (get_d k 29 3) h hh
+    · exact (get_d k 30 9) h hh
+    · exact (get_d k 31 1) h hh
+    · exact (get_d k 32 8) h hh
+    · exact (get_d k 33 2) h hh
+    · exact (get_d k 34 6) h hh
     · exact H.given35
-    · exact c36 h hh
+    · exact (get_d k 36 6) h hh
     · exact H.given37
-    · exact c38 h hh
+    · exact (get_d k 38 8) h hh
     · exact H.given39
-    · exact c40 h hh
+    · exact (get_d k 40 5) h hh
     · exact H.given41
-    · exact c42 h hh
+    · exact (get_d k 42 4) h hh
     · exact H.given43
-    · exact c44 h hh
+    · exact (get_d k 44 9) h hh
     · exact H.given45
-    · exact c46 h hh
-    · exact c47 h hh
-    · exact c48 h hh
-    · exact c49 h hh
-    · exact c50 h hh
-    · exact c51 h hh
-    · exact c52 h hh
+    · exact (get_d k 46 2) h hh
+    · exact (get_d k 47 1) h hh
+    · exact (get_d k 48 6) h hh
+    · exact (get_d k 49 7) h hh
+    · exact (get_d k 50 4) h hh
+    · exact (get_d k 51 5) h hh
+    · exact (get_d k 52 3) h hh
     · exact H.given53
-    · exact c54 h hh
-    · exact c55 h hh
-    · exact c56 h hh
-    · exact c57 h hh
-    · exact c58 h hh
-    · exact c59 h hh
+    · exact (get_d k 54 7) h hh
+    · exact (get_d k 55 5) h hh
+    · exact (get_d k 56 4) h hh
+    · exact (get_d k 57 3) h hh
+    · exact (get_d k 58 9) h hh
+    · exact (get_d k 59 1) h hh
     · exact H.given60
     · exact H.given61
-    · exact c62 h hh
-    · exact c63 h hh
+    · exact (get_d k 62 2) h hh
+    · exact (get_d k 63 1) h hh
     · exact H.given64
     · exact H.given65
-    · exact c66 h hh
-    · exact c67 h hh
+    · exact (get_d k 66 5) h hh
+    · exact (get_d k 67 4) h hh
     · exact H.given68
     · exact H.given69
     · exact H.given70
-    · exact c71 h hh
-    · exact c72 h hh
-    · exact c73 h hh
-    · exact c74 h hh
+    · exact (get_d k 71 3) h hh
+    · exact (get_d k 72 3) h hh
+    · exact (get_d k 73 9) h hh
+    · exact (get_d k 74 2) h hh
     · exact H.given75
-    · exact c76 h hh
-    · exact c77 h hh
-    · exact c78 h hh
+    · exact (get_d k 76 8) h hh
+    · exact (get_d k 77 6) h hh
+    · exact (get_d k 78 1) h hh
     · exact H.given79
-    · exact c80 h hh
+    · exact (get_d k 80 5) h hh
   rw [H.outside_grid]
   · unfold g
     simp at xin

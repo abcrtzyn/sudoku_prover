@@ -1,5 +1,6 @@
 import SudokuLean.Basic
 import SudokuLean.Symbols4
+import SudokuLean.Tactics
 
 set_option linter.style.whitespace false
 
@@ -29,6 +30,7 @@ structure LessThanPuzzle (solution: Nat -> Symbols4) where
 
 theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ LessThanPuzzle f):
   ∃! (g: Nat -> Symbols4), g ∈ S := by
+  have k : IsSound S [] := by intro c d h; cases h
   have c3c7pair: ∀ f (hf:f ∈ S), Set.BijOn f {3, 7} {1, 2} := by
     intro f hf
     replace H := (H f).mp hf
@@ -45,7 +47,7 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     | two => decide
     | three => exfalso; exact digit_in_region h H.col4 H.given11
     | four => exfalso; exact digit_in_region h H.box2 H.given2
-  have c15: ∀ f ∈ S, f 15 = 4 := by
+  replace k := add_fact k 15 4 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 15 with
@@ -53,7 +55,8 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     | two => exfalso; exact locked_set_in_region h H.col4 (c3c7pair f hf)
     | three => exfalso; exact digit_in_region h H.col4 H.given11
     | four => decide
-  have c6: ∀ f ∈ S, f 6 = 3 := by
+  )
+  replace k := add_fact k 6 3 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 6 with
@@ -61,6 +64,7 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     | two => exfalso; exact locked_set_in_region h H.box2 (c3c7pair f hf)
     | three => decide
     | four => exfalso; exact digit_in_region h H.box2 H.given2
+  )
   have c1n4: ∀ f ∈ S, f 1 ≠ 4 := by
     intro f hf
     replace H := (H f).mp hf
@@ -89,7 +93,7 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     | two => decide
     | three => exfalso; exact digit_in_region h H.col4 H.given11
     | four => exfalso; exact digit_in_region h H.box2 H.given2
-  have c1: ∀ f ∈ S, f 1 = 3 := by
+  replace k := add_fact k 1 3 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 1 with
@@ -97,81 +101,92 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
     | two => exfalso; exact locked_set_in_region h H.row1 (c0c3pair f hf)
     | three => decide
     | four => exfalso; exact digit_in_region h H.row1 H.given2
-  have c14: ∀ f ∈ S, f 14 = 2 := by
+  )
+  replace k := add_fact k 14 2 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 14 with
     | one => exfalso; exact digit_in_region h H.row4 H.given13
     | two => decide
     | three => exfalso; exact digit_in_region h H.box4 H.given11
-    | four => exfalso; exact digit_in_region h H.box4 (c15 f hf)
-  have c10: ∀ f ∈ S, f 10 = 1 := by
+    | four => exfalso; exact digit_in_region h H.box4 ((get_d k 15 4) f hf)
+  )
+  replace k := add_fact k 10 1 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 10 with
     | one => decide
-    | two => exfalso; exact digit_in_region h H.box4 (c14 f hf)
+    | two => exfalso; exact digit_in_region h H.box4 ((get_d k 14 2) f hf)
     | three => exfalso; exact digit_in_region h H.box4 H.given11
-    | four => exfalso; exact digit_in_region h H.box4 (c15 f hf)
-  have c12: ∀ f ∈ S, f 12 = 3 := by
+    | four => exfalso; exact digit_in_region h H.box4 ((get_d k 15 4) f hf)
+  )
+  replace k := add_fact k 12 3 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 12 with
     | one => exfalso; exact digit_in_region h H.row4 H.given13
-    | two => exfalso; exact digit_in_region h H.row4 (c14 f hf)
+    | two => exfalso; exact digit_in_region h H.row4 ((get_d k 14 2) f hf)
     | three => decide
-    | four => exfalso; exact digit_in_region h H.row4 (c15 f hf)
-  have c5: ∀ f ∈ S, f 5 = 2 := by
+    | four => exfalso; exact digit_in_region h H.row4 ((get_d k 15 4) f hf)
+  )
+  replace k := add_fact k 5 2 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 5 with
     | one => exfalso; exact digit_in_region h H.col2 H.given13
     | two => decide
-    | three => exfalso; exact digit_in_region h H.col2 (c1 f hf)
+    | three => exfalso; exact digit_in_region h H.col2 ((get_d k 1 3) f hf)
     | four =>
       let lt5_9 := H.lt5_9
       rw [h] at lt5_9
       absurd lt5_9
       cases h: f 9 <;> decide
-  have c9: ∀ f ∈ S, f 9 = 4 := by
+  )
+  replace k := add_fact k 9 4 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 9 with
     | one => exfalso; exact digit_in_region h H.col2 H.given13
-    | two => exfalso; exact digit_in_region h H.col2 (c5 f hf)
-    | three => exfalso; exact digit_in_region h H.col2 (c1 f hf)
+    | two => exfalso; exact digit_in_region h H.col2 ((get_d k 5 2) f hf)
+    | three => exfalso; exact digit_in_region h H.col2 ((get_d k 1 3) f hf)
     | four => decide
-  have c8: ∀ f ∈ S, f 8 = 2 := by
+  )
+  replace k := add_fact k 8 2 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 8 with
-    | one => exfalso; exact digit_in_region h H.row3 (c10 f hf)
+    | one => exfalso; exact digit_in_region h H.row3 ((get_d k 10 1) f hf)
     | two => decide
     | three => exfalso; exact digit_in_region h H.row3 H.given11
-    | four => exfalso; exact digit_in_region h H.row3 (c9 f hf)
-  have c4: ∀ f ∈ S, f 4 = 4 := by
+    | four => exfalso; exact digit_in_region h H.row3 ((get_d k 9 4) f hf)
+  )
+  replace k := add_fact k 4 4 (by
     intro f hf
     replace H := (H f).mp hf
     cases h: f 4 with
-    | one => exfalso; absurd H.lt4_8; rw [h, (c8 f hf)]; decide
-    | two => exfalso; absurd H.lt4_8; rw [h, (c8 f hf)]; decide
-    | three => exfalso; exact digit_in_region h H.row2 (c6 f hf)
+    | one => exfalso; absurd H.lt4_8; rw [h, ((get_d k 8 2) f hf)]; decide
+    | two => exfalso; absurd H.lt4_8; rw [h, ((get_d k 8 2) f hf)]; decide
+    | three => exfalso; exact digit_in_region h H.row2 ((get_d k 6 3) f hf)
     | four => decide
-  have c0: ∀ f ∈ S, f 0 = 1 := by
+  )
+  replace k := add_fact k 0 1 (by
     intro f hf
     replace H := (H f).mp hf
     replace h := (c0c3pair f hf).mapsTo (x := 0) (by simp)
     cases h with
     | inl h => assumption
-    | inr h => exfalso; exact digit_in_region h H.box1 (c5 f hf)
-  have c3: ∀ f ∈ S, f 3 = 2 := by
+    | inr h => exfalso; exact digit_in_region h H.box1 ((get_d k 5 2) f hf)
+  )
+  replace k := add_fact k 3 2 (by
     intro f hf
     replace H := (H f).mp hf
-    simpa using locked_set_reducton (c0c3pair f hf) (c0 f hf)
-  have c7: ∀ f ∈ S, f 7 = 1 := by
+    simpa using locked_set_reducton (c0c3pair f hf) ((get_d k 0 1) f hf)
+  )
+  replace k := add_fact k 7 1 (by
     intro f hf
     replace H := (H f).mp hf
-    simpa using locked_set_reducton (c3c7pair f hf) (c3 f hf)
+    simpa using locked_set_reducton (c3c7pair f hf) ((get_d k 3 2) f hf)
+  )
   clear c3c7pair c1n4 c0c3pair
   -- done solving, lets finish it out
   let digits: Array Symbols4 :=
@@ -206,22 +221,22 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   ext x
   by_cases xin: x < 16
   · interval_cases x
-    · exact c0 h hh
-    · exact c1 h hh
+    · exact (get_d k 0 1) h hh
+    · exact (get_d k 1 3) h hh
     · exact H.given2
-    · exact c3 h hh
-    · exact c4 h hh
-    · exact c5 h hh
-    · exact c6 h hh
-    · exact c7 h hh
-    · exact c8 h hh
-    · exact c9 h hh
-    · exact c10 h hh
+    · exact (get_d k 3 2) h hh
+    · exact (get_d k 4 4) h hh
+    · exact (get_d k 5 2) h hh
+    · exact (get_d k 6 3) h hh
+    · exact (get_d k 7 1) h hh
+    · exact (get_d k 8 2) h hh
+    · exact (get_d k 9 4) h hh
+    · exact (get_d k 10 1) h hh
     · exact H.given11
-    · exact c12 h hh
+    · exact (get_d k 12 3) h hh
     · exact H.given13
-    · exact c14 h hh
-    · exact c15 h hh
+    · exact (get_d k 14 2) h hh
+    · exact (get_d k 15 4) h hh
   rw [H.outside_grid]
   · unfold g
     simp at xin
