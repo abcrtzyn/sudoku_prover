@@ -903,9 +903,9 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply digit_in_cell h ((get_d k 12 9) f hf)
     · exact h
     · exfalso; let this := thermometer_mins H.thermo4 bot_le 1; simp [h] at this; contradiction
-    · exfalso; exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
-    · exfalso; exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
-    · exfalso; exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
+    · exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
+    · exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
+    · exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
   })
   replace k := add_fact k 67 3 (by freeze {
     intro f hf
