@@ -7,6 +7,7 @@ import Mathlib.Order.BoundedOrder.Basic
 import Mathlib.Data.List.Chain
 import Mathlib.Algebra.Group.Defs
 import SudokuLean.ToNat
+import SudokuLean.Basic
 
 set_option linter.style.longLine false
 set_option linter.style.whitespace false
@@ -48,26 +49,19 @@ theorem thermo_pairwise {α} [LT α] [IsTrans α (· < ·)] (f: Nat -> α) (l: L
   apply List.isChain_iff_pairwise.mp
   apply h.property
 
-lemma thermo_distance {α} [LinearOrder α] [HAdd α Nat Nat] [ToNat α]
-  {f: Nat -> α} {l: List Nat} (thermo: Thermometer f l)
-  (i j : Nat) (hi : i < l.length) (hj : j < l.length) (h_le : i ≤ j) :
-  toNat (f l[i]) + (j - i) ≤ toNat (f l[j]) := by
-  induction j, h_le using Nat.le_induction with
-  | base => simp
-  | succ k h_ik ih =>
-    have h_lt : toNat (f l[k]) < toNat (f l[k+1]) := by
-      apply ToNat.toNat_lt_iff.mp
-      apply Thermometer.iff_getElem thermo
-    have ih_k : toNat (f l[i]) + (k - i) ≤ toNat (f l[k]) := by
-      apply ih
-      -- ih (Nat.lt_of_succ_le hj)
-
-    -- 3. Combine: (min + dist_k) + 1 ≤ f[k] + 1 ≤ f[k+1]
-    calc
-      toNat (f l[i]) + (k + 1 - i)
-        = toNat (f l[i]) + (k - i) + 1 := by rw [Nat.add_assoc, Nat.sub_add_comm h_ik]
-      _ ≤ toNat (f l[k]) + 1           := Nat.add_le_add_right ih_k 1
-      _ ≤ toNat (f l[k+1])             := Nat.succ_le_of_lt h_lt
+-- a thermo is a unique region, likely not to be used a lot, but might have a use at some point
+theorem thermo_unique {α} [Preorder α] [IsTrans α (· < ·)] (f: Nat -> α) (l: List Nat) (thermo: Thermometer f l):
+  UniqueRegion f {x | x ∈ l} := by
+  intro x xh y yh h
+  simp only [Set.mem_setOf_eq] at xh
+  simp only [Set.mem_setOf_eq] at yh
+  replace pairs := thermo_pairwise f l thermo
+  -- first step is to turn the less than into not equal
+  replace pairs: List.Pairwise (fun x1 x2 ↦ x1 ≠ x2) (List.map f l) := pairs.imp ne_of_lt
+  -- convert that to nodup
+  have h_map_nodup : (l.map f).Nodup := pairs
+  -- then to injectivity
+  exact List.inj_on_of_nodup_map h_map_nodup xh yh h
 
 
 -- helper lemma
@@ -141,29 +135,77 @@ theorem sub_cont_thermo {α} [LT α] {f: Nat -> α} {l: List Nat} {l': List Nat}
   · assumption
   refine List.IsChain.infix h1.property (List.IsInfix.map f h2)
 
--- set_option trace.Meta.synthInstance true
+
+lemma thermo_distance {α} [LinearOrder α] [HAdd α Nat Nat] [ToNat α]
+  {f: Nat -> α} {l: List Nat} (thermo: Thermometer f l)
+  (i j : Nat) (hi : i < l.length) (hj : j < l.length) (h_le : i ≤ j) :
+  toNat (f l[i]) + (j - i) ≤ toNat (f l[j]) := by
+  induction j, h_le using Nat.le_induction with
+  | base => simp
+  | succ k h_ik ih =>
+    have h_lt : toNat (f l[k]) < toNat (f l[k+1]) := by
+      apply ToNat.toNat_lt_iff.mp
+      apply Thermometer.iff_getElem thermo
+    have ih_k : toNat (f l[i]) + (k - i) ≤ toNat (f l[k]) := by
+      apply ih
+      -- ih (Nat.lt_of_succ_le hj)
+
+    -- 3. Combine: (min + dist_k) + 1 ≤ f[k] + 1 ≤ f[k+1]
+    calc
+      toNat (f l[i]) + (k + 1 - i)
+        = toNat (f l[i]) + (k - i) + 1 := by rw [Nat.add_assoc, Nat.sub_add_comm h_ik]
+      _ ≤ toNat (f l[k]) + 1           := Nat.add_le_add_right ih_k 1
+      _ ≤ toNat (f l[k+1])             := Nat.succ_le_of_lt h_lt
+
 
 -- on a thermo, if f l.0 has a minimum, for a given x, min+x <= f l.x
 theorem thermometer_mins {α} [HAdd α Nat Nat] [LinearOrder α] [ToNat α]
-  {f: Nat -> α} {l: List Nat} {min: α} (thermo: Thermometer f l)
-  (h0: min ≤ f (l.get ⟨0, (by exact Nat.lt_of_succ_le thermo.len)⟩)):
-  ∀ x (h4: x < l.length := by decide), toNat min + x ≤ toNat (f l[x]) := by
-  intro x xl
-  simp only [List.get_eq_getElem, ToNat.toNat_le_iff] at h0
-  let h_dist := thermo_distance thermo 0 x (by exact Nat.lt_of_succ_le thermo.len) xl (by simp only [Nat.zero_le])
-  simp at h_dist
+  {f: Nat -> α} {l: List Nat} (thermo: Thermometer f l)
+  (low_index: Nat) (low_in_list: low_index < l.length := by decide) {low_value: α}
+  (low_value_min: low_value ≤ f (l[low_index])):
+  ∀ x (x_lt_len: x < l.length := by decide) (l_le_x: low_index ≤ x := by decide),
+  toNat low_value + (x - low_index) ≤ toNat (f l[x]) := by
+  intro x xl xg
+  let h_dist := thermo_distance thermo low_index x low_in_list xl xg
+  replace low_value_min2 := ToNat.toNat_le_iff.mp low_value_min
   omega
 
+-- TODO, clean up the hypotheses on this and the opposing one
+theorem digit_less_than_thermo_min {α} [HAdd α Nat Nat] [LinearOrder α] [ToNat α]
+  {f: Nat -> α} {target: Nat} {d: α} {l: List Nat}
+  (target_d: f target = d) (thermo: Thermometer f l)
+  (low_index: Nat) (low_in_list: low_index < l.length := by decide) {low_value: α}
+  (low_value_min: low_value ≤ f (l[low_index]))
+  (x: Nat) (h4: x < l.length := by decide)
+  (h1: l[x] = target := by simp)
+  (l_le_x: low_index ≤ x := by decide)
+  (h3: toNat d < toNat low_value + (x - low_index) := by decide): False := by
+  absurd thermometer_mins thermo low_index low_in_list low_value_min x h4 l_le_x
+  rw [h1, target_d]
+  simpa only [not_le]
 
 theorem thermometer_maxs {α} [HAdd α Nat Nat] [LinearOrder α] [ToNat α]
-  {f: Nat -> α} {l: List Nat} {max: α} (thermo: Thermometer f l)
-  (h0: f (l.get ⟨l.length-1, (by exact Nat.sub_lt thermo.len (by decide))⟩) ≤ max):
-  ∀ x (h4: x < l.length := by decide), toNat (f l[x])+(l.length - 1 - x) ≤ toNat max := by
-  intro x xl
-  simp only [List.get_eq_getElem, ToNat.toNat_le_iff] at h0
-  let h_dist := thermo_distance thermo x (l.length-1) xl (by exact Nat.sub_lt thermo.len (by decide))
-  simp at h_dist
+  {f: Nat -> α} {l: List Nat} (thermo: Thermometer f l)
+  (high_index: Nat) (high_in_list: high_index < l.length := by decide) {high_value: α}
+  (high_value_max: f (l[high_index]) ≤ high_value):
+  ∀ x (x_lt_l: x < l.length := by decide) (x_le_h: x ≤ high_index := by decide), toNat (f l[x]) + (high_index - x) ≤ toNat high_value := by
+  intro x xl xg
+  let h_dist := thermo_distance thermo x high_index xl high_in_list xg
+  replace low_value_min2 := ToNat.toNat_le_iff.mp high_value_max
   omega
+
+theorem digit_greater_than_thermo_max {α} [HAdd α Nat Nat] [LinearOrder α] [ToNat α]
+  {f: Nat -> α} {target: Nat} {d: α} {l: List Nat}
+  (target_d: f target = d) (thermo: Thermometer f l)
+  (high_index: Nat) (high_in_list: high_index < l.length := by decide) {high_value: α}
+  (high_value_max: f (l[high_index]) ≤ high_value)
+  (x: Nat) (h4: x < l.length := by decide)
+  (h1: l[x] = target := by simp)
+  (x_le_h: x ≤ high_index := by decide)
+  (h3: toNat high_value < toNat d + (high_index - x) := by decide): False := by
+  absurd thermometer_maxs thermo high_index high_in_list high_value_max x h4 x_le_h
+  rw [h1, target_d]
+  simpa only [not_le]
 
 
 -- if the cell is le at ge to value than it is value by antisymm
@@ -176,21 +218,22 @@ theorem fill_by_min_max {α} [PartialOrder α] {f: Nat -> α}
 -- example thermo [c0, c1, c2]  2 <= c0  c2 <= 4  ->  c0 = 2  c1 = 3  c2 = 4
 theorem fill_thermo {α} [LinearOrder α] [HAdd α Nat Nat] [ToNat α] [Trans (α := α) (· ≤ ·) (· ≤ ·) (· ≤ ·)] {f: Nat -> α} {l: List Nat}
   (thermo: Thermometer f l)
-  {min max: α}
-  (h0: min ≤ f (l.get ⟨0, (by exact Nat.lt_of_succ_le thermo.len)⟩))
-  (h1: f (l.get ⟨l.length-1, (by exact Nat.sub_lt thermo.len (by decide))⟩) ≤ max)
-  (h2: l.length = toNat max - toNat min + (1: Nat) := by decide):
-  ∀ x (h4: x < l.length), toNat (f l[x]) = min + x := by
-    simp only [List.get_eq_getElem] at *
-    intro x xl
+  (low_index: Nat) (low_in_list: low_index < l.length := by decide) {low_value: α}
+  (low_value_min: low_value ≤ f (l[low_index]))
+  (high_index: Nat) (high_in_list: high_index < l.length := by decide) {high_value: α}
+  (high_value_max: f (l[high_index]) ≤ high_value)
+  (length_is_correct: high_index - low_index = toNat high_value - toNat low_value := by decide):
+  ∀ x (h4: x < l.length := by decide) (l_le_x: low_index ≤ x := by decide) (x_le_h: x ≤ high_index := by decide),
+    toNat (f l[x]) = low_value + (x - low_index) := by
+    intro x xlen xg xl
     rw [ToNat.toNat_add]
     -- we are going to sandwhich this thing hard
     -- mins says min + x ≤ f l x
-    let mins := thermometer_mins thermo h0 x xl
+    let mins := thermometer_mins thermo low_index low_in_list low_value_min x xlen xg
     -- maxs says f l x + (length - x - 1) ≤ max
-    let maxs := thermometer_maxs thermo h1 x xl
+    let maxs := thermometer_maxs thermo high_index high_in_list high_value_max x xlen xl
     -- in order to use antisymm, we want maxs to look like, omega can handle it!
-    replace maxs: toNat (f l[x]) ≤ toNat min + x := by omega
+    replace maxs: toNat (f l[x]) ≤ toNat low_value + (x - low_index) := by omega
     exact le_antisymm maxs mins
 
 

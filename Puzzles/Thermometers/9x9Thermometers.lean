@@ -50,27 +50,15 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
-    · exfalso; let this := thermometer_maxs H.thermo8 le_top 0
-      simp only [List.getElem_cons_zero, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd,
-        Nat.add_one_sub_one, tsub_zero, h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo8 le_top 1
-      simp only [List.getElem_cons_succ, List.getElem_cons_zero, h, List.length_cons,
-        List.length_nil, zero_add, Nat.reduceAdd, Nat.add_one_sub_one] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo8 le_top 2
-      simp only [List.getElem_cons_succ, List.getElem_cons_zero, h, List.length_cons,
-        List.length_nil, zero_add, Nat.reduceAdd, Nat.add_one_sub_one] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 0
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 1
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 2
     · exact ⟨_, by simp, h⟩
     · exact ⟨_, by simp, h⟩
     · exact ⟨_, by simp, h⟩
-    · exfalso; let this := thermometer_maxs H.thermo9 le_top 2
-      simp only [List.getElem_cons_succ, List.getElem_cons_zero, h, List.length_cons,
-        List.length_nil, zero_add, Nat.reduceAdd, Nat.add_one_sub_one] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo9 le_top 1
-      simp only [List.getElem_cons_succ, List.getElem_cons_zero, h, List.length_cons,
-        List.length_nil, zero_add, Nat.reduceAdd, Nat.add_one_sub_one] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo9 le_top 0
-      simp only [List.getElem_cons_zero, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd,
-        Nat.add_one_sub_one, tsub_zero, h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 2
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 1
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 0
   }
   have row8point9: ∀ f ∈ S, SupportSet f {69,70} 9 := by freeze {
     intro f hf
@@ -80,15 +68,15 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
-    · exfalso; let this := thermometer_maxs H.thermo8 le_top 0; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo8 le_top 1; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo8 le_top 2; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 0
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 1
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 2
     · exact ⟨_, by simp, h⟩
     · exact ⟨_, by simp, h⟩
-    · exfalso; let this := thermometer_maxs H.thermo8 le_top 3; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo9 le_top 2; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo9 le_top 1; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo9 le_top 0; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 3
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 2
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 1
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 0
   }
   have c65max7: ∀ f ∈ S, f 65 ≤ 7 := by freeze {
     intro f hf
@@ -104,12 +92,6 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; exact SupportSet.in_region h H.b.row8 (row8point8 f hf)
     · exfalso; exact SupportSet.in_region h H.b.row8 (row8point9 f hf)
   }
-  have thermoA: ∀ f ∈ S, Thermometer f [80, 79, 78, 77, 68] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [80, 79, 78, 77, 68] <:+: [80, 79, 78, 77, 68,69] := by decide
-    exact sub_cont_thermo H.thermo9 this1
-  }
   -- hidden triple 789 in row 9. allows a hidden pointing pair 6
   have c72c75c76triple: ∀ f ∈ S, Set.BijOn f {72,75,76} {7,8,9} := by freeze {
     intro f hf
@@ -122,14 +104,14 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exact ⟨_, by simp, h⟩
-    · exfalso; let this := thermometer_maxs H.thermo6 (c65max7 f hf) 2; simp at this; rw [h] at this; rcases ds with rfl | rfl | rfl <;> contradiction
-    · exfalso; let this := thermometer_maxs H.thermo6 (c65max7 f hf) 3; simp at this; rw [h] at this; rcases ds with rfl | rfl | rfl <;> contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 3 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
     · exact ⟨_, by simp, h⟩
     · exact ⟨_, by simp, h⟩
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 3; simp at this; rw [h] at this; rcases ds with rfl | rfl | rfl <;> contradiction
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 2; simp at this; rw [h] at this; rcases ds with rfl | rfl | rfl <;> contradiction
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 1; simp at this; rw [h] at this; rcases ds with rfl | rfl | rfl <;> contradiction
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 0; simp at this; rw [h] at this; rcases ds with rfl | rfl | rfl <;> contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 3 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
   }
   have row9point6: ∀ f ∈ S, SupportSet f {74, 77} 6 := by freeze {
     intro f hf
@@ -140,35 +122,30 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; exact locked_set_in_cell h (c72c75c76triple f hf)
-    · exfalso; let this := thermometer_maxs H.thermo6 (c65max7 f hf) 2; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2
     · exact ⟨_, by simp, h⟩
     · exfalso; exact locked_set_in_cell h (c72c75c76triple f hf)
     · exfalso; exact locked_set_in_cell h (c72c75c76triple f hf)
     · exact ⟨_, by simp, h⟩
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 2; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 1; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 0; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0
   }
   have row8point7: ∀ f (hf: f ∈ S), SupportSet f {65,68} 7 := by freeze {
     intro f hf
     replace H := (H f).mp hf
     unfold SupportSet
     let h := (row9point6 f hf)
-    simp [SupportSet] at h
-    simp
+    simp only [SupportSet, Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp,
+      ↓existsAndEq, true_and] at h
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq, true_and]
     cases h with
     | inl h =>
       left
-      have thermoA: Thermometer f [74,65] := by
-        have this1: [74,65] <:+: [55,64,73,74,65] := by decide
-        exact sub_cont_thermo H.thermo6 this1
-      apply ToNat.toNat_injective (fill_thermo thermoA h.symm.le (c65max7 f hf) (by decide) 1 (by decide))
+      apply ToNat.toNat_injective (fill_thermo H.thermo6 3 (by decide) h.symm.le 4 (by decide) (c65max7 f hf) (by decide) 4)
     | inr h =>
       right
-      have thermoA: Thermometer f [77,68] := by
-        have this1: [77,68] <:+: [80, 79, 78, 77, 68,69] := by decide
-        exact sub_cont_thermo H.thermo9 this1
-      apply ToNat.toNat_injective (fill_thermo thermoA h.symm.le (c68max7 f hf) (by decide) 1 (by decide))
+      apply ToNat.toNat_injective (fill_thermo H.thermo9 3 (by decide) h.symm.le 4 (by decide) (c68max7 f hf) (by decide) 4)
   }
   replace k := add_fact k 62 7 (by freeze {
     -- hidden single in box 9
@@ -178,46 +155,31 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
-    · exfalso; let this := thermometer_maxs H.thermo8 le_top 0; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo8 le_top 1; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 0
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 1
     · exact h
     · exfalso; apply SupportSet.in_region h H.b.row8 (row8point7 f hf)
     · exfalso; apply SupportSet.in_region h H.b.row8 (row8point7 f hf)
     · exfalso; apply SupportSet.in_region h H.b.row8 (row8point7 f hf)
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 2; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 1; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs (thermoA f hf) (c68max7 f hf) 0; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0
   })
-  clear thermoA
-  have thermoA: ∀ f ∈ S, Thermometer f [62,71,70] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [62,71,70] <:+: [60,61,62,71,70] := by decide
-    exact sub_cont_thermo H.thermo8 this1
-  }
   replace k := add_fact k 71 8 (by freeze {
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    ((get_d k 62 7) f hf).symm.le le_top (by decide) 1 (by decide))
+    replace H := (H f).mp hf
+    apply ToNat.toNat_injective (fill_thermo H.thermo8 2 (by decide) ((get_d k 62 7) f hf).symm.le 4 (by decide) le_top (by decide) 3)
   })
   replace k := add_fact k 70 9 (by freeze {
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    ((get_d k 62 7) f hf).symm.le le_top (by decide) 2 (by decide))
+    replace H := (H f).mp hf
+    apply ToNat.toNat_injective (fill_thermo H.thermo8 2 (by decide) ((get_d k 62 7) f hf).symm.le 4 (by decide) le_top (by decide) 4)
   })
-  clear thermoA
   replace k := add_fact k 69 6 (by freeze {
     -- naked single
     intro f hf
     replace H := (H f).mp hf
-    let this := thermometer_mins H.thermo9 bot_le 5; simp only [List.getElem_cons_succ,
-      List.getElem_cons_zero] at this
-    cases h: (f 69)
-    · rw [h] at this; simp at this; contradiction
-    · rw [h] at this; simp at this; contradiction
-    · rw [h] at this; simp at this; contradiction
-    · rw [h] at this; simp at this; contradiction
-    · rw [h] at this; simp at this; contradiction
+    cases h: f 69 <;> try exfalso; apply digit_less_than_thermo_min h H.thermo9 0 (by decide) bot_le 5
     · rfl
     · exfalso; apply digit_in_region h H.b.box9 ((get_d k 62 7) f hf)
     · exfalso; apply digit_in_region h H.b.box9 ((get_d k 71 8) f hf)
@@ -227,34 +189,28 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 80 1 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    apply ToNat.toNat_injective (fill_thermo H.thermo9 bot_le ((get_d k 69 6) f hf).le (by decide) 0 (by decide))
+    apply ToNat.toNat_injective (fill_thermo H.thermo9 0 (by decide) bot_le 5 (by decide) ((get_d k 69 6) f hf).le (by decide) 0)
   })
   replace k := add_fact k 79 2 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    apply ToNat.toNat_injective (fill_thermo H.thermo9 bot_le ((get_d k 69 6) f hf).le (by decide) 1 (by decide))
+    apply ToNat.toNat_injective (fill_thermo H.thermo9 0 (by decide) bot_le 5 (by decide) ((get_d k 69 6) f hf).le (by decide) 1)
   })
   replace k := add_fact k 78 3 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    apply ToNat.toNat_injective (fill_thermo H.thermo9 bot_le ((get_d k 69 6) f hf).le (by decide) 2 (by decide))
+    apply ToNat.toNat_injective (fill_thermo H.thermo9 0 (by decide) bot_le 5 (by decide) ((get_d k 69 6) f hf).le (by decide) 2)
   })
   replace k := add_fact k 77 4 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    apply ToNat.toNat_injective (fill_thermo H.thermo9 bot_le ((get_d k 69 6) f hf).le (by decide) 3 (by decide))
+    apply ToNat.toNat_injective (fill_thermo H.thermo9 0 (by decide) bot_le 5 (by decide) ((get_d k 69 6) f hf).le (by decide) 3)
   })
   replace k := add_fact k 68 5 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    apply ToNat.toNat_injective (fill_thermo H.thermo9 bot_le ((get_d k 69 6) f hf).le (by decide) 4 (by decide))
+    apply ToNat.toNat_injective (fill_thermo H.thermo9 0 (by decide) bot_le 5 (by decide) ((get_d k 69 6) f hf).le (by decide) 4)
   })
-  have thermoA: ∀ f ∈ S, Thermometer f [73,74,65] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [73,74,65] <:+: [55,64,73,74,65] := by decide
-    exact sub_cont_thermo H.thermo6 this1
-  }
   have c73min5: ∀ f ∈ S, 5 ≤ f 73 := by freeze {
     intro f hf
     replace H := (H f).mp hf
@@ -266,27 +222,21 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   }
   replace k := add_fact k 73 5 (by freeze {
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c73min5 f hf) (c65max7 f hf) (by decide) 0 (by decide))
+    replace H := (H f).mp hf
+    apply ToNat.toNat_injective (fill_thermo H.thermo6 2 (by decide) (c73min5 f hf) 4 (by decide) (c65max7 f hf) (by decide) 2)
   })
   replace k := add_fact k 74 6 (by freeze {
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c73min5 f hf) (c65max7 f hf) (by decide) 1 (by decide))
+    replace H := (H f).mp hf
+    apply ToNat.toNat_injective (fill_thermo H.thermo6 2 (by decide) (c73min5 f hf) 4 (by decide) (c65max7 f hf) (by decide) 3)
   })
   replace k := add_fact k 65 7 (by freeze {
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c73min5 f hf) (c65max7 f hf) (by decide) 2 (by decide))
+    replace H := (H f).mp hf
+    apply ToNat.toNat_injective (fill_thermo H.thermo6 2 (by decide) (c73min5 f hf) 4 (by decide) (c65max7 f hf) (by decide) 4)
   })
   -- lets clean up some pencil marks
-  clear thermoA row8point7 row8point8 row8point9 c65max7 c68max7 row9point6 c73min5
-  have thermoA: ∀ f ∈ S, Thermometer f [60,61] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [60,61] <:+: [60,61,62,71,70] := by decide
-    exact sub_cont_thermo H.thermo8 this1
-  }
+  clear row8point7 row8point8 row8point9 c65max7 c68max7 row9point6 c73min5
   have c60min4: ∀ f ∈ S, 4 ≤ f 60 := by freeze {
     intro f hf
     replace H := (H f).mp hf
@@ -306,15 +256,15 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   }
   replace k := add_fact k 60 4 (by freeze {
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c60min4 f hf) (c61max5 f hf) (by decide) 0 (by decide))
+    replace H := (H f).mp hf
+    apply ToNat.toNat_injective (fill_thermo H.thermo8 0 (by decide) (c60min4 f hf) 1 (by decide) (c61max5 f hf) (by decide) 0)
   })
   replace k := add_fact k 61 5 (by freeze {
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c60min4 f hf) (c61max5 f hf) (by decide) 1 (by decide))
+    replace H := (H f).mp hf
+    apply ToNat.toNat_injective (fill_thermo H.thermo8 0 (by decide) (c60min4 f hf) 1 (by decide) (c61max5 f hf) (by decide) 1)
   })
-  clear thermoA c60min4 c61max5
+  clear c60min4 c61max5
   have row3point1: ∀ f ∈ S, SupportSet f {24,25} 1 := by freeze {
     intro f hf
     replace H := (H f).mp hf
@@ -364,39 +314,27 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h ((get_d k 0 1) f hf)
-    · exfalso; let this := thermometer_mins H.thermo2 bot_le 5; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins H.thermo2 bot_le 4; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins H.thermo1 (c27min2 f hf) 2; simp [h] at this
-    · exfalso; let this := thermometer_mins H.thermo1 (c27min2 f hf) 3; simp [h] at this
-    · exfalso; let this := thermometer_mins H.thermo2 bot_le 3; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins H.thermo1 (c27min2 f hf) 1; simp [h] at this
+    · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 5
+    · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 4
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 0 (by decide) (c27min2 f hf) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 0 (by decide) (c27min2 f hf) 3
+    · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 3
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 0 (by decide) (c27min2 f hf) 1
     · exact h
-    · exfalso; let this := thermometer_mins H.thermo2 bot_le 2; simp [h] at this; contradiction
+    · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 2
   })
-  have thermoB: ∀ f ∈ S, Thermometer f [28,29,20,11] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [28,29,20,11] <:+: [28,29,20,11,2,1] := by decide
-    exact sub_cont_thermo H.thermo2 this1
-  }
   have c11max5: ∀ f ∈ S, f 11 ≤ 5 := by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let this := thermometer_maxs H.thermo2 le_top 3
-    simp at this
-    cases h: f 11 <;> rw [h] at this <;> try decide
+    cases h: f 11 <;> first | decide | exfalso; apply digit_greater_than_thermo_max h H.thermo2 5 (by decide) le_top 3 | exfalso
     · exfalso; apply digit_in_region h H.b.col3 ((get_d k 74 6) f hf)
     · exfalso; apply digit_in_region h H.b.col3 ((get_d k 65 7) f hf)
-    · absurd this; decide
-    · absurd this; decide
   }
   replace k := add_fact k 28 1 (by freeze {
     intro f hf
     replace H := (H f).mp hf
     -- set up upper bound of 2 for this cell
-    let this := thermometer_maxs (thermoB f hf) (c11max5 f hf) 0
-    simp at this
-    cases h: f 28 <;> try {absurd this; rw [h]; decide}
+    cases h: f 28 <;> try exfalso; apply digit_greater_than_thermo_max h H.thermo2 3 (by decide) (c11max5 f hf) 0
     · rfl
     · exfalso; apply digit_in_region h H.b.col2 ((get_d k 19 2) f hf)
   })
@@ -404,9 +342,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     intro f hf
     replace H := (H f).mp hf
     -- set up upper bound of 3 for this cell
-    let this := thermometer_maxs H.thermo6 ((get_d k 65 7) f hf).le 0
-    simp at this
-    cases h: f 55 <;> try {absurd this; rw [h]; decide}
+    cases h: f 55 <;> try exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) ((get_d k 65 7) f hf).le 0
     · exfalso; apply digit_in_region h H.b.col2 ((get_d k 28 1) f hf)
     · exfalso; apply digit_in_region h H.b.col2 ((get_d k 19 2) f hf)
     · rfl
@@ -414,7 +350,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 64 4 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    apply ToNat.toNat_injective (fill_thermo H.thermo6 (((get_d k 55 3) f hf).symm.le) (((get_d k 65 7) f hf).le) (by decide) 1 (by decide))
+    apply ToNat.toNat_injective (fill_thermo H.thermo6 0 (by decide) (((get_d k 55 3) f hf).symm.le) 4 (by decide) (((get_d k 65 7) f hf).le) (by decide) 1)
   })
   replace k := add_fact k 63 2 (by freeze {
     -- naked single
@@ -447,41 +383,33 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h ((get_d k 0 1) f hf)
-    · exfalso; let this := thermometer_mins H.thermo2 bot_le 5; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins H.thermo2 bot_le 4; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins H.thermo1 (c27min3 f hf) 2; simp [h] at this
-    · exfalso; let this := thermometer_mins H.thermo1 (c27min3 f hf) 3; simp [h] at this
-    · exfalso; let this := thermometer_mins H.thermo2 bot_le 3; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins H.thermo1 (c27min3 f hf) 1; simp [h] at this
+    · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 5
+    · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 4
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 0 (by decide) (c27min3 f hf) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 0 (by decide) (c27min3 f hf) 3
+    · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 3
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 0 (by decide) (c27min3 f hf) 1
     · exfalso; apply digit_in_cell h ((get_d k 19 2) f hf)
     · exact h
   })
-  have thermoA: ∀ f ∈ S, Thermometer f [28,29,20] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [28,29,20] <:+: [28,29,20,11,2,1] := by decide
-    exact sub_cont_thermo H.thermo2 this1
-  }
   replace k := add_fact k 29 2 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) (((get_d k 28 1) f hf).symm.le) (((get_d k 20 3) f hf).le) (by decide) 1 (by decide))
+    apply ToNat.toNat_injective (fill_thermo H.thermo2 0 (by decide) (((get_d k 28 1) f hf).symm.le) 2 (by decide) (((get_d k 20 3) f hf).le) (by decide) 1 (by decide))
   })
-  clear thermoA thermoB c11max5
+  clear c11max5
   have c6min5: ∀ f ∈ S, 5 ≤ f 6 := by freeze {
     -- thermo3 min is 4, 4 in column
     intro f hf
     replace H := (H f).mp hf
-    let this := thermometer_mins H.thermo3 bot_le 3; simp at this
-    cases h: f 6 <;> first | decide | absurd this; rw [h]; decide | exfalso
+    cases h: f 6 <;> first | decide | exfalso; apply digit_less_than_thermo_min h H.thermo3 0 (by decide) bot_le 3 | exfalso
     · apply digit_in_region h H.b.col7 ((get_d k 60 4) f hf)
   }
   have c15min5: ∀ f ∈ S, 5 ≤ f 15 := by freeze {
     -- thermo4 min is 3, 3 and 4 in column
     intro f hf
     replace H := (H f).mp hf
-    let this := thermometer_mins H.thermo4 bot_le 2; simp at this
-    cases h: f 15 <;> first | decide | absurd this; rw [h]; decide | exfalso
+    cases h: f 15 <;> first | decide | exfalso; apply digit_less_than_thermo_min h H.thermo4 0 (by decide) bot_le 2 | exfalso
     · apply digit_in_region h H.b.col7 ((get_d k 78 3) f hf)
     · apply digit_in_region h H.b.col7 ((get_d k 60 4) f hf)
   }
@@ -504,30 +432,14 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     apply locked_set_from_naked_set (H.b.box3)
     intro c h
     rcases h with rfl | rfl
-    · let this := thermometer_maxs H.thermo3 (c7max8 f hf) 3
-      simp at this
-      cases h: f 6 <;> first | decide | absurd (c6min5 f hf); rw [h]; decide | exfalso
+    · cases h: f 6 <;> first | decide | absurd (c6min5 f hf); rw [h]; decide | exfalso
       · apply digit_in_region h H.b.col7 ((get_d k 69 6) f hf)
-      · absurd this; rw [h]; decide
-      · absurd this; rw [h]; decide
-    · let this := thermometer_maxs H.thermo4 (c16max8 f hf) 2
-      simp at this
-      cases h: f 15 <;> first | decide | absurd (c15min5 f hf); rw [h]; decide | exfalso
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo3 4 (by decide) (c7max8 f hf) 3
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo3 4 (by decide) (c7max8 f hf) 3
+    · cases h: f 15 <;> first | decide | absurd (c15min5 f hf); rw [h]; decide | exfalso
       · apply digit_in_region h H.b.col7 ((get_d k 69 6) f hf)
-      · absurd this; rw [h]; decide
-      · absurd this; rw [h]; decide
-  }
-  have thermoA: ∀ f ∈ S, Thermometer f [6,7] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [6,7] <:+: [13,4,5,6,7] := by decide
-    exact sub_cont_thermo H.thermo3 this1
-  }
-  have thermoB: ∀ f ∈ S, Thermometer f [15,16] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [15,16] <:+: [13,14,15,16] := by decide
-    exact sub_cont_thermo H.thermo4 this1
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo4 3 (by decide) (c16max8 f hf) 2
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo4 3 (by decide) (c16max8 f hf) 2
   }
   have c7c16pair: ∀ f ∈ S, Set.BijOn f {7,16} {6,8} := by freeze {
     -- by min max, and 7 in box
@@ -536,14 +448,10 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     apply locked_set_from_naked_set (H.b.box3)
     intro c h
     rcases h with rfl | rfl
-    · let this := thermometer_mins (thermoA f hf) (c6min5 f hf) 1
-      simp at this
-      cases h: f 7 <;> first | decide | absurd this; rw [h]; decide | exfalso
+    · cases h: f 7 <;> first | decide | exfalso; apply digit_less_than_thermo_min h H.thermo3 3 (by decide) (c6min5 f hf) 4 | exfalso
       · apply locked_set_in_region h H.b.box3 (c6c15pair f hf)
       · absurd (c7max8 f hf); rw [h]; decide
-    · let this := thermometer_mins (thermoB f hf) (c15min5 f hf) 1
-      simp at this
-      cases h: f 16 <;> first | decide | absurd this; rw [h]; decide | exfalso
+    · cases h: f 16 <;> first | decide | exfalso; apply digit_less_than_thermo_min h H.thermo4 2 (by decide) (c15min5 f hf) 3 | exfalso
       · apply locked_set_in_region h H.b.box3 (c6c15pair f hf)
       · absurd (c16max8 f hf); rw [h]; decide
   }
@@ -613,15 +521,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   have c18min5: ∀ f ∈ S, 5 ≤ f 18 := by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let this := thermometer_mins H.thermo1 (c27min3 f hf) 1; simp at this
-    cases h: f 18 <;> first | decide | absurd this; rw [h]; decide | exfalso
+    cases h: f 18 <;> first | decide | exfalso; apply digit_less_than_thermo_min h H.thermo1 0 (by decide) (c27min3 f hf) 1 | exfalso
     · apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
-  }
-  have thermoC: ∀ f ∈ S, Thermometer f [18,9,10] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [18,9,10] <:+: [27,18,9,10] := by decide
-    exact sub_cont_thermo H.thermo1 this1
   }
   replace k := add_fact k 11 4 (by freeze {
     intro f hf
@@ -631,10 +532,10 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       exists_eq_or_imp, ↓existsAndEq, true_and] at h
     split_disjunctive_9 h
     · exfalso; apply digit_in_cell h ((get_d k 0 1) f hf)
-    · exfalso; let this := thermometer_mins H.thermo2 bot_le 5; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins H.thermo2 bot_le 4; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins (thermoC f hf) (c18min5 f hf) 1; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins (thermoC f hf) (c18min5 f hf) 2; simp [h] at this; contradiction
+    · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 5
+    · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 4
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 1 (by decide) (c18min5 f hf) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 1 (by decide) (c18min5 f hf) 3
     · exact h
     · exfalso; absurd (c18min5 f hf); rw [h]; decide
     · exfalso; apply digit_in_cell h ((get_d k 19 2) f hf)
@@ -715,31 +616,28 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     replace H := (H f).mp hf
     unfold SupportSet
     cases h: f 5
-    · exfalso; let this := thermometer_mins H.thermo3 bot_le 2; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_mins H.thermo3 bot_le 2; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_less_than_thermo_min h H.thermo3 0 (by decide) bot_le 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo3 0 (by decide) bot_le 2
     · -- the complicated case
-      have thermoD: Thermometer f [13,4,5] := by
-        have this1: [13,4,5] <:+: [13,4,5,6,7] := by decide
-        exact sub_cont_thermo H.thermo3 this1
       have c4: f 4 = 2 := by
-        apply ToNat.toNat_injective
-        simpa using fill_thermo thermoD bot_le h.le (by decide) 1
+        apply ToNat.toNat_injective (fill_thermo H.thermo3 0 (by decide) bot_le 2 (by decide) h.le (by decide) 1)
       cases h1: f 14
-      · exfalso; let this := thermometer_mins H.thermo4 bot_le 1; simp at this; rw [h1] at this; contradiction
+      · exfalso; apply digit_less_than_thermo_min h1 H.thermo4 0 (by decide) bot_le 1
       · exfalso; apply digit_in_region h1 H.b.box2 c4
       · exfalso; apply digit_in_region h1 H.b.box2 h
       · exfalso; apply digit_in_region h1 H.b.col6 ((get_d k 77 4) f hf)
       · exfalso; apply digit_in_region h1 H.b.col6 ((get_d k 68 5) f hf)
       · exact ⟨_, by simp, h1⟩
-      · exfalso; let this := thermometer_maxs H.thermo4 (c16max8 f hf) 1; simp at this; rw [h1] at this; contradiction
-      · exfalso; let this := thermometer_maxs H.thermo4 (c16max8 f hf) 1; simp at this; rw [h1] at this; contradiction
-      · exfalso; let this := thermometer_maxs H.thermo4 (c16max8 f hf) 1; simp at this; rw [h1] at this; contradiction
+      -- · exfalso; apply digit_greater_than_thermo_max H.thermo4 (c16max8 f hf) 1; simp at this; rw [h1] at this; contradiction
+      · exfalso; apply digit_greater_than_thermo_max h1 H.thermo4 3 (by decide) (c16max8 f hf) 1
+      · exfalso; apply digit_greater_than_thermo_max h1 H.thermo4 3 (by decide) (c16max8 f hf) 1
+      · exfalso; apply digit_greater_than_thermo_max h1 H.thermo4 3 (by decide) (c16max8 f hf) 1
     · exfalso; apply digit_in_region h H.b.col6 ((get_d k 77 4) f hf)
     · exfalso; apply digit_in_region h H.b.col6 ((get_d k 68 5) f hf)
     · exact ⟨_, by simp, h⟩
-    · exfalso; let this := thermometer_maxs H.thermo3 (c7max8 f hf) 2; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo3 (c7max8 f hf) 2; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo3 (c7max8 f hf) 2; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo3 4 (by decide) (c7max8 f hf) 2
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo3 4 (by decide) (c7max8 f hf) 2
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo3 4 (by decide) (c7max8 f hf) 2
   }
   replace k := add_fact k 18 6 (by freeze {
     -- hidden single in row 3
@@ -764,12 +662,12 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     intro f hf
     replace H := (H f).mp hf
     cases h: f 9
-    · exfalso; let this := thermometer_mins (thermoC f hf) (((get_d k 18 6) f hf).symm.le) 1; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_mins (thermoC f hf) (((get_d k 18 6) f hf).symm.le) 1; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_mins (thermoC f hf) (((get_d k 18 6) f hf).symm.le) 1; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_mins (thermoC f hf) (((get_d k 18 6) f hf).symm.le) 1; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_mins (thermoC f hf) (((get_d k 18 6) f hf).symm.le) 1; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_mins (thermoC f hf) (((get_d k 18 6) f hf).symm.le) 1; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 1 (by decide) (((get_d k 18 6) f hf).symm.le) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 1 (by decide) (((get_d k 18 6) f hf).symm.le) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 1 (by decide) (((get_d k 18 6) f hf).symm.le) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 1 (by decide) (((get_d k 18 6) f hf).symm.le) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 1 (by decide) (((get_d k 18 6) f hf).symm.le) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 1 (by decide) (((get_d k 18 6) f hf).symm.le) 2
     · rfl
     · exfalso; apply locked_set_in_region h H.b.col1 (c54c72pair f hf)
     · exfalso; apply locked_set_in_region h H.b.col1 (c54c72pair f hf)
@@ -785,7 +683,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply digit_in_region h H.b.col2 ((get_d k 73 5) f hf)
     · exact h
     · exfalso; apply digit_in_cell h ((get_d k 9 7) f hf)
-    · exfalso; let this := thermometer_mins (thermoC f hf) (((get_d k 18 6) f hf).symm.le) 2; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_less_than_thermo_min h H.thermo1 1 (by decide) (((get_d k 18 6) f hf).symm.le) 3
     · exfalso; apply digit_in_cell h ((get_d k 11 4) f hf)
     · exfalso; apply digit_in_cell h ((get_d k 18 6) f hf)
     · exfalso; apply digit_in_cell h ((get_d k 19 2) f hf)
@@ -840,7 +738,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     replace H := (H f).mp hf
     replace h := (c7c16pair f hf).mapsTo (x := 7) (by simp)
     cases h with
-    | inl h => exfalso; let this := thermometer_mins (thermoA f hf) ((get_d k 6 7) f hf).symm.le 1; simp at this; rw [h] at this; contradiction
+    | inl h => exfalso; apply digit_less_than_thermo_min h H.thermo3 3 (by decide) (((get_d k 6 7) f hf).symm.le) 4
     | inr h => exact h
   })
   replace k := add_fact k 16 6 (by freeze {
@@ -853,7 +751,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     intro f hf
     replace H := (H f).mp hf
     replace h := (c5c14_6 f hf)
-    simp [SupportSet] at h
+    simp only [SupportSet, Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp,
+      ↓existsAndEq, true_and] at h
     cases h with
     | inl h => exact h
     | inr h => exfalso; apply digit_in_region h H.b.row2 ((get_d k 16 6) f hf)
@@ -884,8 +783,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply digit_in_region h H.b.row1 ((get_d k 1 9) f hf)
     · exfalso; apply digit_in_region h H.b.row1 ((get_d k 1 9) f hf)
     · exact h
-    · exfalso; let this := thermometer_maxs H.thermo4 le_top 0; simp at this; rw [h] at this; contradiction
-    · exfalso; let this := thermometer_maxs H.thermo4 le_top 1; simp at this; rw [h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo4 3 (by decide) le_top 0
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo4 3 (by decide) le_top 1
     · exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
     · exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
     · exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
@@ -902,7 +801,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply digit_in_region h H.b.row1 ((get_d k 0 1) f hf)
     · exfalso; apply digit_in_cell h ((get_d k 12 9) f hf)
     · exact h
-    · exfalso; let this := thermometer_mins H.thermo4 bot_le 1; simp [h] at this; contradiction
+    · exfalso; apply digit_less_than_thermo_min h H.thermo4 0 (by decide) bot_le 1
     · exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
     · exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
     · exfalso; apply locked_set_in_region h H.b.row3 (c24c25c26triple f hf)
@@ -959,10 +858,11 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     cases ch with
     | inl h => rw [h]; apply (c38c47pair f hf).mapsTo (by decide)
     | inr h =>
-      let this := thermometer_mins H.thermo7 bot_le 3
-      simp at this
       rw [h]
-      cases h: f 51 <;> rw [h] at this <;> try contradiction
+      cases h: f 51
+      · exfalso; apply digit_less_than_thermo_min h H.thermo7 0 (by decide) bot_le 3
+      · exfalso; apply digit_less_than_thermo_min h H.thermo7 0 (by decide) bot_le 3
+      · exfalso; apply digit_less_than_thermo_min h H.thermo7 0 (by decide) bot_le 3
       · exfalso; apply digit_in_region h H.b.col7 ((get_d k 60 4) f hf)
       · exfalso; apply digit_in_region h H.b.col7 ((get_d k 15 5) f hf)
       · exfalso; apply digit_in_region h H.b.col7 ((get_d k 69 6) f hf)
@@ -980,9 +880,9 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     intro f hf
     replace H := (H f).mp hf
     cases h: f 50
-    · exfalso; let this := thermometer_mins H.thermo7 (c58min2 f hf) 2; simp [h] at this; contradiction
-    · exfalso; let this := thermometer_mins H.thermo7 (c58min2 f hf) 2; simp [h] at this
-    · exfalso; let this := thermometer_mins H.thermo7 (c58min2 f hf) 2; simp [h] at this; contradiction
+    · exfalso; apply digit_less_than_thermo_min h H.thermo7 0 (by decide) (c58min2 f hf) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo7 0 (by decide) (c58min2 f hf) 2
+    · exfalso; apply digit_less_than_thermo_min h H.thermo7 0 (by decide) (c58min2 f hf) 2
     · exfalso; apply digit_in_region h H.b.col6 ((get_d k 77 4) f hf)
     · exfalso; apply digit_in_region h H.b.col6 ((get_d k 68 5) f hf)
     · exfalso; apply digit_in_region h H.b.col6 ((get_d k 5 6) f hf)
@@ -1018,28 +918,20 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply digit_in_region h H.b.col2 ((get_d k 10 8) f hf)
     · exfalso; apply digit_in_region h H.b.col2 ((get_d k 1 9) f hf)
   })
-  clear thermoC c27min3 c6min5 c15min5 c7max8 c16max8 thermoA thermoB
-  have thermoA: ∀ f ∈ S, Thermometer f [58,49,50] := by freeze {
-    intro f hf
-    replace H := (H f).mp hf
-    have this1: [58,49,50] <:+: [58,49,50,51] := by decide
-    exact sub_cont_thermo H.thermo7 this1
-  }
+  clear c27min3 c6min5 c15min5 c7max8 c16max8
   replace k := add_fact k 58 2 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let this := thermometer_maxs (thermoA f hf) ((get_d k 50 7) f hf).le 0
-    simp at this
     cases h: f 58
     · exfalso; apply digit_in_region h H.b.box8 ((get_d k 66 1) f hf)
     · rfl
     · exfalso; apply digit_in_region h H.b.box8 ((get_d k 67 3) f hf)
     · exfalso; apply digit_in_region h H.b.box8 ((get_d k 77 4) f hf)
     · exfalso; apply digit_in_region h H.b.box8 ((get_d k 68 5) f hf)
-    · exfalso; rw [h] at this; contradiction
-    · exfalso; rw [h] at this; contradiction
-    · exfalso; rw [h] at this; contradiction
-    · exfalso; rw [h] at this; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo7 2 (by decide) ((get_d k 50 7) f hf).le 0
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo7 2 (by decide) ((get_d k 50 7) f hf).le 0
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo7 2 (by decide) ((get_d k 50 7) f hf).le 0
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo7 2 (by decide) ((get_d k 50 7) f hf).le 0
   })
   replace k := add_fact k 4 4 (by freeze {
     intro f hf
@@ -1058,20 +950,16 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 49 5 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let this1 := thermometer_mins (thermoA f hf) ((get_d k 58 2) f hf).symm.le 1
-    let this2 := thermometer_maxs (thermoA f hf) ((get_d k 50 7) f hf).le 1
-    simp at this1
-    simp at this2
     cases h: f 49
-    · exfalso; rw [h] at this1; contradiction
-    · exfalso; rw [h] at this1; contradiction
+    · exfalso; apply digit_less_than_thermo_min h H.thermo7 0 (by decide) ((get_d k 58 2) f hf).symm.le 1
+    · exfalso; apply digit_less_than_thermo_min h H.thermo7 0 (by decide) ((get_d k 58 2) f hf).symm.le 1
     · exfalso; apply digit_in_region h H.b.col5 ((get_d k 67 3) f hf)
     · exfalso; apply digit_in_region h H.b.col5 ((get_d k 4 4) f hf)
     · rfl
     · exfalso; apply digit_in_region h H.b.row6 ((get_d k 46 6) f hf)
-    · exfalso; rw [h] at this2; contradiction
-    · exfalso; rw [h] at this2; contradiction
-    · exfalso; rw [h] at this2; contradiction
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo7 2 (by decide) ((get_d k 50 7) f hf).le 1
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo7 2 (by decide) ((get_d k 50 7) f hf).le 1
+    · exfalso; apply digit_greater_than_thermo_max h H.thermo7 2 (by decide) ((get_d k 50 7) f hf).le 1
   })
   replace k := add_fact k 23 8 (by freeze {
     intro f hf
@@ -1166,7 +1054,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     replace H := (H f).mp hf
     have this1: ({7, 8, 9} \ {9}: Set Symbols9) = {7, 8} := by
       ext x
-      simp
+      simp only [Set.mem_diff, Set.mem_insert_iff, Set.mem_singleton_iff]
       apply Iff.intro
       · intro ⟨h1, h2⟩
         rcases h1 with rfl | rfl | rfl
@@ -1275,9 +1163,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 39 8 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    cases h: f 39 <;> try {
-      exfalso; let this := thermometer_mins H.thermo5 (c30min4 f hf) 1; simp [h] at this; try contradiction
-    }
+    cases h: f 39 <;> try exfalso; apply digit_less_than_thermo_min h H.thermo5 0 (by decide) (c30min4 f hf) 1
     · exfalso; apply digit_in_region h H.b.col4 ((get_d k 21 5) f hf)
     · exfalso; apply digit_in_region h H.b.col4 ((get_d k 57 6) f hf)
     · exfalso; apply digit_in_region h H.b.col4 ((get_d k 75 7) f hf)
@@ -1315,10 +1201,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 27 5 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-
-    cases h: f 27 <;> try {
-      exfalso; let this := thermometer_maxs H.thermo1 ((get_d k 10 8) f hf).le 0; simp [h] at this; try contradiction
-    }
+    cases h: f 27 <;> try exfalso; apply digit_greater_than_thermo_max h H.thermo1 3 (by decide) ((get_d k 10 8) f hf).le 0
     · exfalso; apply digit_in_region h H.b.row4 ((get_d k 28 1) f hf)
     · exfalso; apply digit_in_region h H.b.row4 ((get_d k 29 2) f hf)
     · exfalso; apply digit_in_region h H.b.row4 ((get_d k 32 3) f hf)
@@ -1343,12 +1226,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       · exfalso; apply digit_in_region h H.b.col7 ((get_d k 6 7) f hf)
       · decide
       · decide
-    · have thermoA: Thermometer f [50,51] := by
-        have this1: [50,51] <:+: [58,49,50,51] := by decide
-        exact sub_cont_thermo H.thermo7 this1
-      let this := thermometer_mins thermoA ((get_d k 50 7) f hf).symm.le 1
-      simp at this
-      cases h: f 51 <;> try {rw [h] at this; contradiction}
+    · cases h: f 51 <;> try exfalso; apply digit_less_than_thermo_min h H.thermo7 2 (by decide) ((get_d k 50 7) f hf).symm.le 3
       · decide
       · decide
   }
@@ -1385,7 +1263,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     replace H := (H f).mp hf
     simpa using locked_set_reducton (c25c26pair f hf) ((get_d k 25 4) f hf)
   })
-  clear c25c26pair thermoA c58min2
+  clear c25c26pair c58min2
   replace k := add_fact k 42 2 (by freeze {
     intro f hf
     replace H := (H f).mp hf

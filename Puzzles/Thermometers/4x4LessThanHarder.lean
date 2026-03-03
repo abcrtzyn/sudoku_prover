@@ -101,18 +101,18 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   -- now to fill the thermo
   replace k := add_fact k 0 2 (by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c0min f hf) (c2max f hf) (by decide) 0 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) 0 (by decide) (c0min f hf)
+      2 (by decide) (c2max f hf) (by decide) 0)
   )
   replace k := add_fact k 1 3 (by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c0min f hf) (c2max f hf) (by decide) 1 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) 0 (by decide) (c0min f hf)
+      2 (by decide) (c2max f hf) (by decide) 1 (by decide))
   )
   replace k := add_fact k 2 4 (by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c0min f hf) (c2max f hf) (by decide) 2 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) 0 (by decide) (c0min f hf)
+      2 (by decide) (c2max f hf) (by decide) 2 (by decide))
   )
   clear thermoA c0min c2max
   -- new thermo
@@ -137,13 +137,13 @@ theorem SolveLessThanPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔
   -- now to fill the thermo
   replace k := add_fact k 6 3 (by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c7min f hf) (c6max f hf) (by decide) 1 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) 0 (by decide) (c7min f hf)
+      1 (by decide) (c6max f hf) (by decide) 1)
   )
   replace k := add_fact k 7 2 (by
     intro f hf
-    apply ToNat.toNat_injective (fill_thermo (thermoA f hf)
-    (c7min f hf) (c6max f hf) (by decide) 0 (by decide))
+    apply ToNat.toNat_injective (fill_thermo (thermoA f hf) 0 (by decide) (c7min f hf)
+      1 (by decide) (c6max f hf) (by decide) 0)
   )
   replace k := add_fact k 4 4 (by
     intro f hf
