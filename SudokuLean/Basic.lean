@@ -110,7 +110,12 @@ theorem SupportSet.in_region {α} {f: Nat -> α} {r} {S: Set Nat} {target: Nat} 
     contradiction
   refine digit_in_region target_d ur c1v this target_r (sr c1S)
 
--- does not matter which region that is used, as long at it has injectivity. We need to know that these 2 cells have to be different for some reason
+
+-- locked set are pairs where 2 cells contain the same 2 candidates in the same region.
+-- they can be found by having 2 cells with 2 candidates or support sets on the same cells with different digits.
+
+-- does not matter which region that is used, as long at it has injectivity.
+-- We need to know that these 2 cells have to be different for some reason
 theorem locked_set_from_naked_set {α} {f: Nat -> α} {cells: Set Nat} {digits: Set α} {region: Set Nat}
   (ur: UniqueRegion f region)
   (naked_prop: ∀ c ∈ cells, f c ∈ digits)
@@ -197,22 +202,6 @@ theorem locked_set_reducton {α} {f: Nat -> α} {cells: Set Nat} {digits: Set α
         apply h_found
     · apply xh1
 
--- theorem locked_set_single {α} {f: Nat -> α} {c: Nat} {d: α}
---   (h: Set.BijOn f {c} {d}): f c = d := h.mapsTo (by simp)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- this theorem specifically applies the locked set principle to a region that is the full set of digits of 1 to 9
 theorem region_full_set_bijective {α} [Fintype α] {r: Set Nat} {f: Nat -> α}
   (unique_region: UniqueRegion f r) (card_same: r.ncard = Fintype.card α := by simp):
@@ -224,5 +213,16 @@ theorem region_full_set_bijective {α} [Fintype α] {r: Set Nat} {f: Nat -> α}
     assumption
 
 
+-- this section is fishy...as in x wings, swordfish, jellyfish
+-- multi-support sets.
+-- for a digit d, given a support set in region A and region B (A and B are disjoint),
+-- if all cells in all support sets are in regions C, it creates support sets in regions C
+-- eventually, I want this to be set logic, but I am starting with numeric cases
 
-  -- Can remove digits not in D from cells C
+-- theorem xwing {α} {f: Nat -> α} (d: α) {B1 B2: Set Nat} {C1 C2: Set Nat}
+--   (disjoint: B1 ∩ B2 = ∅)
+--   (urb1: UniqueRegion f B1) (urb2: UniqueRegion f B2)
+--   (urc1: UniqueRegion f C1) (urc2: UniqueRegion f C2)
+
+--   (ss1: SupportSet f cells1 d) (ss1ss: cells1 ⊆ B1)
+--   (ss2: SupportSet f cells2 d) (ss2ss: cells2 ⊆ B2)
