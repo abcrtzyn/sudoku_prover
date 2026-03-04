@@ -190,7 +190,7 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     · assumption
   )
   replace k := add_fact k 26 6 (by
-    -- hidden single in column 7
+    -- hidden single in column 9
     intro f hf
     replace H := (H f).mp hf
     let h := (region_full_set_bijective H.b.col9).surjOn (Set.mem_univ 6)
