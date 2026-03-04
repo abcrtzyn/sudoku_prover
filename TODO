@@ -1,0 +1,24 @@
+- need pencil marks on the interface, buttons to switch modes
+- easy backspace to erase (also typing the same digit erase)
+
+some functionality
+- select cell, press naked logic to fill
+- select cell, press hidden logic to fill (checks each region it is a part of for hidden quality)
+- select more than one cell, press naked or hidden logic to create locked set
+- conflict checker should be able to eliminate using locked sets in region
+- support sets
+- select cell(s), fill candidates button. Fills with center pencil marks of valid possibilities
+
+edit mode
+- for adding givens and much other grid furniture
+- eventually selecting templates
+
+storage format
+- I will need an intermediate storage format, which should keep all constraints, and logic steps in a consise format.
+
+
+finally writing the proofs
+
+nice to haves
+- multi select/single select
+- way later drag select (really not needed)
