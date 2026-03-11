@@ -1,18 +1,4 @@
-import Mathlib.Data.Set.Defs
-import Mathlib.Logic.ExistsUnique
-import Mathlib.Data.Set.Operations
-import Mathlib.Data.Set.Insert
-import Mathlib.Data.Set.Function
-import Mathlib.Data.Fintype.Defs
-import Mathlib.Data.Fintype.Card
 import Mathlib.Data.Set.Card
-import Mathlib.Tactic.IntervalCases
-import Mathlib.Data.Fintype.Card
-import Mathlib.Tactic.Fincases
-import Mathlib.Data.List.Nodup
-
--- import MathLib.Data.Finset.Defs
--- import Mathlib.Data.Finset.Dedup
 
 set_option linter.style.whitespace false
 set_option linter.style.longLine false
