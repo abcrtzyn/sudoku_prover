@@ -7,7 +7,7 @@ class ToNat (α : Type) [HAdd α Nat Nat] [LinearOrder α] where
   toNat_le_iff : ∀ {a b : α}, a ≤ b ↔ toNat a ≤ toNat b
   toNat_add : ∀ (a : α) (n : Nat), a + n = toNat a + n
 
-attribute [instance] ToNat.toNat
+
 export ToNat (toNat)
 
 lemma ToNat.toNat_lt_iff {α} [HAdd α Nat Nat] [LinearOrder α] [ToNat α] {a b : α} :
