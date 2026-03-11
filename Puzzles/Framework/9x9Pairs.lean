@@ -2,6 +2,7 @@ import SudokuLean.Basic
 import SudokuLean.BaselineConstraints
 import SudokuLean.Symbols9
 import SudokuLean.Tactics
+import Mathlib.Tactic.IntervalCases
 
 
 set_option linter.style.whitespace false

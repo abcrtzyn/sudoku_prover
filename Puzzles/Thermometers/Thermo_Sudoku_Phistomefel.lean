@@ -3,6 +3,7 @@ import SudokuLean.Symbols9
 import SudokuLean.Thermometer
 import SudokuLean.Tactics
 import SudokuLean.BaselineConstraints
+import Mathlib.Tactic.IntervalCases
 
 set_option linter.style.whitespace false
 set_option linter.style.longLine false
