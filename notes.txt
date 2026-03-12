@@ -1,0 +1,41 @@
+Lemmas
+- There is one thing that I hate right now, and it is the amount of effort to do hidden logic
+    There are 3 objects that can have hidden logic applied:
+    1. UniqueSets of the same cardinality as the digits type, (region_full_locked_set H.b.box9) turns it into a locked set
+    2. Locked Set, locked_support_cases (locked set) D
+    3. Support Set, support_cases
+    Usually you want to show that there is one place for D in the region/set
+    We might need to show some other goal. In the case of Schubladen, the first bits of logic, 
+    there is a support set c18c71 on 1. By hidden logic, c26 and c63 are not 1
+- I have this system where there are ways to do cases on things
+    1. Naked logic, do cases over the digits in a cell to prove something. MapsTo logic
+    2. Hidden logic, do cases over a surjective region to prove something. SurjOn logic
+    Usually the thing to prove is that cell x is some digit, but it shouldn't have to be
+- All that said, I have to unify some of these systems.
+    - UniqueSets are done with Set.InjOn
+    - Locked sets are done with Set.BijOn
+    - Support sets should be done with Set.SurjOn
+    - Any hidden logic should have cases on a bijection or surjection object
+    - Any naked logic should have cases on a mapsto object
+
+Constraint Ideas
+- Global sum
+    ∃ F(c) k
+    s.t. for all c, F(c) ∈ powerset digits - {∅}
+    all cages sum to k
+    ∃ a way to pick from F to satisfy the constraints
+    ->
+    ∃! solution f(c) k₀
+    s.t for all c, f(c) in F(c)
+    C(f) is true
+    all cages sum to k₀
+    forall cells |F(c)| = 1
+- Schrodinger cells, rather than a unique f(c), prove that every f(c) works or contradicts
+    and that for the unresolved cells, it has the largest set possible to still be valid
+    I think Ill hold off on this for a long while
+- Chaos Construction
+    partition of the grid, look it up from discrete structures
+    connected by graphs, fun stuff
+    regions are 9 cells
+    hypothesis there exists a partition...
+    conclusion there exists a unique partition ...

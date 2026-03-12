@@ -7,6 +7,7 @@ import Mathlib.Tactic.IntervalCases
 
 set_option linter.style.whitespace false
 set_option linter.style.longLine false
+set_option warningAsError true
 
 -- if this is false, will freeze all the proofs under freeze tactic
 def freeze_flag : Bool := true
@@ -46,17 +47,14 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   have row8point8: ∀ f ∈ S, SupportSet f {69,70,71} 8 := by freeze {
     intro f hf
     replace H := (H f).mp hf
-    unfold SupportSet
-    let h := (region_full_set_bijective H.b.box9).surjOn (Set.mem_univ 8)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box9)
+    locked_support_cases h 8
     · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 0
     · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 1
     · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 2
-    · exact ⟨_, by simp, h⟩
-    · exact ⟨_, by simp, h⟩
-    · exact ⟨_, by simp, h⟩
+    · exact in_support_set h
+    · exact in_support_set h
+    · exact in_support_set h
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 2
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 1
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 0
@@ -64,16 +62,13 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   have row8point9: ∀ f ∈ S, SupportSet f {69,70} 9 := by freeze {
     intro f hf
     replace H := (H f).mp hf
-    unfold SupportSet
-    let h := (region_full_set_bijective H.b.box9).surjOn (Set.mem_univ 9)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box9)
+    locked_support_cases h 9
     · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 0
     · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 1
     · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 2
-    · exact ⟨_, by simp, h⟩
-    · exact ⟨_, by simp, h⟩
+    · exact in_support_set h
+    · exact in_support_set h
     · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 3
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 2
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 5 (by decide) le_top 1
@@ -83,51 +78,68 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     intro f hf
     replace H := (H f).mp hf
     cases h: f 65 <;> try decide
-    · exfalso; exact SupportSet.in_region h H.b.row8 (row8point8 f hf)
-    · exfalso; exact SupportSet.in_region h H.b.row8 (row8point9 f hf)
+    · exfalso; exact support_set_in_region h H.b.row8 (row8point8 f hf)
+    · exfalso; exact support_set_in_region h H.b.row8 (row8point9 f hf)
   }
   have c68max7: ∀ f ∈ S, f 68 ≤ 7 := by freeze {
     intro f hf
     replace H := (H f).mp hf
     cases h: f 68 <;> try decide
-    · exfalso; exact SupportSet.in_region h H.b.row8 (row8point8 f hf)
-    · exfalso; exact SupportSet.in_region h H.b.row8 (row8point9 f hf)
+    · exfalso; exact support_set_in_region h H.b.row8 (row8point8 f hf)
+    · exfalso; exact support_set_in_region h H.b.row8 (row8point9 f hf)
   }
   -- hidden triple 789 in row 9. allows a hidden pointing pair 6
-  have c72c75c76triple: ∀ f ∈ S, Set.BijOn f {72,75,76} {7,8,9} := by freeze {
+  have c72c75c76triple: ∀ f ∈ S, LockedSet f {72,75,76} {7,8,9} := by freeze {
     intro f hf
     replace H := (H f).mp hf
     apply locked_set_from_hidden_set (H.b.row9)
     intro d ds
-    let region_bij := (region_full_set_bijective H.b.row9)
-    let h := region_bij.surjOn (Set.mem_univ d)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
-    · exact ⟨_, by simp, h⟩
-    · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
-    · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 3 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
-    · exact ⟨_, by simp, h⟩
-    · exact ⟨_, by simp, h⟩
-    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 3 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
-    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
-    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
-    · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0 (h3 := by {rcases ds with rfl | rfl | rfl <;> decide})
+    rcases ds with rfl | rfl | rfl
+    · let h := (region_full_locked_set H.b.row9)
+      locked_support_cases h 7
+      · exact ⟨_, by simp, h⟩
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 3
+      · exact ⟨_, by simp, h⟩
+      · exact ⟨_, by simp, h⟩
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 3
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0
+    · let h := (region_full_locked_set H.b.row9)
+      locked_support_cases h 8
+      · exact ⟨_, by simp, h⟩
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 3
+      · exact ⟨_, by simp, h⟩
+      · exact ⟨_, by simp, h⟩
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 3
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0
+    · let h := (region_full_locked_set H.b.row9)
+      locked_support_cases h 9
+      · exact ⟨_, by simp, h⟩
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 3
+      · exact ⟨_, by simp, h⟩
+      · exact ⟨_, by simp, h⟩
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 3
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1
+      · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0
   }
   have row9point6: ∀ f ∈ S, SupportSet f {74, 77} 6 := by freeze {
     intro f hf
     replace H := (H f).mp hf
-    unfold SupportSet
-    let h := (region_full_set_bijective H.b.row9).surjOn (Set.mem_univ 6)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.row9)
+    locked_support_cases h 6
     · exfalso; exact locked_set_in_cell h (c72c75c76triple f hf)
     · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2
-    · exact ⟨_, by simp, h⟩
+    · exact in_support_set h
     · exfalso; exact locked_set_in_cell h (c72c75c76triple f hf)
     · exfalso; exact locked_set_in_cell h (c72c75c76triple f hf)
-    · exact ⟨_, by simp, h⟩
+    · exact in_support_set h
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0
@@ -135,33 +147,25 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   have row8point7: ∀ f (hf: f ∈ S), SupportSet f {65,68} 7 := by freeze {
     intro f hf
     replace H := (H f).mp hf
-    unfold SupportSet
     let h := (row9point6 f hf)
-    simp only [SupportSet, Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp,
-      ↓existsAndEq, true_and] at h
-    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp, ↓existsAndEq, true_and]
-    cases h with
-    | inl h =>
-      left
+    support_cases h
+    · apply in_support_set (x:=65)
       apply ToNat.toNat_injective (fill_thermo H.thermo6 3 (by decide) h.symm.le 4 (by decide) (c65max7 f hf) (by decide) 4)
-    | inr h =>
-      right
+    · apply in_support_set (x:=68)
       apply ToNat.toNat_injective (fill_thermo H.thermo9 3 (by decide) h.symm.le 4 (by decide) (c68max7 f hf) (by decide) 4)
   }
   replace k := add_fact k 62 7 (by freeze {
     -- hidden single in box 9
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.box9).surjOn (Set.mem_univ 7)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := support_set_from_locked_set (region_full_locked_set H.b.box9) 7
+    support_cases h
     · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 0
     · exfalso; apply digit_greater_than_thermo_max h H.thermo8 4 (by decide) le_top 1
     · exact h
-    · exfalso; apply SupportSet.in_region h H.b.row8 (row8point7 f hf)
-    · exfalso; apply SupportSet.in_region h H.b.row8 (row8point7 f hf)
-    · exfalso; apply SupportSet.in_region h H.b.row8 (row8point7 f hf)
+    · exfalso; apply support_set_in_region h H.b.row8 (row8point7 f hf)
+    · exfalso; apply support_set_in_region h H.b.row8 (row8point7 f hf)
+    · exfalso; apply support_set_in_region h H.b.row8 (row8point7 f hf)
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1
     · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0
@@ -269,28 +273,23 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   have row3point1: ∀ f ∈ S, SupportSet f {24,25} 1 := by freeze {
     intro f hf
     replace H := (H f).mp hf
-    unfold SupportSet
-    let h := (region_full_set_bijective H.b.box3).surjOn (Set.mem_univ 1)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box3)
+    locked_support_cases h 1
     · exfalso; apply bottom_is_only_first h H.thermo3
     · exfalso; apply bottom_is_only_first h H.thermo3
     · exfalso; apply digit_in_region h H.b.col9 ((get_d k 80 1) f hf)
     · exfalso; apply bottom_is_only_first h H.thermo4
     · exfalso; apply bottom_is_only_first h H.thermo4
     · exfalso; apply digit_in_region h H.b.col9 ((get_d k 80 1) f hf)
-    · exact ⟨_, by simp, h⟩
-    · exact ⟨_, by simp, h⟩
+    · exact in_support_set h
+    · exact in_support_set h
     · exfalso; apply digit_in_region h H.b.col9 ((get_d k 80 1) f hf)
   }
   replace k := add_fact k 0 1 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.box1).surjOn (Set.mem_univ 1)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box1)
+    locked_support_cases h 1
     · assumption
     · exfalso; apply bottom_is_only_first h H.thermo2
     · exfalso; apply bottom_is_only_first h H.thermo2
@@ -298,7 +297,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply bottom_is_only_first h H.thermo1
     · exfalso; apply bottom_is_only_first h H.thermo2
     · exfalso; apply bottom_is_only_first h H.thermo1
-    · exfalso; apply SupportSet.in_region h H.b.row3 (row3point1 f hf)
+    · exfalso; apply support_set_in_region h H.b.row3 (row3point1 f hf)
     · exfalso; apply bottom_is_only_first h H.thermo2
   })
   have c27min2: ∀ f ∈ S, 2 ≤ f 27 := by freeze {
@@ -310,10 +309,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 19 2 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.box1).surjOn (Set.mem_univ 2)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box1)
+    locked_support_cases h 2
     · exfalso; apply digit_in_cell h ((get_d k 0 1) f hf)
     · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 5
     · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 4
@@ -379,10 +376,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 20 3 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.box1).surjOn (Set.mem_univ 3)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box1)
+    locked_support_cases h 3
     · exfalso; apply digit_in_cell h ((get_d k 0 1) f hf)
     · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 5
     · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 4
@@ -426,7 +421,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     cases h: f 16 <;> first | decide | exfalso
     · apply digit_in_region h H.b.col8 ((get_d k 70 9) f hf)
   }
-  have c6c15pair: ∀ f ∈ S, Set.BijOn f {6,15} {5,7} := by freeze {
+  have c6c15pair: ∀ f ∈ S, LockedSet f {6,15} {5,7} := by freeze {
     -- by min max, and 6 in col
     intro f hf
     replace H := (H f).mp hf
@@ -442,7 +437,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       · exfalso; apply digit_greater_than_thermo_max h H.thermo4 3 (by decide) (c16max8 f hf) 2
       · exfalso; apply digit_greater_than_thermo_max h H.thermo4 3 (by decide) (c16max8 f hf) 2
   }
-  have c7c16pair: ∀ f ∈ S, Set.BijOn f {7,16} {6,8} := by freeze {
+  have c7c16pair: ∀ f ∈ S, LockedSet f {7,16} {6,8} := by freeze {
     -- by min max, and 7 in box
     intro f hf
     replace H := (H f).mp hf
@@ -456,18 +451,15 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       · apply locked_set_in_region h H.b.box3 (c6c15pair f hf)
       · absurd (c16max8 f hf); rw [h]; decide
   }
-  have c8c17pair: ∀ f ∈ S, Set.BijOn f {8,17} {2,3} := by freeze {
+  have c8c17pair: ∀ f ∈ S, LockedSet f {8,17} {2,3} := by freeze {
     -- hidden in box using thermo mins
     intro f hf
     replace H := (H f).mp hf
     apply locked_set_from_hidden_set (H.b.box3)
     intro d this
-    let region_bij := (region_full_set_bijective H.b.box3)
     rcases this with rfl | rfl
-    · let h := region_bij.surjOn (Set.mem_univ 2)
-      simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-        exists_eq_or_imp, ↓existsAndEq, true_and] at h
-      split_disjunctive_9 h
+    · let h := (region_full_locked_set H.b.box3)
+      locked_support_cases h 2
       · exfalso; apply locked_set_in_cell h (c6c15pair f hf)
       · exfalso; apply locked_set_in_cell h (c7c16pair f hf)
       · exact ⟨_, by simp, h⟩
@@ -477,10 +469,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       · exfalso; apply digit_in_region h H.b.row3 ((get_d k 19 2) f hf)
       · exfalso; apply digit_in_region h H.b.row3 ((get_d k 19 2) f hf)
       · exfalso; apply digit_in_region h H.b.row3 ((get_d k 19 2) f hf)
-    · let h := region_bij.surjOn (Set.mem_univ 3)
-      simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-        exists_eq_or_imp, ↓existsAndEq, true_and] at h
-      split_disjunctive_9 h
+    · let h := (region_full_locked_set H.b.box3)
+      locked_support_cases h 3
       · exfalso; apply locked_set_in_cell h (c6c15pair f hf)
       · exfalso; apply locked_set_in_cell h (c7c16pair f hf)
       · exact ⟨_, by simp, h⟩
@@ -491,7 +481,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       · exfalso; apply digit_in_region h H.b.row3 ((get_d k 20 3) f hf)
       · exfalso; apply digit_in_region h H.b.row3 ((get_d k 20 3) f hf)
   }
-  have c24c25c26triple: ∀ f ∈ S, Set.BijOn f {24,25,26} {1,4,9} := by freeze {
+  have c24c25c26triple: ∀ f ∈ S, LockedSet f {24,25,26} {1,4,9} := by freeze {
     intro f hf
     replace H := (H f).mp hf
     apply locked_set_from_naked_set (H.b.box3)
@@ -528,10 +518,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 11 4 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.box1).surjOn (Set.mem_univ 4)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box1)
+    locked_support_cases h 4
     · exfalso; apply digit_in_cell h ((get_d k 0 1) f hf)
     · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 5
     · exfalso; apply digit_less_than_thermo_min h H.thermo2 0 (by decide) bot_le 4
@@ -542,7 +530,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply digit_in_cell h ((get_d k 19 2) f hf)
     · exfalso; apply digit_in_cell h ((get_d k 20 3) f hf)
   })
-  have c66c67pair: ∀ f ∈ S, Set.BijOn f {66,67} {1,3} := by freeze {
+  have c66c67pair: ∀ f ∈ S, LockedSet f {66,67} {1,3} := by freeze {
     -- naked pair
     intro f hf
     replace H := (H f).mp hf
@@ -570,10 +558,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     -- hidden single in col3
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.col3).surjOn (Set.mem_univ 1)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.col3)
+    locked_support_cases h 1
     · exfalso; apply digit_in_region h H.b.box1 ((get_d k 0 1) f hf)
     · exfalso; apply digit_in_region h H.b.box1 ((get_d k 0 1) f hf)
     · exfalso; apply digit_in_region h H.b.box1 ((get_d k 0 1) f hf)
@@ -584,7 +570,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply digit_in_cell h ((get_d k 65 7) f hf)
     · exfalso; apply digit_in_cell h ((get_d k 74 6) f hf)
   })
-  have c54c72pair: ∀ f ∈ S, Set.BijOn f {54,72} {8,9} := by freeze {
+  have c54c72pair: ∀ f ∈ S, LockedSet f {54,72} {8,9} := by freeze {
     -- naked pair in box7
     intro f hf
     replace H := (H f).mp hf
@@ -609,13 +595,13 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · simp
   }
   have c5c14_6: ∀ f ∈ S, SupportSet f {5, 14} 6 := by freeze {
+    -- this is support set by maps to logic in cell 5
     -- complicated logic
     -- c5 is currently either a 3 or 6
     -- if it is a 3, the thermometer forces 2 into c4
     -- c14 is currently 2 3 or 6, it can only be 6
     intro f hf
     replace H := (H f).mp hf
-    unfold SupportSet
     cases h: f 5
     · exfalso; apply digit_less_than_thermo_min h H.thermo3 0 (by decide) bot_le 2
     · exfalso; apply digit_less_than_thermo_min h H.thermo3 0 (by decide) bot_le 2
@@ -628,14 +614,14 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       · exfalso; apply digit_in_region h1 H.b.box2 h
       · exfalso; apply digit_in_region h1 H.b.col6 ((get_d k 77 4) f hf)
       · exfalso; apply digit_in_region h1 H.b.col6 ((get_d k 68 5) f hf)
-      · exact ⟨_, by simp, h1⟩
+      · exact in_support_set h1
       -- · exfalso; apply digit_greater_than_thermo_max H.thermo4 (c16max8 f hf) 1; simp at this; rw [h1] at this; contradiction
       · exfalso; apply digit_greater_than_thermo_max h1 H.thermo4 3 (by decide) (c16max8 f hf) 1
       · exfalso; apply digit_greater_than_thermo_max h1 H.thermo4 3 (by decide) (c16max8 f hf) 1
       · exfalso; apply digit_greater_than_thermo_max h1 H.thermo4 3 (by decide) (c16max8 f hf) 1
     · exfalso; apply digit_in_region h H.b.col6 ((get_d k 77 4) f hf)
     · exfalso; apply digit_in_region h H.b.col6 ((get_d k 68 5) f hf)
-    · exact ⟨_, by simp, h⟩
+    · exact in_support_set h
     · exfalso; apply digit_greater_than_thermo_max h H.thermo3 4 (by decide) (c7max8 f hf) 2
     · exfalso; apply digit_greater_than_thermo_max h H.thermo3 4 (by decide) (c7max8 f hf) 2
     · exfalso; apply digit_greater_than_thermo_max h H.thermo3 4 (by decide) (c7max8 f hf) 2
@@ -644,16 +630,14 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     -- hidden single in row 3
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.row3).surjOn (Set.mem_univ 6)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.row3)
+    locked_support_cases h 6
     · apply h
     · exfalso; apply digit_in_cell h ((get_d k 19 2) f hf)
     · exfalso; apply digit_in_cell h ((get_d k 20 3) f hf)
-    · exfalso; apply SupportSet.in_region h H.b.box2 (c5c14_6 f hf)
-    · exfalso; apply SupportSet.in_region h H.b.box2 (c5c14_6 f hf)
-    · exfalso; apply SupportSet.in_region h H.b.box2 (c5c14_6 f hf)
+    · exfalso; apply support_set_in_region h H.b.box2 (c5c14_6 f hf)
+    · exfalso; apply support_set_in_region h H.b.box2 (c5c14_6 f hf)
+    · exfalso; apply support_set_in_region h H.b.box2 (c5c14_6 f hf)
     · exfalso; apply locked_set_in_region h H.b.box3 (c7c16pair f hf)
     · exfalso; apply locked_set_in_region h H.b.box3 (c7c16pair f hf)
     · exfalso; apply locked_set_in_region h H.b.box3 (c7c16pair f hf)
@@ -676,10 +660,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 2 5 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.box1).surjOn (Set.mem_univ 5)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box1)
+    locked_support_cases h 5
     · exfalso; apply digit_in_cell h ((get_d k 0 1) f hf)
     · exfalso; apply digit_in_region h H.b.col2 ((get_d k 73 5) f hf)
     · exact h
@@ -690,7 +672,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply digit_in_cell h ((get_d k 19 2) f hf)
     · exfalso; apply digit_in_cell h ((get_d k 20 3) f hf)
   })
-  have c1c10pair: ∀ f ∈ S, Set.BijOn f {1,10} {8,9} := by freeze {
+  have c1c10pair: ∀ f ∈ S, LockedSet f {1,10} {8,9} := by freeze {
     intro f hf
     replace H := (H f).mp hf
     apply locked_set_from_naked_set H.b.box1
@@ -723,28 +705,30 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 6 7 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    replace h := (c6c15pair f hf).mapsTo (x := 6) (by simp)
-    cases h with
-    | inl h => exfalso; apply digit_in_region h H.b.row1 ((get_d k 2 5) f hf)
-    | inr h => exact h
+    replace h := (c6c15pair f hf)
+    locked_maps_cases h 6
+    · exfalso; apply digit_in_region h H.b.row1 ((get_d k 2 5) f hf)
+    · exact h
   })
   replace k := add_fact k 15 5 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c6c15pair f hf) ((get_d k 6 7) f hf)
   })
   clear c6c15pair
   replace k := add_fact k 7 8 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    replace h := (c7c16pair f hf).mapsTo (x := 7) (by simp)
-    cases h with
-    | inl h => exfalso; apply digit_less_than_thermo_min h H.thermo3 3 (by decide) (((get_d k 6 7) f hf).symm.le) 4
-    | inr h => exact h
+    replace h := (c7c16pair f hf)
+    locked_maps_cases h 7
+    · exfalso; apply digit_less_than_thermo_min h H.thermo3 3 (by decide) (((get_d k 6 7) f hf).symm.le) 4
+    · exact h
   })
   replace k := add_fact k 16 6 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c7c16pair f hf) ((get_d k 7 8) f hf)
   })
   clear c7c16pair
@@ -752,34 +736,31 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     intro f hf
     replace H := (H f).mp hf
     replace h := (c5c14_6 f hf)
-    simp only [SupportSet, Set.mem_insert_iff, Set.mem_singleton_iff, exists_eq_or_imp,
-      ↓existsAndEq, true_and] at h
-    cases h with
-    | inl h => exact h
-    | inr h => exfalso; apply digit_in_region h H.b.row2 ((get_d k 16 6) f hf)
+    support_cases h
+    · exact h
+    · exfalso; apply digit_in_region h H.b.row2 ((get_d k 16 6) f hf)
   })
   clear c5c14_6
   replace k := add_fact k 1 9 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    replace h := (c1c10pair f hf).mapsTo (x := 1) (by simp)
-    cases h with
-    | inl h => exfalso; apply digit_in_region h H.b.row1 ((get_d k 7 8) f hf)
-    | inr h => exact h
+    replace h := (c1c10pair f hf)
+    locked_maps_cases h 1
+    · exfalso; apply digit_in_region h H.b.row1 ((get_d k 7 8) f hf)
+    · exact h
   })
   replace k := add_fact k 10 8 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c1c10pair f hf) ((get_d k 1 9) f hf)
   })
   clear c1c10pair
   replace k := add_fact k 12 9 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.box2).surjOn (Set.mem_univ 9)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box2)
+    locked_support_cases h 9
     · exfalso; apply digit_in_region h H.b.row1 ((get_d k 1 9) f hf)
     · exfalso; apply digit_in_region h H.b.row1 ((get_d k 1 9) f hf)
     · exfalso; apply digit_in_region h H.b.row1 ((get_d k 1 9) f hf)
@@ -793,10 +774,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 13 1 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.box2).surjOn (Set.mem_univ 1)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box2)
+    locked_support_cases h 1
     · exfalso; apply digit_in_region h H.b.row1 ((get_d k 0 1) f hf)
     · exfalso; apply digit_in_region h H.b.row1 ((get_d k 0 1) f hf)
     · exfalso; apply digit_in_region h H.b.row1 ((get_d k 0 1) f hf)
@@ -810,18 +789,19 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 67 3 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    replace h := (c66c67pair f hf).mapsTo (x := 67) (by simp)
-    cases h with
-    | inl h => exfalso; apply digit_in_region h H.b.col5 ((get_d k 13 1) f hf)
-    | inr h => exact h
+    replace h := (c66c67pair f hf)
+    locked_maps_cases h 67
+    · exfalso; apply digit_in_region h H.b.col5 ((get_d k 13 1) f hf)
+    · exact h
   })
   replace k := add_fact k 66 1 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c66c67pair f hf) ((get_d k 67 3) f hf)
   })
   clear c66c67pair
-  have c38c47pair: ∀ f ∈ S, Set.BijOn f {38,47} {8,9} := by freeze {
+  have c38c47pair: ∀ f ∈ S, LockedSet f {38,47} {8,9} := by freeze {
     intro f hf
     replace H := (H f).mp hf
     apply locked_set_from_naked_set H.b.col3
@@ -851,7 +831,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · decide
     · decide
   }
-  have c47c51pair: ∀ f ∈ S, Set.BijOn f {47,51} {8,9} := by freeze {
+  have c47c51pair: ∀ f ∈ S, LockedSet f {47,51} {8,9} := by freeze {
     intro f hf
     replace H := (H f).mp hf
     apply locked_set_from_naked_set H.b.row6
@@ -1008,10 +988,8 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     -- hidden single in box 8
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.b.box8).surjOn (Set.mem_univ 6)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_9 h
+    let h := (region_full_locked_set H.b.box8)
+    locked_support_cases h 6
     · exact h
     · exfalso; apply digit_in_cell h ((get_d k 58 2) f hf)
     · exfalso; apply digit_in_region h H.b.col6 ((get_d k 5 6) f hf)
@@ -1039,18 +1017,19 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 54 8 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    replace h := (c54c72pair f hf).mapsTo (x := 54) (by simp)
-    cases h with
-    | inl h => exact h
-    | inr h => exfalso; apply digit_in_region h H.b.row7 ((get_d k 59 9) f hf)
+    replace h := (c54c72pair f hf)
+    locked_maps_cases h 54
+    · exact h
+    · exfalso; apply digit_in_region h H.b.row7 ((get_d k 59 9) f hf)
   })
   replace k := add_fact k 72 9 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c54c72pair f hf) ((get_d k 54 8) f hf)
   })
   clear c54c72pair
-  have c75c76pair: ∀ f ∈ S, Set.BijOn f {75,76} {7,8} := by freeze {
+  have c75c76pair: ∀ f ∈ S, LockedSet f {75,76} {7,8} := by freeze {
     intro f hf
     replace H := (H f).mp hf
     have this1: ({7, 8, 9} \ {9}: Set Symbols9) = {7, 8} := by
@@ -1072,14 +1051,15 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 76 8 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    replace h := (c75c76pair f hf).mapsTo (x := 76) (by simp)
-    cases h with
-    | inl h => exfalso; apply digit_in_region h H.b.col5 ((get_d k 22 7 ) f hf)
-    | inr h => exact h
+    replace h := (c75c76pair f hf)
+    locked_maps_cases h 76
+    · exfalso; apply digit_in_region h H.b.col5 ((get_d k 22 7 ) f hf)
+    · exact h
   })
   replace k := add_fact k 75 7 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c75c76pair f hf) ((get_d k 76 8) f hf)
   })
   clear c75c76pair
@@ -1142,14 +1122,15 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 8 2 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    replace h := (c8c17pair f hf).mapsTo (x := 8) (by simp)
-    cases h with
-    | inl h => exact h
-    | inr h => exfalso; apply digit_in_region h H.b.row1 ((get_d k 3 3) f hf)
+    replace h := (c8c17pair f hf)
+    locked_maps_cases h 8
+    · exact h
+    · exfalso; apply digit_in_region h H.b.row1 ((get_d k 3 3) f hf)
   })
   replace k := add_fact k 17 3 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c8c17pair f hf) ((get_d k 8 2) f hf)
   })
   clear c8c17pair
@@ -1210,7 +1191,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · rfl
   })
   clear c30min4 row3point1
-  have c33c51pair: ∀ f ∈ S, Set.BijOn f {33,51} {8,9} := by freeze {
+  have c33c51pair: ∀ f ∈ S, LockedSet f {33,51} {8,9} := by freeze {
     -- by min
     intro f hf
     replace H := (H f).mp hf
@@ -1245,7 +1226,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     · exfalso; apply locked_set_in_region h H.b.col7 (c33c51pair f hf)
     · exfalso; apply locked_set_in_region h H.b.col7 (c33c51pair f hf)
   })
-  have c25c26pair: ∀ f ∈ S, Set.BijOn f {25,26} {4,9} := by freeze {
+  have c25c26pair: ∀ f ∈ S, LockedSet f {25,26} {4,9} := by freeze {
     intro f hf
     replace H := (H f).mp hf
     simpa using locked_set_reducton (c24c25c26triple f hf) ((get_d k 24 1) f hf)
@@ -1254,14 +1235,15 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 25 4 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    replace h := (c25c26pair f hf).mapsTo (x := 25) (by simp)
-    cases h with
-    | inl h => exact h
-    | inr h => exfalso; apply digit_in_region h H.b.col8 ((get_d k 70 9) f hf)
+    replace h := (c25c26pair f hf)
+    locked_maps_cases h 25
+    · exact h
+    · exfalso; apply digit_in_region h H.b.col8 ((get_d k 70 9) f hf)
   })
   replace k := add_fact k 26 9 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c25c26pair f hf) ((get_d k 25 4) f hf)
   })
   clear c25c26pair c58min2
@@ -1394,26 +1376,29 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
   replace k := add_fact k 33 8 (by freeze {
     intro f hf
     replace H := (H f).mp hf
-    replace h := (c33c51pair f hf).mapsTo (x := 33) (by simp)
-    cases h with
-    | inl h => assumption
-    | inr h => exfalso; apply digit_in_region h H.b.row4 ((get_d k 31 9) f hf)
+    replace h := (c33c51pair f hf)
+    locked_maps_cases h 33
+    · assumption
+    · exfalso; apply digit_in_region h H.b.row4 ((get_d k 31 9) f hf)
   })
   replace k := add_fact k 51 9 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c33c51pair f hf) ((get_d k 33 8) f hf)
   })
   clear c33c51pair
   replace k := add_fact k 47 8 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c47c51pair f hf) ((get_d k 51 9) f hf)
   })
   clear c47c51pair
   replace k := add_fact k 38 9 (by freeze {
     intro f hf
     replace H := (H f).mp hf
+    apply locked_set_single
     simpa using locked_set_reducton (c38c47pair f hf) ((get_d k 47 8) f hf)
   })
   clear c38c47pair
@@ -1576,7 +1561,6 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     simp
   push_neg at xin
   apply xin
-
 
 /-
 Less than theorems

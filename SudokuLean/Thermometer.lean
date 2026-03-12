@@ -11,6 +11,8 @@ import SudokuLean.Basic
 
 set_option linter.style.longLine false
 set_option linter.style.whitespace false
+-- there are a couple variables that it thinks are unused but ther are not
+set_option linter.unusedVariables false
 
 -- This file is dedicated to themometers and other comparison constraints.
 
@@ -51,7 +53,7 @@ theorem thermo_pairwise {α} [LT α] [IsTrans α (· < ·)] (f: Nat -> α) (l: L
 
 -- a thermo is a unique region, likely not to be used a lot, but might have a use at some point
 theorem thermo_unique {α} [Preorder α] [IsTrans α (· < ·)] (f: Nat -> α) (l: List Nat) (thermo: Thermometer f l):
-  UniqueRegion f {x | x ∈ l} := by
+  UniqueSet f {x | x ∈ l} := by
   intro x xh y yh h
   simp only [Set.mem_setOf_eq] at xh
   simp only [Set.mem_setOf_eq] at yh
