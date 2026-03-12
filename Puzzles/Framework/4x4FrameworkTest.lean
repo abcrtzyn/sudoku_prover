@@ -1,6 +1,7 @@
 import SudokuLean.Basic
 import SudokuLean.Symbols4
 import SudokuLean.Tactics
+import Mathlib.Tactic.IntervalCases
 
 
 set_option linter.style.whitespace false
@@ -8,18 +9,18 @@ set_option linter.style.whitespace false
 
 
 structure TestPuzzle (solution: Nat -> Symbols4) where
-  row1: UniqueRegion solution { 0, 1, 2, 3}
-  row2: UniqueRegion solution { 4, 5, 6, 7}
-  row3: UniqueRegion solution { 8, 9,10,11}
-  row4: UniqueRegion solution {12,13,14,15}
-  col1: UniqueRegion solution { 0, 4, 8,12}
-  col2: UniqueRegion solution { 1, 5, 9,13}
-  col3: UniqueRegion solution { 2, 6,10,14}
-  col4: UniqueRegion solution { 3, 7,11,15}
-  box1: UniqueRegion solution { 0, 1, 4, 5}
-  box2: UniqueRegion solution { 2, 3, 6, 7}
-  box3: UniqueRegion solution { 8, 9,12,13}
-  box4: UniqueRegion solution {10,11,14,15}
+  row1: UniqueSet solution { 0, 1, 2, 3}
+  row2: UniqueSet solution { 4, 5, 6, 7}
+  row3: UniqueSet solution { 8, 9,10,11}
+  row4: UniqueSet solution {12,13,14,15}
+  col1: UniqueSet solution { 0, 4, 8,12}
+  col2: UniqueSet solution { 1, 5, 9,13}
+  col3: UniqueSet solution { 2, 6,10,14}
+  col4: UniqueSet solution { 3, 7,11,15}
+  box1: UniqueSet solution { 0, 1, 4, 5}
+  box2: UniqueSet solution { 2, 3, 6, 7}
+  box3: UniqueSet solution { 8, 9,12,13}
+  box4: UniqueSet solution {10,11,14,15}
   given2: solution 2 = 4
   given4: solution 4 = 4
   given6: solution 6 = 3
@@ -50,10 +51,8 @@ theorem SolveTestPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ Tes
   replace k := add_fact k 1 3 (by
     intro f hf
     replace H := (H f).mp hf
-    let h := (region_full_set_bijective H.col2).surjOn (Set.mem_univ 3)
-    simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff,
-      exists_eq_or_imp, ↓existsAndEq, true_and] at h
-    split_disjunctive_4 h
+    let h := (region_full_locked_set H.col2)
+    locked_support_cases h 3
     · assumption
     · exfalso; exact digit_in_cell h ((get_d k 5 2) f hf)
     · exfalso; exact digit_in_cell h H.given9
