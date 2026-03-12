@@ -337,9 +337,9 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
     replace H := (H f).mp hf
     apply locked_set_from_hidden_set (H.b.col6)
     intro d this
+    let h := (region_full_locked_set H.b.col6)
     rcases this with rfl | rfl
-    · let h := (region_full_locked_set H.b.col6)
-      locked_support_cases h 4
+    · locked_support_cases h 4
       · exfalso; exact digit_in_cell h H.given5
       · exfalso; exact digit_in_region h H.b.row2 ((get_d k 17 4) f hf)
       · exact ⟨_, by simp, h⟩
@@ -350,8 +350,7 @@ theorem SolveTestPuzzle2 {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ Te
       · exfalso; exact digit_in_region h H.b.row7 ((get_d k 56 4) f hf)
       · exfalso; exact digit_in_cell h H.given68
       · exfalso; exact digit_in_region h H.b.row9 H.given79
-    · let h := (region_full_locked_set H.b.col6)
-      locked_support_cases h 5
+    · locked_support_cases h 5
       · exfalso; exact digit_in_cell h H.given5
       · exfalso; exact digit_in_region h H.b.row2 H.given16
       · exact ⟨_, by simp, h⟩

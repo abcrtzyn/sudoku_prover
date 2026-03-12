@@ -94,9 +94,9 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     replace H := (H f).mp hf
     apply locked_set_from_hidden_set (H.b.row9)
     intro d ds
+    let h := (region_full_locked_set H.b.row9)
     rcases ds with rfl | rfl | rfl
-    · let h := (region_full_locked_set H.b.row9)
-      locked_support_cases h 7
+    · locked_support_cases h 7
       · exact ⟨_, by simp, h⟩
       · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2
       · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 3
@@ -106,8 +106,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2
       · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1
       · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0
-    · let h := (region_full_locked_set H.b.row9)
-      locked_support_cases h 8
+    · locked_support_cases h 8
       · exact ⟨_, by simp, h⟩
       · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2
       · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 3
@@ -117,8 +116,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 2
       · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 1
       · exfalso; apply digit_greater_than_thermo_max h H.thermo9 4 (by decide) (c68max7 f hf) 0
-    · let h := (region_full_locked_set H.b.row9)
-      locked_support_cases h 9
+    · locked_support_cases h 9
       · exact ⟨_, by simp, h⟩
       · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 2
       · exfalso; apply digit_greater_than_thermo_max h H.thermo6 4 (by decide) (c65max7 f hf) 3
@@ -457,9 +455,9 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
     replace H := (H f).mp hf
     apply locked_set_from_hidden_set (H.b.box3)
     intro d this
+    let h := (region_full_locked_set H.b.box3)
     rcases this with rfl | rfl
-    · let h := (region_full_locked_set H.b.box3)
-      locked_support_cases h 2
+    · locked_support_cases h 2
       · exfalso; apply locked_set_in_cell h (c6c15pair f hf)
       · exfalso; apply locked_set_in_cell h (c7c16pair f hf)
       · exact ⟨_, by simp, h⟩
@@ -469,8 +467,7 @@ theorem SolveThermoSudoku {S : Set (Nat → Symbols9)} (H : ∀ f, f ∈ S ↔ T
       · exfalso; apply digit_in_region h H.b.row3 ((get_d k 19 2) f hf)
       · exfalso; apply digit_in_region h H.b.row3 ((get_d k 19 2) f hf)
       · exfalso; apply digit_in_region h H.b.row3 ((get_d k 19 2) f hf)
-    · let h := (region_full_locked_set H.b.box3)
-      locked_support_cases h 3
+    · locked_support_cases h 3
       · exfalso; apply locked_set_in_cell h (c6c15pair f hf)
       · exfalso; apply locked_set_in_cell h (c7c16pair f hf)
       · exact ⟨_, by simp, h⟩
