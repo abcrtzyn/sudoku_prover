@@ -39,3 +39,28 @@ Constraint Ideas
     regions are 9 cells
     hypothesis there exists a partition...
     conclusion there exists a unique partition ...
+
+
+Edit mode
+- allows placing any constraints: givens, regions, eventually cells
+
+Solve mode
+- solving the puzzle only using deductions
+- placement modes
+    - mouse: default, no placing, just for selecting cells for visual purposes. 
+    - naked single: toggles, click a cell, attempt to fill it using naked logic (only one candidate in the cell)
+    - hidden single: toggles, click a cell, attempt to fill it using hidden logic (tries each unique region with surjection prop that contains the cell)
+    - fill candidates: click a cell, creates center pencil marks for every possible candidate using naked logic
+    Any theorems already established
+    - eliminate candidate: not sure how this works yet. But click a cell, remove a candidate, and explain why
+    - locked set by naked logic: select multiple cells in the same region, press enter(okay), and it will check and eagerly create eliminations for all regions with that set
+    - locked set by hidden logic: select multiple cells in the same region, press enter(okay), and it will check for each region, that there are only x places for x digits, and will eagerly create eliminatios for all regions with that set
+    - support set in region: select multiple cells in the same region, press enter(okay), and it will check for each region, that those are the only cells where each digit can go, will eagerly create eliminations for all regions with that set
+    - we also need a way to assume this cell is x and find a contadiction somewhere
+- buttons for
+    - try naked single logic on every cell
+    - try hidden single logic on every cell
+
+
+extra notes
+hidden single logic can happen inside locked sets, I just don't know if it is neccesary

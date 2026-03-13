@@ -1,5 +1,8 @@
 # Python Arcade array template
 
+import queue
+import threading
+from time import sleep
 from typing import Any, Dict, List, Optional, Tuple
 
 # import pyglet
@@ -98,46 +101,60 @@ generate_search()
 # will occur at the time
 eliminations: Dict[Tuple[int,int],str] = {}
 
-def find_conflict(grid:List[Optional[int]], cell: int, digit: int):
-    if grid[cell] is not None:
-        if grid[cell] != digit:
-            return True # digit in cell conflict
-        else:
-            print(f'bad input, cell {cell} has {digit}')
-            return False
-    # else
-    # check for digits in regions
-    for r in regions_search[cell]:
-        for i in regions[r]:
-            if grid[i] == digit:
-                # digit in region r
-                return True
-    if (cell,digit) in eliminations:
-        return True
-    print(f'could not find a conflict for cell {cell} with digit {digit}')
-    return False
+# def find_conflict(grid:List[Optional[int]], cell: int, digit: int):
+#     if grid[cell] is not None:
+#         if grid[cell] != digit:
+#             return True # digit in cell conflict
+#         else:
+#             print(f'bad input, cell {cell} has {digit}')
+#             return False
+#     # else
+#     # check for digits in regions
+#     for r in regions_search[cell]:
+#         for i in regions[r]:
+#             if grid[i] == digit:
+#                 # digit in region r
+#                 return True
+#     if (cell,digit) in eliminations:
+#         return True
+#     print(f'could not find a conflict for cell {cell} with digit {digit}')
+#     return False
 
 
-def handle_naked_single(grid: List[Optional[int]], cell: int, digit: int):
-    for d in range(1,10):
-        if d != digit:
-            if not find_conflict(grid,cell,d):
-                return False
-    return True
+# # given a cell, returns the one candidate that is not eliminated.
+# # if there is more than one digit not eliminated or all digits are eliminated, returns None
+# def naked_single(grid: List[Optional[int]], cell: int):
+#     not_elim = None
+#     for d in range(1,10):
+#         if not find_conflict(grid,cell,d):
+#             if not_elim is None:
+#                 not_elim = d
+#             else:
+#                 # if there are more than one digit that can't be eliminated, nothing happens
+#                 return None
+#     return not_elim
+            
 
+# def handle_hidden_single(grid: List[Optional[int]], cell: int, digit: int):
+#     for region in regions_search[cell]:
+#         # try each region for a hidden single
+#         for i in regions[region]:
+#             if i != cell and not find_conflict(grid,i,digit):
+#                 # not a hidden single in this region
+#                 break
+#         else:
+#             # did not break early
+#             # valid hidden single in this region
+#             return True
+#     return False
 
-def handle_hidden_single(grid: List[Optional[int]], cell: int, digit: int):
-    for region in regions_search[cell]:
-        # try each region for a hidden single
-        for i in regions[region]:
-            if i != cell and not find_conflict(grid,i,digit):
-                # not a hidden single in this region
-                break
-        else:
-            # did not break early
-            # valid hidden single in this region
-            return True
-    return False
+# # for each mode, function to call and call signiture
+# modes_calls = {
+#     'mouse': (None,None),
+#     'naked_single': (naked_single, ['cell']),
+#     'hidden_single': (hidden_single, ['cell'])
+
+# }
 
 
 
@@ -165,15 +182,22 @@ def coords_to_grid_cell(x:int,y:int):
 WINDOW_TITLE = "Sudoku Prover"
 
 
-class SudokuWindow(arcade.View):
-    def __init__(self):
-        super().__init__()
+class SudokuWindow(arcade.Window):
+    def __init__(self,width: int,height: int,title: str | None):
+        super().__init__(width,height,title)
+        self.set_location(533,256)
+
         self.grid: List[Optional[int]] = [None for _ in range(CELLS)]
         self.background_color = arcade.color.WHITE_SMOKE
 
         self.reset_grid()
+        self.cmd_queue: queue.Queue[str] = queue.Queue()
     
+        threading.Thread(target=self.terminal_listener, daemon=True).start()
+
     def reset_grid(self):
+        self.mode = 'mouse'
+        self.function_args = []
         self.selected_cell = None
         self.shape_list: arcade.shape_list.ShapeElementList[Any] = arcade.shape_list.ShapeElementList()
         self.digits_text_grid: List[arcade.Text] = [None for _ in range(CELLS)] # type: ignore
@@ -205,14 +229,26 @@ class SudokuWindow(arcade.View):
             self.change_cell(index,value)
             return
         
-        if handle_naked_single(self.grid,index,value):
-            self.change_cell(index,value)
-            return
-        if handle_hidden_single(self.grid,index,value):
-            self.change_cell(index,value)
-            return
+        # if handle_naked_single(self.grid,index,value):
+        #     self.change_cell(index,value)
+        #     return
+        # if handle_hidden_single(self.grid,index,value):
+        #     self.change_cell(index,value)
+        #     return
         print(f'could not find a reason to place digit {value} in cell {index}')
 
+    def on_update(self, delta_time: float) -> bool | None:
+        if not self.cmd_queue.empty():
+            cmd = self.cmd_queue.get_nowait()
+            if cmd == 'exit':
+                arcade.exit()
+            elif cmd == 'loc':
+                print(self.get_location())
+            else:
+                args = cmd.split()
+                self.change_cell(int(args[0]),int(args[1]))
+    
+    
     def on_draw(self):
         self.clear()
 
@@ -236,24 +272,43 @@ class SudokuWindow(arcade.View):
         # draw selector
         if self.selected_cell is not None:
             x,y = center_coords(self.selected_cell)
-            arcade.draw_rect_outline(arcade.XYWH(x,y,CELL_SIZE,CELL_SIZE),arcade.color.BLUE,3)
+            arcade.draw_rect_outline(arcade.XYWH(x,y,0.85*CELL_SIZE,0.85*CELL_SIZE),arcade.color.BLUE,3)
         # draw ui stuff
 
-
+    def terminal_listener(self):
+        sleep(2)
+        while True:
+            cmd = input('> ')
+            self.cmd_queue.put(cmd.strip().lower())
+            
                 
-    def on_mouse_press(self, x, y, button, modifiers):
-        # Convert the clicked mouse position into grid coordinates
-        index = coords_to_grid_cell(x,y)
-        if index is None:
-            return
-        print(f'click cell {index}')
-        # if selected, deselect, else, select
-        if index == self.selected_cell:
-            self.selected_cell = None
-        else:
-            self.selected_cell = index
+    # def on_mouse_press(self, x, y, button, modifiers):
+        # first, check for mode switch
+        # if on a mode button
+        # if button := False:
+        #     print(f'click mode {button}')
+        #     self.mode = button
+        #     # reset args
+        #     self.function_args = []
+        #     return
+        # # if it wasn't selecting a new mode
 
-    def on_key_press(self, symbol, modifiers):
+        # # Convert the clicked mouse position into grid coordinates
+        # if index := coords_to_grid_cell(x,y):
+        #     print(f'click cell {index}')
+        #     if self.mode == 'mouse':
+        #         if index == self.selected_cell:
+        #             self.selected_cell = None
+        #         else:
+        #             self.selected_cell = index
+        #     else:
+        #         # TODO check for correct call signiture first
+        #         self.function_args.append(('cell',index))
+        
+        # check for correct number of args
+
+
+    def on_key_press(self, symbol, modifiers): # type: ignore
         if self.selected_cell is not None and arcade.key.KEY_1 <= symbol <= arcade.key.KEY_9:
             digit = int(chr(symbol))
             self.update_cell(self.selected_cell,digit)
@@ -262,15 +317,8 @@ class SudokuWindow(arcade.View):
 
 
 def main():
-    # Create a window class. This is what actually shows up on screen
-    window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
-
-    # Create the GameView
-    game = SudokuWindow()
-
-    # Show GameView on screen
-    window.show_view(game)
-
+    window = SudokuWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
+    
     # Start the arcade game loop
     arcade.run()
 
