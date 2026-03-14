@@ -99,62 +99,55 @@ generate_search()
 
 # manual eliminations, automatic eliminations for naked single or hidden single
 # will occur at the time
-eliminations: Dict[Tuple[int,int],str] = {}
-
-# def find_conflict(grid:List[Optional[int]], cell: int, digit: int):
-#     if grid[cell] is not None:
-#         if grid[cell] != digit:
-#             return True # digit in cell conflict
-#         else:
-#             print(f'bad input, cell {cell} has {digit}')
-#             return False
-#     # else
-#     # check for digits in regions
-#     for r in regions_search[cell]:
-#         for i in regions[r]:
-#             if grid[i] == digit:
-#                 # digit in region r
-#                 return True
-#     if (cell,digit) in eliminations:
-#         return True
-#     print(f'could not find a conflict for cell {cell} with digit {digit}')
-#     return False
+eliminations: Dict[int,Dict[int,str]] = {}
 
 
-# # given a cell, returns the one candidate that is not eliminated.
-# # if there is more than one digit not eliminated or all digits are eliminated, returns None
-# def naked_single(grid: List[Optional[int]], cell: int):
-#     not_elim = None
-#     for d in range(1,10):
-#         if not find_conflict(grid,cell,d):
-#             if not_elim is None:
-#                 not_elim = d
-#             else:
-#                 # if there are more than one digit that can't be eliminated, nothing happens
-#                 return None
-#     return not_elim
-            
+"""eliminates all of digit from every cell in every region that cell is a part of"""
+def region_eliminate(cell: int,digit: int):
+    for r in regions_search[cell]:
+        for i in regions[r]:
+            if i == cell:
+                continue
+            # we have a choice to override a current elimination rule, or keep the first one
+            # there are pros and cons to either, but that is for future me to decide.
+            # this code OVERRIDES existing elemination rules
+            if i not in eliminations:
+                eliminations[i] = dict()
+            eliminations[i][digit] = f'digit_in_region: cell {cell} in region {r}'
 
-# def handle_hidden_single(grid: List[Optional[int]], cell: int, digit: int):
-#     for region in regions_search[cell]:
-#         # try each region for a hidden single
-#         for i in regions[region]:
-#             if i != cell and not find_conflict(grid,i,digit):
-#                 # not a hidden single in this region
-#                 break
-#         else:
-#             # did not break early
-#             # valid hidden single in this region
-#             return True
-#     return False
+"""returns the digit in a cell because it is the only candidate left
 
-# # for each mode, function to call and call signiture
-# modes_calls = {
-#     'mouse': (None,None),
-#     'naked_single': (naked_single, ['cell']),
-#     'hidden_single': (hidden_single, ['cell'])
+this function is not very protective, it currently only checks 1-9 and first checks for exactly 8 digit eliminations"""
+def naked_single(cell: int):
+    elims = eliminations[cell]
+    if len(elims.keys()) != 8:
+        return None
+    # good length
+    for d in range(1,10):
+        if d not in elims.keys():
+            return d
+    raise ValueError(f'naked cell can\'t handle whatever happened. naked_cell({cell})')
+    
+"""returns the only cell where a digit appears in a region
 
-# }
+this function is not very protective, it currently assumes that all regions have the surjective property"""
+def hidden_single(grid: List[Optional[int]], digit: int, region: str):
+    current_find = None
+    for cell in regions[region]:
+        if grid[cell] is not None:
+            continue
+        if cell in eliminations:
+            if digit in eliminations[cell]:
+                continue
+        # else case for both, digit not eliminated
+        if current_find is not None:
+            # more than one cell is possible
+            return None
+        # else, set it
+        current_find = cell
+    # only one cell is not eliminated
+    return current_find
+
 
 
 
@@ -185,7 +178,7 @@ WINDOW_TITLE = "Sudoku Prover"
 class SudokuWindow(arcade.Window):
     def __init__(self,width: int,height: int,title: str | None):
         super().__init__(width,height,title)
-        self.set_location(533,256)
+        self.set_location(210,251)
 
         self.grid: List[Optional[int]] = [None for _ in range(CELLS)]
         self.background_color = arcade.color.WHITE_SMOKE
@@ -202,6 +195,8 @@ class SudokuWindow(arcade.Window):
         self.shape_list: arcade.shape_list.ShapeElementList[Any] = arcade.shape_list.ShapeElementList()
         self.digits_text_grid: List[arcade.Text] = [None for _ in range(CELLS)] # type: ignore
         self.digits_batch = Batch()
+        self.elims_text_grid: List[List[arcade.Text]] = [[None for _ in range(9)] for _ in range(CELLS)] # type: ignore
+        self.elims_batch = Batch()
         # init everything that needs to be done for each cell
         for i in range(CELLS):
             x,y = center_coords(i)
@@ -216,38 +211,77 @@ class SudokuWindow(arcade.Window):
                 anchor_x="center",anchor_y="center",
                 batch=self.digits_batch,
             )
+            for d in range(9):
+                ex = x + CELL_SIZE/3 * (d%3-1)
+                ey = y - CELL_SIZE/3 * (d//3-1) - 0.05*CELL_SIZE
+                self.elims_text_grid[i][d] = arcade.Text(
+                    text="",x=ex,y=ey+int(0.12*CELL_SIZE),
+                    color=arcade.color.RED,
+                    font_size=15,
+                    font_name=("Chalkboard SE","calibri"),
+                    anchor_x="center",anchor_y="center",
+                    batch=self.elims_batch,
+                )
+        
         for i,x in givens.items():
             self.change_cell(i,x)
+            region_eliminate(i,x)
+        self.update_elims_text()
 
     def change_cell(self,index:int, value:Optional[int]):
         self.grid[index] = value
         self.digits_text_grid[index].text = str(value) if value is not None else ""
 
+    def update_elims_text(self):
+        for cell,elims in eliminations.items():
+            for digit in elims.keys():
+                if self.grid[cell] is None:
+                    self.elims_text_grid[cell][digit-1].text = str(digit)
+                else:
+                    # if the digit is placed, remove the elim shown
+                    self.elims_text_grid[cell][digit-1].text = ""
+
     def update_cell(self,index:int,value:Optional[int]):
         # check for validity
+        raise NotImplementedError('update cell is no longer implemented')
         if value is None:
-            self.change_cell(index,value)
+            print('setting a cell back to empty is not supported at the moment')
             return
+            # self.change_cell(index,value)
+            # return
         
-        # if handle_naked_single(self.grid,index,value):
-        #     self.change_cell(index,value)
-        #     return
-        # if handle_hidden_single(self.grid,index,value):
-        #     self.change_cell(index,value)
-        #     return
-        print(f'could not find a reason to place digit {value} in cell {index}')
 
     def on_update(self, delta_time: float) -> bool | None:
+        # check for a cli command to run
         if not self.cmd_queue.empty():
             cmd = self.cmd_queue.get_nowait()
-            if cmd == 'exit':
+            args = cmd.split()            
+            if args[0] == 'exit':
                 arcade.exit()
-            elif cmd == 'loc':
+            elif args[0] == 'loc':
+                # this was to get the current location of the window
+                # allows me to place the window wherever I want when it opens
                 print(self.get_location())
-            else:
-                args = cmd.split()
-                self.change_cell(int(args[0]),int(args[1]))
-    
+            elif args[0] == 'naked' and 2 <= len(args):
+                cell = int(args[1])
+                # naked takes a cell number, anything after is not used
+                # the command succeeds if the cell only has one candidate
+                if digit := naked_single(cell):
+                    self.change_cell(cell,digit)
+                    region_eliminate(cell,digit)
+            elif args[0] == 'hidden' and 2 <= len(args):
+                digit = int(args[1])
+                region = args[2]
+                # hidden takes a digit and region, anything after is not used
+                # the command succeeds if the region only has one cell without digit eliminated
+                if cell := hidden_single(self.grid,digit,region):
+                    self.change_cell(cell, digit)
+                    region_eliminate(cell,digit)
+        self.update_elims_text()
+
+                    
+
+                
     
     def on_draw(self):
         self.clear()
@@ -269,6 +303,7 @@ class SudokuWindow(arcade.Window):
 
         # draw digits
         self.digits_batch.draw()
+        self.elims_batch.draw()
         # draw selector
         if self.selected_cell is not None:
             x,y = center_coords(self.selected_cell)
