@@ -3,6 +3,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from pantograph import Server
 from pantograph.expr import Site, TacticHave, TacticExpr, TacticMode, GoalState
 
+SYMBOLS = [1,2,3,4]
+
+
 word_to_number = {
     'one': 1,
     'two': 2,
@@ -19,7 +22,7 @@ server = Server(project_path=".",imports=[
     'SudokuLean.Basic',
     'SudokuLean.Symbols4',
     'SudokuLean.Tactics'
-], timeout=60)
+],timeout=60)
 
 puzzle = """
 structure TestPuzzle (solution: Nat -> Symbols4) where
@@ -97,43 +100,55 @@ def region_eliminate(cell: int,digit: int):
                 eliminations[i] = dict()
             eliminations[i][digit] = ('digit_in_region', (cell,digit,r))
 
-# def naked_single(cell: int):
-#     """returns the digit in a cell because it is the only candidate left
-#     this function is not very protective, it currently only checks 1-9 and first checks for exactly 8 digit eliminations"""
-#     elims = eliminations[cell]
-#     if len(elims.keys()) != 8:
-#         return None
-#     # good length
-#     for d in range(1,10):
-#         if d not in elims.keys():
-#             return d
-#     raise ValueError(f'naked cell can\'t handle whatever happened. naked_cell({cell})')
-    
-# def hidden_single(grid: List[Optional[int]], digit: int, region: str):
-#     """returns the only cell where a digit appears in a region
-#     this function is not very protective, it currently assumes that all regions have the surjective property"""
-#     current_find = None
-#     for cell in regions[region]:
-#         if grid[cell] is not None:
-#             continue
-#         if cell in eliminations:
-#             if digit in eliminations[cell]:
-#                 continue
-#         # else case for both, digit not eliminated
-#         if current_find is not None:
-#             # more than one cell is possible
-#             return None
-#         # else, set it
-#         current_find = cell
-#     # only one cell is not eliminated
-#     return current_find
 
+server.is_automatic()
 current_state: GoalState
+
+
+def generate_elimination_proof(cell: int, digit: int, hypothesis: str):
+    """Given the current cell and digit and hypothesis name to eliminate
+    eliminates this contradictory case"""
+    global current_state
+    if cell in eliminations and digit in eliminations[cell]:
+        elim = eliminations[cell][digit]
+        if elim[0] == 'digit_in_region':
+            proof = f'exact digit_in_region {hypothesis} H.{elim[1][2]} ((get_d k {elim[1][0]} {elim[1][1]}) f hf)'
+        else:
+            print('unknown elimination reason',elim[0])
+            exit(4)
+
+        current_state = server.goal_tactic(current_state, f'exfalso; {proof}')
+    else:
+        print(f'no elimination present for {cell} {digit}')
+        exit(5)
+
+def generate_elimination_proof_manual(hypothesis: str):
+    """Finds out the values of cell and digit from the hypothesis and eliminates the case"""
+    global current_state
+    for var in current_state.goals[0].variables:
+        if var.name == hypothesis:
+            break
+    else:
+        print(f'could not find a hypothesis {hypothesis} in the context')
+        exit(2)
+    mat = re.match('f (\\d+) = (Symbols\\d+\\.(\\w+)|(\\d+))',var.t)
+    if mat is None:
+        print(f'{var.t} did not match the re')
+        exit(3)
+    cell = int(mat.group(1))
+    if mat.group(4) is not None:
+        digit = int(mat.group(4))
+    else:
+        digit = word_to_number[mat.group(3)]
+    
+    generate_elimination_proof(cell,digit,hypothesis)
+
 
 def have(goal: str):
     global current_state
     goals_count = len(current_state.goals)
     current_state = server.goal_tactic(current_state,TacticHave(goal,'h'))
+    # check if it is a top level have, that needs the forall f in S removed
     if current_state.goals[0].target.startswith('∀ f ∈ S'):
         print('did the thing')
         current_state = server.goal_tactic(current_state,"""intro f hf; replace H := (H f).mp hf""")
@@ -154,41 +169,24 @@ def cell_cases(cell):
     global current_state
     goals_count = len(current_state.goals)
     current_state = server.goal_tactic(current_state,f'cases h: f {cell}')
-    # keep asking for proofs until all cases are closed
-    while len(current_state.goals) >= goals_count:
-        cmd = yield
-        yield from handle_input(cmd)
-    
-def generate_elimination_proof(hypothesis: str):
-    global current_state
-    for var in current_state.goals[0].variables:
-        if var.name == hypothesis:
-            break
-    else:
-        print(f'could not find a hypothesis {hypothesis} in the context')
-        exit(2)
-    mat = re.match('f (\\d+) = (Symbols\\d+\\.(\\w+)|(\\d+))',var.t)
-    if mat is None:
-        print(f'{var.t} did not match the re')
-        exit(3)
-    cell = int(mat.group(1))
-    if mat.group(4) is not None:
-        digit = int(mat.group(4))
-    else:
-        digit = word_to_number[mat.group(3)]
-    if cell in eliminations and digit in eliminations[cell]:
-        elim = eliminations[cell][digit]
-        if elim[0] == 'digit_in_region':
-            proof = f'exact digit_in_region {hypothesis} H.{elim[1][2]} ((get_d k {elim[1][0]} {elim[1][1]}) f hf)'
+    # we know the order of these cases, it's exactly the order of the symbols
+    for digit in SYMBOLS:
+        if cell in eliminations and digit in eliminations[cell]:
+            generate_elimination_proof(cell,digit,'h')
+        # TODO we also need to check for accepting cases, not yet
         else:
-            print('unknown elimination reason',elim[0])
-            exit(4)
-
-        current_state = server.goal_tactic(current_state, f'exfalso; {proof}')
-    else:
-        print(f'no elimination present for {cell} {digit}')
-        exit(5)
-    
+            cmd = yield
+            yield from handle_input(cmd)    
+    if len(current_state.goals) != goals_count - 1:
+        # not the correct number of goals
+        if len(current_state.goals) < goals_count - 1:
+            print(current_state.goals)
+            print('cell_cases managed to solve more cases than it was supposed to. Did you dormant a goal?')
+            exit(6)
+        else:
+            print(current_state.goals)
+            print('cell_cases did not prove all the cases')
+            exit(7)
 
 
 def handle_input(cmd: str):
@@ -210,7 +208,7 @@ def handle_input(cmd: str):
         current_state = server.goal_tactic(current_state,'rfl')
     elif args[0] == 'elim':
         hypothesis = args[1]
-        generate_elimination_proof(hypothesis)
+        generate_elimination_proof_manual(hypothesis)
     else:
         print('unknown command')
         exit(1)
