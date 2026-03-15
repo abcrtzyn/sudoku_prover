@@ -168,8 +168,10 @@ def have(goal: str):
     if current_state.goals[0].target.startswith('∀ f ∈ S'):
         print('did the thing')
         current_state = server.goal_tactic(current_state,"""intro f hf; replace H := (H f).mp hf""")
+    # solve the goal using a command
     cmd = yield goal
     yield from handle_input(cmd)
+
     if len(current_state.goals) > goals_count:
         print('the have goal was not finished')
         exit(6)
@@ -326,8 +328,15 @@ def handle_input(cmd: str):
     #         self.change_cell(cell, digit)
     #         region_eliminate(cell,digit)
 
-
-
+def controller():
+    """main logic loop for cli"""
+    while True:
+        cmd = yield ''
+        try:
+            yield from handle_input(cmd)
+        except Exception as e:
+            print('bad input')
+            print(e)
 
 
 # give the puzzle to Lean
@@ -354,19 +363,13 @@ for k,v in givens.items():
     region_eliminate(k,v)
 
 # this is where the proof begins
+control = controller()
+prompt = next(control)
 
 while True:
     print(current_state.goals[0])
-    cmd = input('> ').strip()
-    gen = handle_input(cmd)
-    try:
-        prompt = next(gen)
-        while True:
-            print(current_state.goals[0])
-            cmd = input(f'{prompt} > ').strip()
-            prompt = gen.send(cmd)
-    except StopIteration:
-        pass
+    cmd = input(f'{prompt}{' ' if prompt else ''}> ').strip()
+    prompt = control.send(cmd)
 
 
 
