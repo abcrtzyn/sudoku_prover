@@ -1,0 +1,19 @@
+version = 1
+revision = 3
+requires-python = ">=3.13"
+
+[[package]]
+name = "pantograph"
+version = "0.3.13"
+source = { git = "https://github.com/stanford-centaur/PyPantograph#7bf8feb6af8adbf50955081d5e2e863058f36506" }
+
+[[package]]
+name = "sudoku-prover"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "pantograph" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pantograph", git = "https://github.com/stanford-centaur/PyPantograph" }]
