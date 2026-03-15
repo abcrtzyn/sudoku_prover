@@ -1,7 +1,7 @@
 import re
 from typing import Any, Dict, List, Optional, Tuple
 from pantograph import Server
-from pantograph.expr import Site, TacticHave, TacticExpr, TacticMode, GoalState
+from pantograph.expr import Site, TacticHave, TacticExpr, TacticLet, TacticMode, GoalState
 
 SYMBOLS = [1,2,3,4]
 
@@ -82,8 +82,7 @@ def generate_search():
 generate_search()
 
 
-# manual eliminations, automatic eliminations for naked single or hidden single
-# will occur at the time
+grid: List[int | None] = [None for _ in range(16)]
 eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = {}
 
 
@@ -109,7 +108,11 @@ def generate_elimination_proof(cell: int, digit: int, hypothesis: str):
     """Given the current cell and digit and hypothesis name to eliminate
     eliminates this contradictory case"""
     global current_state
-    if cell in eliminations and digit in eliminations[cell]:
+    goals_count = len(current_state.goals)
+    if grid[cell] is not None:
+        proof = f'exact digit_in_cell {hypothesis} ((get_d k {cell} {grid[cell]}) f hf)'
+        current_state = server.goal_tactic(current_state, f'exfalso; {proof}')
+    elif cell in eliminations and digit in eliminations[cell]:
         elim = eliminations[cell][digit]
         if elim[0] == 'digit_in_region':
             proof = f'exact digit_in_region {hypothesis} H.{elim[1][2]} ((get_d k {elim[1][0]} {elim[1][1]}) f hf)'
@@ -121,6 +124,18 @@ def generate_elimination_proof(cell: int, digit: int, hypothesis: str):
     else:
         print(f'no elimination present for {cell} {digit}')
         exit(5)
+    if len(current_state.goals) != goals_count - 1:
+        # not the correct number of goals
+        if len(current_state.goals) < goals_count - 1:
+            print(current_state.goals)
+            print('generate_elimination_proof managed to solve more cases than it was supposed to. Did you dormant a goal?')
+            exit(6)
+        else:
+            print(current_state.goals)
+            print('generate_elimination_proof did not prove all the cases')
+            exit(7)
+    
+    
 
 def generate_elimination_proof_manual(hypothesis: str):
     """Finds out the values of cell and digit from the hypothesis and eliminates the case"""
@@ -145,6 +160,7 @@ def generate_elimination_proof_manual(hypothesis: str):
 
 
 def have(goal: str):
+    """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
     global current_state
     goals_count = len(current_state.goals)
     current_state = server.goal_tactic(current_state,TacticHave(goal,'h'))
@@ -152,7 +168,7 @@ def have(goal: str):
     if current_state.goals[0].target.startswith('∀ f ∈ S'):
         print('did the thing')
         current_state = server.goal_tactic(current_state,"""intro f hf; replace H := (H f).mp hf""")
-    cmd = yield
+    cmd = yield goal
     yield from handle_input(cmd)
     if len(current_state.goals) > goals_count:
         print('the have goal was not finished')
@@ -160,9 +176,11 @@ def have(goal: str):
 
 
 def fill(cell: int, digit: int):
+    """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
     global current_state
     yield from have(f'∀ f ∈ S, f {cell} = {digit}')
     current_state = server.goal_tactic(current_state,f"""replace k := add_fact k {cell} {digit} h; clear h""")
+    grid[cell] = digit
     region_eliminate(cell,digit)
 
 def cell_cases(cell):
@@ -175,8 +193,8 @@ def cell_cases(cell):
             generate_elimination_proof(cell,digit,'h')
         # TODO we also need to check for accepting cases, not yet
         else:
-            cmd = yield
-            yield from handle_input(cmd)    
+            cmd = yield f'cell_cases {digit}'
+            yield from handle_input(cmd)
     if len(current_state.goals) != goals_count - 1:
         # not the correct number of goals
         if len(current_state.goals) < goals_count - 1:
@@ -187,6 +205,80 @@ def cell_cases(cell):
             print(current_state.goals)
             print('cell_cases did not prove all the cases')
             exit(7)
+
+def support_cases(hypothesis: str, digit: int | None):
+    """Does support_cases or locked_support_cases on the hypothesis and digit
+    the hypothesis is must be of the form SupportSet {...} n or LockedSet {...} {...}
+    This function will detect which one is needed. If the hypothesis is a locked set, a digit must be given"""
+    global current_state
+    goals_count = len(current_state.goals)
+
+    for var in current_state.goals[0].variables:
+        if var.name == hypothesis:
+            break
+    else:
+        print(f'could not find a hypothesis {hypothesis} in the context')
+        exit(2)
+    pattern = r'(?P<type>Locked|Support)Set f \{(?P<data>\d+(?:,\s*\d+)*)\} (?P<digit>\S|.+)'
+    mat = re.match(pattern, var.t)
+    if mat is None:
+        print(f'{var.t} did not match the re')
+        exit(7)
+    region_is_locked = mat.group('type') == 'Locked'
+    cell_set = [int(x.strip()) for x in mat.group('data').split(',')]
+    if not region_is_locked:
+        digit = int(mat.group('digit'))
+    
+    if digit is None:
+        print('no digit provided for locked set')
+        exit(8)
+
+    current_state = server.goal_tactic(current_state,
+f"""{'locked_support_cases' if region_is_locked else 'support_cases'} h {digit}
+""")
+    print(cell_set)
+    for cell in cell_set:
+        if (grid[cell] is not None) or (cell in eliminations and digit in eliminations[cell]):
+            generate_elimination_proof(cell,digit,'h')
+        # TODO we also need to check for accepting cases, not yet
+        else:
+            cmd = yield f'support_cases {cell}'
+            yield from handle_input(cmd)
+    
+    if len(current_state.goals) != goals_count - 1:
+        # not the correct number of goals
+        if len(current_state.goals) < goals_count - 1:
+            print(current_state.goals)
+            print('support_cases managed to solve more cases than it was supposed to. Did you dormant a goal?')
+            exit(6)
+        else:
+            print(current_state.goals)
+            print('support_cases did not prove all the cases')
+            exit(7)
+    
+def support_cases_manual(digit: int, region: str):
+    global current_state
+    # couple things we have to do in order to call support cases
+    # one, create the hypothesis to run cases on, which has many cases
+    # is there a hypothesis by that name in the context?
+    qualified_region_name = None
+    if region in regions:
+        # check if it is the correct size for surjective logic
+        if len(regions[region]) != len(SYMBOLS):
+            print("can't do surjective logic on a unique set that isn't the same size as symbols")
+        qualified_region_name = f'(region_full_locked_set H.{region})'
+    else:
+        for var in current_state.goals[0].variables:
+            if var.name == region:
+                break
+        else:
+            print('could not find a region by that name in the context')
+        # TODO for now, assume that it starts with forall f in S
+        qualified_region_name = f'{region} f hf'
+    
+    current_state = server.goal_tactic(current_state,f'let h := {qualified_region_name}')
+
+    yield from support_cases('h',digit)
 
 
 def handle_input(cmd: str):
@@ -204,8 +296,14 @@ def handle_input(cmd: str):
     elif args[0] == 'cell_cases':
         cell = int(args[1])
         yield from cell_cases(cell)
+    elif args[0] == 'support_cases':
+        region = args[1]
+        digit = int(args[2])
+        yield from support_cases_manual(digit, region)
     elif args[0] == 'rfl':
         current_state = server.goal_tactic(current_state,'rfl')
+    elif args[0] == 'exact':
+        current_state = server.goal_tactic(current_state, f'exact {args[1]}')
     elif args[0] == 'elim':
         hypothesis = args[1]
         generate_elimination_proof_manual(hypothesis)
@@ -252,6 +350,7 @@ for k,v in givens.items():
     replace H := (H f).mp hf
     apply H.given{k})""")
     # create elimination proofs for each
+    grid[k] = v
     region_eliminate(k,v)
 
 # this is where the proof begins
@@ -261,11 +360,11 @@ while True:
     cmd = input('> ').strip()
     gen = handle_input(cmd)
     try:
-        next(gen)
+        prompt = next(gen)
         while True:
             print(current_state.goals[0])
-            cmd = input('> ').strip()
-            gen.send(cmd)
+            cmd = input(f'{prompt} > ').strip()
+            prompt = gen.send(cmd)
     except StopIteration:
         pass
 
