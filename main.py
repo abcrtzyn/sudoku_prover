@@ -3,7 +3,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from pantograph import Server
 from pantograph.expr import Site, TacticHave, TacticExpr, TacticLet, TacticMode, GoalState
 
+class CommandError(Exception):
+    pass
+
+
 SYMBOLS = [1,2,3,4]
+MAX_CELLS = 16
 
 
 word_to_number = {
@@ -285,33 +290,67 @@ def support_cases_manual(digit: int, region: str):
 
 def handle_input(cmd: str):
     global current_state
+    if cmd == '':
+        raise CommandError("No command given")
     args = cmd.split()
-    if args[0] == 'exit':
+    name = args[0]
+    params = args[1:]
+    if name == 'exit':
+        # ignores all arguments
         exit(0)
-    elif args[0] == 'fill':
-        cell = int(args[1])
-        digit = int(args[2])
+    elif name == 'fill':
+        if len(params) != 2:
+            raise CommandError("expected 'fill cell digit'")
+        try:
+            cell = int(params[0])
+            digit = int(params[1])
+        except ValueError:
+            raise CommandError('digit and cell must be integers')
+        if not (0 <= cell < MAX_CELLS):
+            raise CommandError(f'cell {cell} out of range')
+        if digit not in SYMBOLS:
+            raise CommandError(f'digit {digit} invalid')
         yield from fill(cell,digit)
-    elif args[0] == 'have':
+    elif name == 'have':
+        # the rest of the line is the goal
         goal = cmd.removeprefix('have').strip()
+        if goal == "":
+            raise CommandError("expected 'have [goal]'")
         yield from have(goal)
-    elif args[0] == 'cell_cases':
-        cell = int(args[1])
+    elif name == 'cell_cases':
+        if len(params) != 1:
+            raise CommandError("expected 'cell_cases cell'")
+        try:
+            cell = int(params[0])
+        except ValueError:
+            raise CommandError('cell must be an integer')
+        if not (0 <= cell < MAX_CELLS):
+            raise CommandError(f'cell {cell} out of range')
         yield from cell_cases(cell)
-    elif args[0] == 'support_cases':
-        region = args[1]
-        digit = int(args[2])
+    elif name == 'support_cases':
+        if len(params) != 2:
+            raise CommandError("expected 'support_cases region digit'")
+        region = params[0]
+        try: 
+            digit = int(params[1])
+        except ValueError:
+            raise CommandError('digit must be an integer')
+        if digit not in SYMBOLS:
+            raise CommandError(f'digit {digit} invalid')
         yield from support_cases_manual(digit, region)
-    elif args[0] == 'rfl':
+    elif name == 'rfl':
+        if len(params) != 0:
+            raise CommandError("expected 'rfl' with no arguments")
         current_state = server.goal_tactic(current_state,'rfl')
-    elif args[0] == 'exact':
-        current_state = server.goal_tactic(current_state, f'exact {args[1]}')
-    elif args[0] == 'elim':
-        hypothesis = args[1]
-        generate_elimination_proof_manual(hypothesis)
+    elif name == 'exact':
+        if len(params) != 1:
+            raise CommandError("expected 'exact hypothesis'")
+        current_state = server.goal_tactic(current_state, f'exact {params[0]}')
+    # elif args[0] == 'elim':
+    #     hypothesis = args[1]
+    #     generate_elimination_proof_manual(hypothesis)
     else:
-        print('unknown command')
-        exit(1)
+        raise CommandError(f'unknown command {name}')
     # elif args[0] == 'naked' and 2 <= len(args):
     #     cell = int(args[1])
     #     # naked takes a cell number, anything after is not used
@@ -334,9 +373,8 @@ def controller():
         cmd = yield ''
         try:
             yield from handle_input(cmd)
-        except Exception as e:
-            print('bad input')
-            print(e)
+        except CommandError as e:
+            print(f'[!] {e}')
 
 
 # give the puzzle to Lean
