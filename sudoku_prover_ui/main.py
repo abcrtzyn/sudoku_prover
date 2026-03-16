@@ -138,6 +138,16 @@ class SudokuWindow(arcade.Window):
         self.digits_batch = Batch()
         self.cand_text_grid: List[List[arcade.Text]] = [[None for _ in range(9)] for _ in range(CELLS)] # type: ignore
         self.cand_batch = Batch()
+
+        self.proof_text = arcade.Text(
+            text="",x=WINDOW_HEIGHT,y=WINDOW_HEIGHT-MARGIN,
+            width=1000,
+            color=arcade.color.BLACK,
+            font_size=10,
+            font_name=('Victor Mono','Menlo','monospace'),
+            anchor_x="left",anchor_y="top",
+            multiline=True
+        )
         # init everything that needs to be done for each cell
         for i in range(CELLS):
             x,y = center_coords(i)
@@ -191,7 +201,9 @@ class SudokuWindow(arcade.Window):
                 else:
                     # no candidates show
                     self.cand_text_grid[cell][digit].text = ''
+        
 
+        self.proof_text.text = self.engine.current.proof_state.goals[0]
 
     # def change_cell(self,index:int, value:Optional[int]):
     #     self.grid[index] = value
@@ -264,6 +276,7 @@ class SudokuWindow(arcade.Window):
         # draw digits
         self.digits_batch.draw()
         self.cand_batch.draw()
+        self.proof_text.draw()
         # draw selector
         # if self.selected_cell is not None:
         #     x,y = center_coords(self.selected_cell)
