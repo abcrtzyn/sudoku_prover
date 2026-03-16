@@ -249,6 +249,42 @@ apply H.given{k})""")
     def exact(self,hypothesis: str):
         self.tactic(f'exact {hypothesis}')
 
+    def naked_single(self,cell: int):
+        # first find the digit to fill (check that all digits but one are eliminated)
+        if cell not in self.current.eliminations:
+            # definetely not able to eliminate the candidates
+            raise CommandError(f'cell {cell} has more than one candidate, can not do naked_single')
+        elims = self.current.eliminations[cell]
+            
+        not_eliminated = None
+        for digit in SYMBOLS:
+            if digit in elims:
+                continue
+            # not eliminated
+            if not_eliminated is None:
+                not_eliminated = digit
+            else:
+                # there is more than one candidate
+                # can not do naked single
+                raise CommandError(f'cell {cell} has more than one candidate, can not do naked_single')
+        
+        if not_eliminated is None:
+            # this cell has no candidates, solve using cell_cases instead
+            raise CommandError(f'cell {cell} has no candidates, this should be solved by cell_cases')
+        digit = not_eliminated
+        
+        gen = self.fill(cell,digit)
+        prompt = next(gen)
+        # this test is sort of temporary, assuming the data validation above is good
+        # this should never go.
+        prompt = gen.send(f'cell_cases {cell}')
+        if prompt != f'cell_cases {digit}':
+            raise Exception(f'the prompt after cell_cases is wrong. got "{prompt}", expected cell_cases {digit}')
+        try:
+            gen.send('rfl')
+        except StopIteration:
+            pass
+
 
     def handle_input(self, cmd: str) -> Generator[str,str,None]:
         if cmd == '':
@@ -307,23 +343,19 @@ apply H.given{k})""")
             if len(params) != 1:
                 raise CommandError("expected 'exact hypothesis'")
             self.exact(params[0])
+        elif name == 'naked_single':
+            if len(params) != 1:
+                raise CommandError("expected 'naked_single cell")
+            try:
+                cell = int(params[0])
+            except ValueError:
+                raise CommandError('cell must be an integer')
+            if not (0 <= cell < MAX_CELLS):
+                raise CommandError(f'cell {cell} out of range')
+            self.naked_single(cell)
         else:
             raise CommandError(f'unknown command {name}')
-        # elif args[0] == 'naked' and 2 <= len(args):
-        #     cell = int(args[1])
-        #     # naked takes a cell number, anything after is not used
-        #     # the command succeeds if the cell only has one candidate
-        #     if digit := naked_single(cell):
-        #         self.change_cell(cell,digit)
-        #         region_eliminate(cell,digit)
-        # elif args[0] == 'hidden' and 2 <= len(args):
-        #     digit = int(args[1])
-        #     region = args[2]
-        #     # hidden takes a digit and region, anything after is not used
-        #     # the command succeeds if the region only has one cell without digit eliminated
-        #     if cell := hidden_single(self.grid,digit,region):
-        #         self.change_cell(cell, digit)
-        #         region_eliminate(cell,digit)
+        
 
     def controller(self) -> Generator[str,str,None]:
         """main logic loop for cli"""
