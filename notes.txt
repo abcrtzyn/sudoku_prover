@@ -41,6 +41,17 @@ Constraint Ideas
     conclusion there exists a unique partition ...
 
 
+I now see that I am basically just writing a program that allows me to call the same theorems but with a ui.
+I don't know yet how to do this stuff in Lean, but I would like to use the same implementation for theorems
+
+In python, I actually need a similar way to handle goals and hypotheses to Lean
+A context class with hypotheses and a goal is really the way to go
+The goal then is to write the proof line by line using cli with a ui to help visualize
+The problem kicks in when I notice that Lean is much much much more flexible than my python program
+
+Lets think about a different approach
+
+
 Edit mode
 - allows placing any constraints: givens, regions, eventually cells
 

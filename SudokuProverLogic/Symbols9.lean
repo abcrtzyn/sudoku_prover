@@ -1,7 +1,7 @@
 import Mathlib.Data.Fintype.Defs
 import Mathlib.Data.Finset.Card
 import Mathlib.Data.Fintype.Card
-import SudokuLean.ToNat
+import SudokuProverLogic.ToNat
 
 set_option linter.style.whitespace false
 

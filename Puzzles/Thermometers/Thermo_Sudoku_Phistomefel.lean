@@ -1,8 +1,8 @@
-import SudokuLean.Basic
-import SudokuLean.Symbols9
-import SudokuLean.Thermometer
-import SudokuLean.Tactics
-import SudokuLean.BaselineConstraints
+import SudokuProverLogic.Basic
+import SudokuProverLogic.Symbols9
+import SudokuProverLogic.Thermometer
+import SudokuProverLogic.Tactics
+import SudokuProverLogic.BaselineConstraints
 import Mathlib.Tactic.IntervalCases
 
 set_option linter.style.whitespace false

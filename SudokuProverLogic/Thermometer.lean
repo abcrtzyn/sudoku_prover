@@ -6,8 +6,8 @@ import Mathlib.Order.Defs.PartialOrder
 import Mathlib.Order.BoundedOrder.Basic
 import Mathlib.Data.List.Chain
 import Mathlib.Algebra.Group.Defs
-import SudokuLean.ToNat
-import SudokuLean.Basic
+import SudokuProverLogic.ToNat
+import SudokuProverLogic.Basic
 
 set_option linter.style.longLine false
 set_option linter.style.whitespace false

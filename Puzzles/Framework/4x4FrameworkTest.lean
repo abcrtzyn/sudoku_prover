@@ -1,6 +1,6 @@
-import SudokuLean.Basic
-import SudokuLean.Symbols4
-import SudokuLean.Tactics
+import SudokuProverLogic.Basic
+import SudokuProverLogic.Symbols4
+import SudokuProverLogic.Tactics
 import Mathlib.Tactic.IntervalCases
 
 

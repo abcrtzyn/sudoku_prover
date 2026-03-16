@@ -1,5 +1,5 @@
-import SudokuLean.Basic
-import SudokuLean.Symbols9
+import SudokuProverLogic.Basic
+import SudokuProverLogic.Symbols9
 -- this file has common puzzle baselines to save some lines of text I'd say
 
 set_option linter.style.whitespace false

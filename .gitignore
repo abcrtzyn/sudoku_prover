@@ -1,2 +1,6 @@
 /.lake
 .DS_Store
+sudoku_prover_ui/__pycache__/__init__.cpython-313.pyc
+sudoku_prover_ui/__pycache__/main.cpython-313.pyc
+sudoku_prover_ui/__pycache__/proof_engine.cpython-313.pyc
+sudoku_prover_ui/__pycache__/sudoku_state.cpython-313.pyc

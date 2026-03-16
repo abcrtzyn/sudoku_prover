@@ -1,5 +1,5 @@
-import SudokuLean.Basic
-import SudokuLean.Symbols4
+import SudokuProverLogic.Basic
+import SudokuProverLogic.Symbols4
 
 set_option linter.style.whitespace false
 set_option warningAsError true

@@ -1,6 +1,6 @@
 import Mathlib.Data.Set.Defs
 import Mathlib.Tactic.FinCases
-import SudokuLean.Basic
+import SudokuProverLogic.Basic
 
 set_option linter.style.whitespace false
 

@@ -1,5 +1,26 @@
-- need pencil marks on the interface, buttons to switch modes
-- easy backspace to erase (also typing the same digit erase)
+Next Steps
+- naked single and hidden single commands
+- show proof state on the UI (no fancy stuff yet)
+- naked single button and click cell
+
+What I think is important, maybe...
+- have naming hypotheses
+- top level have vs lower level, technically can leave this one for a while until we actually need to care about it.
+- saving state, replay-ability
+- combo commands, naked single (fill, cell_cases, auto everything)
+- Import puzzle from file
+- show candidates in the middle of the cell
+- finish the proofs, yep can only get as far as filling the cells, but the rest is basically the same for every puzzle
+- better handling of UniqueSets and Symbols (partially comes with importing)
+- commands for support sets, naked locked sets, hidden locked sets
+
+UI better reflect state
+- UI showing proof state
+- UI parsing proof state
+- creating pencil marks based on hypotheses
+- highlight cells actively involved in the proof
+- engine push changes to UI
+
 
 some functionality
 - select cell, press naked logic to fill
@@ -17,8 +38,11 @@ storage format
 - I will need an intermediate storage format, which should keep all constraints, and logic steps in a consise format.
 
 
-finally writing the proofs
-
 nice to haves
 - multi select/single select
 - way later drag select (really not needed)
+
+Other
+- environment setup scripts
+- readme
+- github test puzzles by reruning suko files
