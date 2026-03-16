@@ -83,6 +83,22 @@ apply H.given{k})""")
 
         return self.current.proof_state
 
+    def _execute_or_prompt(self, command: Generator[str, str, None] | None, prompt: str) -> Generator[str, str, None]:
+        """if a command is given, run the command, else, get one from the interface and run it"""
+        if command is not None:
+            yield from command
+        else:
+            cmd = yield prompt
+            yield from self.handle_input(cmd)
+    
+    def _execute_dict_or_prompt[K](self, commands: Dict[K,Generator[str,str,None]] | None, key: K, prompt: str) -> Generator[str, str, None]:
+        """if a command is given, run the command, else, get one from the interface and run it"""
+        if commands is not None and key in commands:
+            yield from commands[key]
+        else:
+            cmd = yield prompt
+            yield from self.handle_input(cmd)
+
     def region_eliminate(self, cell: int,digit: int):
         """eliminates all of digit from every cell in every region that cell is a part of"""
         for r in regions_search[cell]:
@@ -128,7 +144,7 @@ apply H.given{k})""")
                 exit(7)
 
 
-    def have(self, goal: str) -> Generator[str,str,None]:
+    def have(self, goal: str, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
         """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
         goals_count = self.current.count_goals()
         self.tactic(TacticHave(goal,'h'))
@@ -137,33 +153,32 @@ apply H.given{k})""")
             print('did the thing')
             self.tactic("""intro f hf; replace H := (H f).mp hf""")
         # solve the goal using a command
-        cmd = yield goal
-        yield from self.handle_input(cmd)
+        yield from self._execute_or_prompt(command,goal)
 
         if self.current.count_goals() > goals_count:
             print('the have goal was not finished')
             exit(6)
 
 
-    def fill(self, cell: int, digit: int) -> Generator[str,str,None]:
+    def fill(self, cell: int, digit: int, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
         """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
-        yield from self.have(f'∀ f ∈ S, f {cell} = {digit}')
+        yield from self.have(f'∀ f ∈ S, f {cell} = {digit}',command)
         self.tactic(f"""replace k := add_fact k {cell} {digit} h; clear h""")
         
         self.current.grid[cell] = digit
         self.region_eliminate(cell,digit)
 
-    def cell_cases(self, cell) -> Generator[str,str,None]:
+    def cell_cases(self, cell: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
         goals_count = self.current.count_goals()
         self.tactic(f'cases h: f {cell}')
         # we know the order of these cases, it's exactly the order of the symbols
         for digit in SYMBOLS:
             if cell in self.current.eliminations and digit in self.current.eliminations[cell]:
                 self.generate_elimination_proof(cell,digit,'h')
-            # TODO we also need to check for accepting cases, not yet
+                # TODO we also need to check for accepting cases, not yet
             else:
-                cmd = yield f'cell_cases {digit}'
-                yield from self.handle_input(cmd)
+                yield from self._execute_dict_or_prompt(commands,digit,f'cell_cases {digit}')
+            
         if self.current.count_goals() != goals_count - 1:
             # not the correct number of goals
             if self.current.count_goals() < goals_count - 1:
@@ -175,7 +190,7 @@ apply H.given{k})""")
                 print('cell_cases did not prove all the cases')
                 exit(7)
 
-    def support_cases(self, hypothesis: str, digit: int | None) -> Generator[str,str,None]:
+    def support_cases(self, hypothesis: str, digit: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
         """Does support_cases or locked_support_cases on the hypothesis and digit
         the hypothesis is must be of the form SupportSet {...} n or LockedSet {...} {...}
         This function will detect which one is needed. If the hypothesis is a locked set, a digit must be given"""
@@ -207,8 +222,7 @@ apply H.given{k})""")
                 self.generate_elimination_proof(cell,digit,'h')
             # TODO we also need to check for accepting cases, not yet
             else:
-                cmd = yield f'support_cases {cell}'
-                yield from self.handle_input(cmd)
+                yield from self._execute_dict_or_prompt(commands,cell,f'support_cases {cell}')
         
         if self.current.count_goals() != goals_count - 1:
             # not the correct number of goals
@@ -243,13 +257,17 @@ apply H.given{k})""")
 
         yield from self.support_cases('h',digit)
 
-    def rfl(self):
+    def rfl(self) -> Generator[str,str,None]:
         self.tactic('rfl')
+        return
+        yield
     
-    def exact(self,hypothesis: str):
+    def exact(self,hypothesis: str) -> Generator[str,str,None]:
         self.tactic(f'exact {hypothesis}')
+        return
+        yield
 
-    def naked_single(self,cell: int):
+    def naked_single(self,cell: int) -> Generator[str,str,None]:
         # first find the digit to fill (check that all digits but one are eliminated)
         if cell not in self.current.eliminations:
             # definetely not able to eliminate the candidates
@@ -273,17 +291,8 @@ apply H.given{k})""")
             raise CommandError(f'cell {cell} has no candidates, this should be solved by cell_cases')
         digit = not_eliminated
         
-        gen = self.fill(cell,digit)
-        prompt = next(gen)
-        # this test is sort of temporary, assuming the data validation above is good
-        # this should never go.
-        prompt = gen.send(f'cell_cases {cell}')
-        if prompt != f'cell_cases {digit}':
-            raise Exception(f'the prompt after cell_cases is wrong. got "{prompt}", expected cell_cases {digit}')
-        try:
-            gen.send('rfl')
-        except StopIteration:
-            pass
+        # naked single macro. fills the cell with the digit by doing cases on that cell
+        yield from self.fill(cell,digit,self.cell_cases(cell,{digit: self.rfl()}))
 
 
     def handle_input(self, cmd: str) -> Generator[str,str,None]:
@@ -338,11 +347,11 @@ apply H.given{k})""")
         elif name == 'rfl':
             if len(params) != 0:
                 raise CommandError("expected 'rfl' with no arguments")
-            self.rfl()
+            yield from self.rfl()
         elif name == 'exact':
             if len(params) != 1:
                 raise CommandError("expected 'exact hypothesis'")
-            self.exact(params[0])
+            yield from self.exact(params[0])
         elif name == 'naked_single':
             if len(params) != 1:
                 raise CommandError("expected 'naked_single cell")
@@ -352,7 +361,7 @@ apply H.given{k})""")
                 raise CommandError('cell must be an integer')
             if not (0 <= cell < MAX_CELLS):
                 raise CommandError(f'cell {cell} out of range')
-            self.naked_single(cell)
+            yield from self.naked_single(cell)
         else:
             raise CommandError(f'unknown command {name}')
         
