@@ -243,6 +243,12 @@ apply H.given{k})""")
 
         yield from self.support_cases('h',digit)
 
+    def rfl(self):
+        self.tactic('rfl')
+    
+    def exact(self,hypothesis: str):
+        self.tactic(f'exact {hypothesis}')
+
 
     def handle_input(self, cmd: str) -> Generator[str,str,None]:
         if cmd == '':
@@ -296,11 +302,11 @@ apply H.given{k})""")
         elif name == 'rfl':
             if len(params) != 0:
                 raise CommandError("expected 'rfl' with no arguments")
-            self.tactic('rfl')
+            self.rfl()
         elif name == 'exact':
             if len(params) != 1:
                 raise CommandError("expected 'exact hypothesis'")
-            self.tactic(f'exact {params[0]}')
+            self.exact(params[0])
         else:
             raise CommandError(f'unknown command {name}')
         # elif args[0] == 'naked' and 2 <= len(args):
