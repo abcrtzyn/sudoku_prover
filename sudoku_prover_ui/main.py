@@ -299,7 +299,7 @@ class SudokuWindow(arcade.Window):
     def terminal_listener(self):
         while True:
             self.terminal_ready.wait()
-            print(self.engine.current.proof_state.goals[0])
+            # print(self.engine.current.proof_state.goals[0])
             cmd = input(f'{self.terminal_prompt}{' ' if self.terminal_prompt else ''}> ').strip()
             self.cmd_waiting = cmd
             self.terminal_ready.clear()
