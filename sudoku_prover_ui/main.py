@@ -202,8 +202,11 @@ class SudokuWindow(arcade.Window):
                     # no candidates show
                     self.cand_text_grid[cell][digit].text = ''
         
-
-        self.proof_text.text = self.engine.current.proof_state.goals[0]
+        if not self.engine.current.proof_state.goals:
+            # proof finished
+            self.proof_text.text = 'Proof finished!'
+        else:
+            self.proof_text.text = self.engine.current.proof_state.goals[0]
 
     # def change_cell(self,index:int, value:Optional[int]):
     #     self.grid[index] = value
@@ -249,6 +252,7 @@ class SudokuWindow(arcade.Window):
         
         # gone through the states, we may or may not have an active proof
         
+
         # update the UI crudely
         self.refresh()
         # terminal can go
@@ -286,7 +290,7 @@ class SudokuWindow(arcade.Window):
     def terminal_listener(self):
         while True:
             self.terminal_ready.wait()
-            print(self.engine.current.proof_state.goals[0])
+            # print(self.engine.current.proof_state.goals[0])
             cmd = input(f'{self.terminal_prompt}{' ' if self.terminal_prompt else ''}> ').strip()
             self.cmd_waiting = cmd
             self.terminal_ready.clear()
