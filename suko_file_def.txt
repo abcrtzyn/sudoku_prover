@@ -1,0 +1,18 @@
+template <template must be first in the file if it is a template, templates only have puzzle definition, else it is a actual puzzle with a proof>
+definition <marks the beginning of puzzle definition>
+template file/path <if template is given, any fields in the template will disallow fields in this definition>
+cell_count 81
+cell_layout (0, 0) (0, 1)
+symbols Symbols9 <must be a definition we have in lean>
+imported_constraints
+diags file/path
+constraints
+name lean code
+pack {
+c1 lean code
+c2 lean code
+}
+state in_progress
+proof
+naked_single 5 2
+proof step

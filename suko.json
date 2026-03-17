@@ -1,4 +1,5 @@
 {
+    "template": false,
     "puzzle": {
         // templates can have any properties of the puzzle object
         // template is optional
@@ -7,7 +8,7 @@
         // we could also just add to the template
         "cell_count": 81,
         "cell_layout": [{"x":0,"y":0}],
-        "symbols": "Symbols9" // should be a definition in already in lean, no custom arrays.
+        "symbols": "Symbols9", // should be a definition in already in lean, no custom arrays.
         "imported_constraints": {
             // all constraints must have unique names.
             // for the sake of lean and structure:
@@ -29,6 +30,6 @@
     "proof_state": "in_progress", // complete, in_progress, and not_started
     "proof": [
         "naked_single 5 2",
-        "hi"
+        "proof step"
     ]
 }
