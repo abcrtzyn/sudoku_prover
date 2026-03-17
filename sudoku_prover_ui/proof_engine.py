@@ -294,7 +294,7 @@ apply H.given{k})""")
         # naked single macro. fills the cell with the digit by doing cases on that cell
         yield from self.fill(cell,digit,self.cell_cases(cell,{digit: self.rfl()}))
 
-    def finish_proof(self):
+    def finish(self):
         """Where all the digits are known, this function finishes out the proof.
         This finishes out the proof by 
         - creating the function g, 
@@ -430,10 +430,10 @@ apply xin
             if not (0 <= cell < MAX_CELLS):
                 raise CommandError(f'cell {cell} out of range')
             yield from self.naked_single(cell)
-        elif name == 'finish_proof':
+        elif name == 'finish':
             if len(params) != 0:
-                raise CommandError('finish_proof takes no args')
-            self.finish_proof()
+                raise CommandError('finish takes no args')
+            self.finish()
         else:
             raise CommandError(f'unknown command {name}')
         
