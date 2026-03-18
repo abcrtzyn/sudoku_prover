@@ -110,13 +110,38 @@ class SukoInterpreter(Interpreter):
             raise NotImplementedError(f"section '{tree.data}' not implemented yet\n")
         return self.visit_children(tree) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
+# steps and code stuffs for template importing
+# def parent_template(self, tree):
+#     path = tree.children[0].strip('"')
+#     # RECURSION: Load the template file using the SAME logic
+#     parent = Puzzle.load_puzzle(path, is_puzzle=False)
+#     self.puzzle.merge(parent)
 
+    # path = tree.children[0].strip('"')
+    # # Load the parent file
+    # parent_puzzle = Puzzle.load_puzzle(path, is_puzzle=False)
+    # # Merge parent data into OUR temporary state
+    # if parent_puzzle.cell_count:
+    #     if self._cell_count and self._cell_count != parent_puzzle.cell_count:
+    #         raise ValueError("Template count conflicts with local count")
+    #     self._cell_count = parent_puzzle.cell_count
+    # # ... repeat for layout, symbols, etc.
 
-
-
-
-    # def cell_count(self,tree):
-
+# in the class
+# self.seen_files = seen_files or set()
+    # # 1. Resolve to an absolute path
+    # relative_path = tree.children.strip('"')
+    # abs_path = os.path.abspath(relative_path)
+    # # 2. Check for circular reference
+    # if abs_path in self.seen_files:
+    #     raise RecursionError(f"Circular template reference detected: {abs_path}")
+    # # 3. Add to stack and recurse
+    # new_seen = self.seen_files.copy()
+    # new_seen.add(abs_path)
+    # # Pass the 'seen' set to the next interpreter
+    # parent_puzzle = Puzzle.load_puzzle(abs_path, is_puzzle=False, seen_files=new_seen)
+    # # 4. Merge logic...
+    # self.puzzle.merge(parent_puzzle)
 
 
 
