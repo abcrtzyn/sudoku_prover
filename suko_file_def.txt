@@ -1,5 +1,3 @@
-TEMPLATE
-lean_source "lean.object"
 METADATA
 name "puzzle name"
 author "author"
@@ -7,8 +5,8 @@ link "link"
 description ""
 DEFINITION
 template "file/path"
-cell_count 81
-cell_layout [(0, 0) (0, 1)]
+cell_count 2
+cell_layout [(0 0) (0 1)]
 symbols "Symbols9"
 imported_constraints
 - diags "file/path"
