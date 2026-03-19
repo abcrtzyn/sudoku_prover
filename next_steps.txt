@@ -1,0 +1,5 @@
+Working torwards removing lots of hard-coded things
+main should
+    import the puzzle
+    give it to the UI (lots of new processing here)
+    run proof steps
