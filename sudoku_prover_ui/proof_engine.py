@@ -1,10 +1,10 @@
-#pyright: standard
 
 import re
-from typing import Any, Dict, Generator, List, NoReturn, Optional, Tuple
-from pantograph import Server
-from pantograph.expr import Site, Tactic, TacticHave, TacticExpr, TacticLet, TacticMode, GoalState
+from typing import Any, Dict, Generator, List, Tuple
+from pantograph import Server # pyright: ignore[reportMissingTypeStubs]
+from pantograph.expr import Tactic, TacticHave # pyright: ignore[reportMissingTypeStubs]
 
+from sudoku_prover_ui.puzzle import Puzzle
 from sudoku_prover_ui.sudoku_state import SudokuState
 
 from pathlib import Path
@@ -15,8 +15,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-SYMBOLS = [1,2,3,4]
-MAX_CELLS = 16
+
 word_to_number = {
     'one': 1,
     'two': 2,
@@ -31,25 +30,26 @@ class CommandError(Exception):
 
 
 class ProofEngine:
-    def __init__(self, num_cells: int, puzzle: str):
+    def __init__(self, puzzle: Puzzle):
+        self.puzzle = puzzle
+        del puzzle
         self.server = Server(project_path=REPO_ROOT,imports=[ # type: ignore
             'Mathlib.Tactic.IntervalCases',
             'SudokuProverLogic.Basic',
-            'SudokuProverLogic.Symbols4',
+            f'SudokuProverLogic.{self.puzzle.symbols}',
             'SudokuProverLogic.Tactics'
         ],timeout=60)
-        grid: List[int | None] = [None for _ in range(num_cells)]
+        grid: List[int | None] = [None for _ in range(self.puzzle.cell_count)]
         eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = {}
 
         # give the puzzle to Lean
-        self.server.load_definitions(puzzle)
+        self.server.load_definitions(self.puzzle.generate_lean_structure()) # pyright: ignore[reportUnknownMemberType]
 
         # start the proof
-        proof_state = self.server.goal_start("∀ (S: Set (Nat → Symbols4)) (_ : ∀ f, f ∈ S ↔ TestPuzzle f), ∃! (g: Nat -> Symbols4), g ∈ S")
-        proof_state = self.server.goal_tactic(proof_state, 
+        proof_state = self.server.goal_start(f"∀ (S: Set (Nat → {self.puzzle.symbols})) (_ : ∀ f, f ∈ S ↔ Puzzle f), ∃! (g: Nat -> {self.puzzle.symbols}), g ∈ S") # pyright: ignore[reportUnknownMemberType]
+        proof_state = self.server.goal_tactic(proof_state,  # pyright: ignore[reportUnknownMemberType]
 """intro S H
 have k: IsSound S [] := by intro c d h; cases h""")
-        self.symbols = SYMBOLS
         self.current = SudokuState(proof_state,grid,eliminations)
 
         self.undo_stack: List[SudokuState] = []
@@ -76,7 +76,7 @@ apply H.given{k})""")
     def tactic(self, tactic: Tactic):
         """helper that handles the state variables
         updates the proof state and returns it"""
-        new_state = self.server.goal_tactic(self.current.proof_state, tactic)
+        new_state = self.server.goal_tactic(self.current.proof_state, tactic) # pyright: ignore[reportUnknownMemberType]
         # can handle errors here
         # before updating state
         self.current.proof_state = new_state
@@ -172,7 +172,7 @@ apply H.given{k})""")
         goals_count = self.current.count_goals()
         self.tactic(f'cases h: f {cell}')
         # we know the order of these cases, it's exactly the order of the symbols
-        for digit in SYMBOLS:
+        for digit in self.puzzle.symbols_python:
             if cell in self.current.eliminations and digit in self.current.eliminations[cell]:
                 self.generate_elimination_proof(cell,digit,'h')
                 # TODO we also need to check for accepting cases, not yet
@@ -190,7 +190,7 @@ apply H.given{k})""")
                 print('cell_cases did not prove all the cases')
                 exit(7)
 
-    def support_cases(self, hypothesis: str, digit: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
+    def support_cases(self, hypothesis: str, digit: int | None, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
         """Does support_cases or locked_support_cases on the hypothesis and digit
         the hypothesis is must be of the form SupportSet {...} n or LockedSet {...} {...}
         This function will detect which one is needed. If the hypothesis is a locked set, a digit must be given"""
@@ -209,6 +209,7 @@ apply H.given{k})""")
             exit(7)
         region_is_locked = mat.group('type') == 'Locked'
         cell_set = [int(x.strip()) for x in mat.group('data').split(',')]
+        # if it is a support set, get the digit from the hypothesis
         if not region_is_locked:
             digit = int(mat.group('digit'))
         
@@ -242,7 +243,7 @@ apply H.given{k})""")
         qualified_region_name = None
         if region in regions:
             # check if it is the correct size for surjective logic
-            if len(regions[region]) != len(SYMBOLS):
+            if len(regions[region]) != len(self.puzzle.symbols_python):
                 print("can't do surjective logic on a unique set that isn't the same size as symbols")
             qualified_region_name = f'(region_full_locked_set H.{region})'
         else:
@@ -275,7 +276,7 @@ apply H.given{k})""")
         elims = self.current.eliminations[cell]
             
         not_eliminated = None
-        for digit in SYMBOLS:
+        for digit in self.puzzle.symbols_python:
             if digit in elims:
                 continue
             # not eliminated
@@ -312,9 +313,9 @@ apply H.given{k})""")
                 digit = int(params[1])
             except ValueError:
                 raise CommandError('digit and cell must be integers')
-            if not (0 <= cell < MAX_CELLS):
+            if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
-            if digit not in SYMBOLS:
+            if digit not in self.puzzle.symbols_python:
                 raise CommandError(f'digit {digit} invalid')
             yield from self.fill(cell,digit)
         elif name == 'have':
@@ -330,7 +331,7 @@ apply H.given{k})""")
                 cell = int(params[0])
             except ValueError:
                 raise CommandError('cell must be an integer')
-            if not (0 <= cell < MAX_CELLS):
+            if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
             yield from self.cell_cases(cell)
         elif name == 'support_cases':
@@ -341,7 +342,7 @@ apply H.given{k})""")
                 digit = int(params[1])
             except ValueError:
                 raise CommandError('digit must be an integer')
-            if digit not in SYMBOLS:
+            if digit not in self.puzzle.symbols_python:
                 raise CommandError(f'digit {digit} invalid')
             yield from self.support_cases_manual(digit, region)
         elif name == 'rfl':
@@ -359,7 +360,7 @@ apply H.given{k})""")
                 cell = int(params[0])
             except ValueError:
                 raise CommandError('cell must be an integer')
-            if not (0 <= cell < MAX_CELLS):
+            if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
             yield from self.naked_single(cell)
         else:
@@ -376,30 +377,6 @@ apply H.given{k})""")
                 print(f'[!] {e}')
 
 
-
-
-puzzle = """
-structure TestPuzzle (solution: Nat -> Symbols4) where
-  row1: UniqueSet solution { 0, 1, 2, 3}
-  row2: UniqueSet solution { 4, 5, 6, 7}
-  row3: UniqueSet solution { 8, 9,10,11}
-  row4: UniqueSet solution {12,13,14,15}
-  col1: UniqueSet solution { 0, 4, 8,12}
-  col2: UniqueSet solution { 1, 5, 9,13}
-  col3: UniqueSet solution { 2, 6,10,14}
-  col4: UniqueSet solution { 3, 7,11,15}
-  box1: UniqueSet solution { 0, 1, 4, 5}
-  box2: UniqueSet solution { 2, 3, 6, 7}
-  box3: UniqueSet solution { 8, 9,12,13}
-  box4: UniqueSet solution {10,11,14,15}
-  given2: solution 2 = 4
-  given4: solution 4 = 4
-  given6: solution 6 = 3
-  given9: solution 9 = 4
-  given11: solution 11 = 3
-  given13: solution 13 = 1
-  outside_grid: ∀ x, x ≥ 16 -> solution x = Symbols4.one -- just need something to call default
-"""
 
 regions: Dict[str,List[int]] = {
     'row1': [ 0, 1, 2, 3],

@@ -4,143 +4,47 @@ from pyglet.graphics import Batch
 import arcade
 
 from sudoku_prover_ui.proof_engine import ProofEngine
+from sudoku_prover_ui.puzzle import Puzzle
 
-
-"""HARD CODING EVERYTHING ABOUT THE PUZZLE FOR THE MOMENT"""
-
-# Set how many rows and columns we will have
-ROW_COUNT = 4
-COLUMN_COUNT = 4
-CELLS = ROW_COUNT * COLUMN_COUNT
-
-puzzle = """structure TestPuzzle (solution: Nat -> Symbols4) where
-  row1: UniqueSet solution { 0, 1, 2, 3}
-  row2: UniqueSet solution { 4, 5, 6, 7}
-  row3: UniqueSet solution { 8, 9,10,11}
-  row4: UniqueSet solution {12,13,14,15}
-  col1: UniqueSet solution { 0, 4, 8,12}
-  col2: UniqueSet solution { 1, 5, 9,13}
-  col3: UniqueSet solution { 2, 6,10,14}
-  col4: UniqueSet solution { 3, 7,11,15}
-  box1: UniqueSet solution { 0, 1, 4, 5}
-  box2: UniqueSet solution { 2, 3, 6, 7}
-  box3: UniqueSet solution { 8, 9,12,13}
-  box4: UniqueSet solution {10,11,14,15}
-  given2: solution 2 = 4
-  given4: solution 4 = 4
-  given6: solution 6 = 3
-  given9: solution 9 = 4
-  given11: solution 11 = 3
-  given13: solution 13 = 1
-  outside_grid: ∀ x, x ≥ 16 -> solution x = Symbols4.one -- just need something to call default
-"""
-
-# This sets the WIDTH and HEIGHT of each grid location
 CELL_SIZE = 50
-
-givens = {
-    2: 4,
-    4: 4,
-    6: 3,
-    9: 4,
-    11: 3,
-    13: 1,
-}
-
-regions: Dict[str,List[int]] = {
-    'row1': [ 0, 1, 2, 3],
-    'row2': [ 4, 5, 6, 7],
-    'row3': [ 8, 9,10,11],
-    'row4': [12,13,14,15],
-    'col1': [ 0, 4, 8,12],
-    'col2': [ 1, 5, 9,13],
-    'col3': [ 2, 6,10,14],
-    'col4': [ 3, 7,11,15],
-    'box1': [ 0, 1, 4, 5],
-    'box2': [ 2, 3, 6, 7],
-    'box3': [ 8, 9,12,13],
-    'box4': [10,11,14,15],
-}
-givens = {
-    2: 4,
-    4: 4,
-    6: 3,
-    9: 4,
-    11: 3,
-    13: 1,
-}
-
-regions_search: List[List[str]] = []
-
-def generate_search():
-    for _ in range(81):
-        regions_search.append([])
-    for r in regions:
-        for c in regions[r]:
-            regions_search[c].append(r)
-
-generate_search()
-
-"""END HARDCODING THE PUZZLE"""
-
-
 
 # This sets the margin between each cell
 MARGIN = 2
-
+# and the margin from the edge of the window to the cell
 WINDOW_MARGIN = 5
-
-WINDOW_WIDTH = (CELL_SIZE*COLUMN_COUNT+MARGIN*(COLUMN_COUNT+1))+WINDOW_MARGIN+300
-WINDOW_HEIGHT = (CELL_SIZE*ROW_COUNT+MARGIN*(ROW_COUNT+1))+WINDOW_MARGIN*2
-
-
-def center_coords(i: int):
-    # center coords of the rectangle
-    x = WINDOW_MARGIN+MARGIN+(CELL_SIZE/2)+(CELL_SIZE+MARGIN)*(i%COLUMN_COUNT)
-    y = WINDOW_MARGIN+MARGIN+(CELL_SIZE/2)+(CELL_SIZE+MARGIN)*((ROW_COUNT-1)-i//COLUMN_COUNT)
-    return (x,y)
-
-def coords_to_grid_cell(x:int,y:int):
-    x = x - WINDOW_MARGIN - MARGIN
-    y = WINDOW_HEIGHT - y - WINDOW_MARGIN - MARGIN
-    # x and y are now at the top left of the 0th cell
-    # anything 0 to cell_size is a valid position
-    col = x // (CELL_SIZE+MARGIN)
-    x_in_cell = x % (CELL_SIZE+MARGIN) <= CELL_SIZE
-    row = y // (CELL_SIZE+MARGIN)
-    y_in_cell = y % (CELL_SIZE+MARGIN) <= CELL_SIZE
-    if 0 <= col < COLUMN_COUNT and 0 <= row < ROW_COUNT and x_in_cell and y_in_cell:
-        return row*COLUMN_COUNT+col
-    else:
-        return None
-
-
-WINDOW_TITLE = "Sudoku Prover"
 
 
 class SudokuWindow(arcade.Window):
-    def __init__(self,width: int,height: int,title: str | None):
-        super().__init__(width,height,title)
-        # set up the proof engine which creates the initial state
-        print('starting up Lean Server',end=' ')
-        self.engine = ProofEngine(CELLS,puzzle)
-        print('done')
+    def __init__(self,puzzle: Puzzle, engine: ProofEngine):
+        # using the puzzle def (the cell layout) calculate the window width and height
+        self.puzzle = puzzle
+        del puzzle
+        
+        rows, cols = zip(*self.puzzle.cell_layout)
+        self.row_count = max(rows)+1
+        self.column_count = max(cols)+1
+
+        width = (CELL_SIZE*self.column_count+MARGIN*(self.column_count+1))+WINDOW_MARGIN+300
+        height = (CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))+WINDOW_MARGIN*2
+        # these are selfed in the super constructor
+        super().__init__(width,height,title="Sudoku Prover")
+        
         self.set_location(210,251)
 
-
-
+        self.engine = engine
+        
         # self.mode = 'mouse'
         # self.function_args = []
         # self.selected_cell = None
         self.background_color = arcade.color.WHITE_SMOKE
         self.shape_list: arcade.shape_list.ShapeElementList[Any] = arcade.shape_list.ShapeElementList()
-        self.digits_text_grid: List[arcade.Text] = [None for _ in range(CELLS)] # type: ignore
+        self.digits_text_grid: List[arcade.Text] = [None for _ in range(self.puzzle.cell_count)] # type: ignore
         self.digits_batch = Batch()
-        self.cand_text_grid: List[List[arcade.Text]] = [[None for _ in range(9)] for _ in range(CELLS)] # type: ignore
+        self.cand_text_grid: List[List[arcade.Text]] = [[None for _ in range(9)] for _ in range(self.puzzle.cell_count)] # type: ignore
         self.cand_batch = Batch()
 
         self.proof_text = arcade.Text(
-            text="",x=WINDOW_HEIGHT,y=WINDOW_HEIGHT-MARGIN,
+            text="",x=self.width,y=self.height-MARGIN,
             width=1000,
             color=arcade.color.BLACK,
             font_size=10,
@@ -149,8 +53,8 @@ class SudokuWindow(arcade.Window):
             multiline=True
         )
         # init everything that needs to be done for each cell
-        for i in range(CELLS):
-            x,y = center_coords(i)
+        for i in range(self.puzzle.cell_count):
+            x,y = self.get_cell_coords(i)
             rect = arcade.shape_list.create_rectangle_filled(x, y, CELL_SIZE, CELL_SIZE, arcade.color.WHITE)
             self.shape_list.append(rect)
 
@@ -188,11 +92,11 @@ class SudokuWindow(arcade.Window):
         grid = self.engine.current.grid
         eliminations = self.engine.current.eliminations
         # maybe get the proof state too...maybe
-        for cell in range(CELLS):
+        for cell in range(self.puzzle.cell_count):
             do_candidates = grid[cell] is None
             self.digits_text_grid[cell].text = grid[cell] if not do_candidates else ''
 
-            for digit in self.engine.symbols:
+            for digit in self.engine.puzzle.symbols_python:
                 if do_candidates:
                     if cell in eliminations and digit in eliminations[cell]:
                         self.cand_text_grid[cell][digit].text = ''
@@ -204,6 +108,30 @@ class SudokuWindow(arcade.Window):
         
 
         self.proof_text.text = self.engine.current.proof_state.goals[0]
+
+    def get_cell_coords(self, index: int):
+        """gets the center pixel coordinates for a cell at index"""
+        row, col = self.puzzle.cell_layout[index]
+        x = WINDOW_MARGIN+MARGIN+(CELL_SIZE/2)+(CELL_SIZE+MARGIN)*col
+        y = self.height-(WINDOW_MARGIN+MARGIN+(CELL_SIZE/2)+(CELL_SIZE+MARGIN)*row)
+        return (x,y)
+    
+    def coords_to_grid_cell(self,x:int,y:int) -> int | None:
+        raise NotImplementedError('coords to grid cell needs refactoring, maybe needs a search table or something')
+        x = x - WINDOW_MARGIN - MARGIN
+        y = WINDOW_HEIGHT - y - WINDOW_MARGIN - MARGIN
+        # x and y are now at the top left of the 0th cell
+        # anything 0 to cell_size is a valid position
+        col = x // (CELL_SIZE+MARGIN)
+        x_in_cell = x % (CELL_SIZE+MARGIN) <= CELL_SIZE
+        row = y // (CELL_SIZE+MARGIN)
+        y_in_cell = y % (CELL_SIZE+MARGIN) <= CELL_SIZE
+        if 0 <= col < COLUMN_COUNT and 0 <= row < ROW_COUNT and x_in_cell and y_in_cell:
+            return row*COLUMN_COUNT+col
+        else:
+            return None
+
+
 
     # def change_cell(self,index:int, value:Optional[int]):
     #     self.grid[index] = value
@@ -258,7 +186,9 @@ class SudokuWindow(arcade.Window):
     def on_draw(self):
         self.clear()
 
-        arcade.draw_rect_filled(arcade.LBWH(WINDOW_MARGIN,WINDOW_MARGIN,(CELL_SIZE*COLUMN_COUNT+MARGIN*(COLUMN_COUNT+1)),(CELL_SIZE*ROW_COUNT+MARGIN*(ROW_COUNT+1))),arcade.color.BLACK)
+        # draws all the cell dividers with one simple trick
+        # until we have odd shaped puzzles...
+        arcade.draw_rect_filled(arcade.LBWH(WINDOW_MARGIN,WINDOW_MARGIN,(CELL_SIZE*self.column_count+MARGIN*(self.column_count+1)),(CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))),arcade.color.BLACK)
 
         # draw cells
         self.shape_list.draw()
@@ -325,8 +255,8 @@ class SudokuWindow(arcade.Window):
 
 
 
-def main():
-    window = SudokuWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE) # pyright: ignore[reportUnusedVariable]
+def main(puzzle: Puzzle,engine: ProofEngine):
+    window = SudokuWindow(puzzle,engine) # pyright: ignore[reportUnusedVariable]
 
     # Start the arcade game loop
     arcade.run()

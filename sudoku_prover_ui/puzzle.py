@@ -1,13 +1,21 @@
 
 import codecs
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import sys
 from typing import Any, Dict, List, Tuple, cast
 
 from lark import Lark, Token, Tree
 from lark.visitors import Interpreter
 
-class SukoInterpreter(Interpreter):
+# these tell python exactly what and in what order the symbols are
+# very important
+SYMBOLS_DICT: Dict[str,List[int]] = {
+    'Symbols4': [1,2,3,4],
+    'Symbols9': [1,2,3,4,5,6,7,8,9]
+}
+
+
+class SukoInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
     _cell_count: int | None
     _cell_layout: List[Tuple[int,int]] | None
     _symbols: str | None
@@ -40,6 +48,17 @@ class SukoInterpreter(Interpreter):
         if self._symbols is None:
             raise ValueError('No symbols object was provided')
         # TODO check that symbols can be found in lean
+
+        rows, cols = zip(*self._cell_layout)
+        min_row = min(rows)
+        min_col = min(cols)
+
+        # if the mins are not zero, offset the entire cell layout to make it 0.
+        if min_row != 0 or min_col != 0:
+            print('WARNING, the puzzle should have a cell in row 0 and column 0')
+            print('it does not have to have a cell at (0,0) though')
+            self._cell_layout = [(row-min_row,col-min_col) for row, col in self._cell_layout]
+        
         # any other data validation we need
 
         return Puzzle(self._cell_count,self._cell_layout,self._symbols,self._constraints)
@@ -144,13 +163,17 @@ class SukoInterpreter(Interpreter):
     # self.puzzle.merge(parent_puzzle)
 
 
-
 @dataclass
 class Puzzle:
     cell_count: int
     cell_layout: List[Tuple[int,int]]
     symbols: str
+    symbols_python: List[int] = field(init=False)
     constraints: Dict[str,str]
+
+    def __post_init__(self):
+        # This runs immediately after __init__
+        self.symbols_python = SYMBOLS_DICT[self.symbols]
 
     @staticmethod
     def import_puzzle(text: str,file_name:str):
@@ -166,7 +189,15 @@ class Puzzle:
 
 
     def generate_lean_structure(self) -> str:
-        raise NotImplementedError()
+        definition = f"puzzle = structure Puzzle (f: Nat -> {self.symbols}) where\n"
+        definition += f"  outside_grid: ∀ x, x ≥ 16 -> solution x = {self.symbols_python[0]}\n"
+        for name, constraint in self.constraints.items():
+            if '.' in name:
+                raise NotImplementedError('we are not able to handle template constraints yet')
+            definition += f"  {name}: {constraint}\n"
+
+
+        return definition
 
 
 def main(argv: List[str]):
