@@ -1,10 +1,10 @@
-#pyright: standard
 
 import re
-from typing import Any, Dict, Generator, List, NoReturn, Optional, Tuple
-from pantograph import Server
-from pantograph.expr import Site, Tactic, TacticHave, TacticExpr, TacticLet, TacticMode, GoalState
+from typing import Any, Dict, Generator, List, Tuple
+from pantograph import Server # pyright: ignore[reportMissingTypeStubs]
+from pantograph.expr import Tactic, TacticHave # pyright: ignore[reportMissingTypeStubs]
 
+from sudoku_prover_ui.puzzle import Puzzle
 from sudoku_prover_ui.sudoku_state import SudokuState
 
 from pathlib import Path
@@ -15,8 +15,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-SYMBOLS = [1,2,3,4]
-MAX_CELLS = 16
+
 word_to_number = {
     'one': 1,
     'two': 2,
@@ -31,52 +30,60 @@ class CommandError(Exception):
 
 
 class ProofEngine:
-    def __init__(self, num_cells: int, puzzle: str):
+    def __init__(self, puzzle: Puzzle):
+        self.puzzle = puzzle
+        del puzzle
         self.server = Server(project_path=REPO_ROOT,imports=[ # type: ignore
             'Mathlib.Tactic.IntervalCases',
             'SudokuProverLogic.Basic',
-            'SudokuProverLogic.Symbols4',
+            f'SudokuProverLogic.{self.puzzle.symbols}',
             'SudokuProverLogic.Tactics'
         ],timeout=60)
-        grid: List[int | None] = [None for _ in range(num_cells)]
+        grid: List[int | None] = [None for _ in range(self.puzzle.cell_count)]
         eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = {}
 
         # give the puzzle to Lean
-        self.server.load_definitions(puzzle)
+        self.server.load_definitions(self.puzzle.generate_lean_structure()) # pyright: ignore[reportUnknownMemberType]
 
         # start the proof
-        proof_state = self.server.goal_start("∀ (S: Set (Nat → Symbols4)) (_ : ∀ f, f ∈ S ↔ TestPuzzle f), ∃! (g: Nat -> Symbols4), g ∈ S")
-        proof_state = self.server.goal_tactic(proof_state, 
+        proof_state = self.server.goal_start(f"∀ (S: Set (Nat → {self.puzzle.symbols})) (_ : ∀ f, f ∈ S ↔ Puzzle f), ∃! (g: Nat -> {self.puzzle.symbols}), g ∈ S") # pyright: ignore[reportUnknownMemberType]
+        proof_state = self.server.goal_tactic(proof_state,  # pyright: ignore[reportUnknownMemberType]
 """intro S H
 have k: IsSound S [] := by intro c d h; cases h""")
-        self.symbols = SYMBOLS
         self.current = SudokuState(proof_state,grid,eliminations)
 
         self.undo_stack: List[SudokuState] = []
         self.history: List[str] = []
-        self.active_gen: Generator[str, str, None] = self.controller()
+        self._active_gen: Generator[str, str, None] = self.controller()
+        self.terminal_prompt = next(self._active_gen)
         
-        # process the puzzle input
-
-        # process given digits
-        for k,v in givens.items():
-            # add the given to the k structure
-            self.tactic(
-f"""replace k := add_fact k {k} {v} (by
+        # process the puzzle constraints
+        for name, constraint in self.puzzle.constraints_python.items():
+            match constraint[0]:
+                case 'Given':
+                    cell = constraint[1][0]
+                    digit = constraint[1][1]
+                    self.tactic(
+f"""replace k := add_fact k {cell} {digit} (by
 intro f hf
 replace H := (H f).mp hf
-apply H.given{k})""")
+apply H.{name})""")
             
-            # create elimination proofs for each
-            self.current.grid[k] = v
-            self.region_eliminate(k,v)
+                    # create elimination proofs for each
+                    self.current.grid[cell] = digit
+                    self.region_eliminate(cell,digit)
+                case 'UniqueSet':
+                    pass
+                case _:
+                    raise NotImplementedError(f'constraint of type {constraint[0]} has no implementation for initialization')
+
 
 
     
     def tactic(self, tactic: Tactic):
         """helper that handles the state variables
         updates the proof state and returns it"""
-        new_state = self.server.goal_tactic(self.current.proof_state, tactic)
+        new_state = self.server.goal_tactic(self.current.proof_state, tactic) # pyright: ignore[reportUnknownMemberType]
         # can handle errors here
         # before updating state
         self.current.proof_state = new_state
@@ -101,16 +108,19 @@ apply H.given{k})""")
 
     def region_eliminate(self, cell: int,digit: int):
         """eliminates all of digit from every cell in every region that cell is a part of"""
-        for r in regions_search[cell]:
-            for i in regions[r]:
-                if i == cell:
-                    continue
-                # we have a choice to override a current elimination rule, or keep the first one
-                # there are pros and cons to either, but that is for future me to decide.
-                # this code OVERRIDES existing elemination rules
-                if i not in self.current.eliminations:
-                    self.current.eliminations[i] = dict()
-                self.current.eliminations[i][digit] = ('digit_in_region', (cell,digit,r))
+        for name, constraint in self.puzzle.constraints_python.items():
+            if constraint[0] != 'UniqueSet':
+                continue
+            if cell in constraint[1]:
+                for i in constraint[1]:
+                    if i == cell:
+                        continue        
+                    # we have a choice to override a current elimination rule, or keep the first one
+                    # there are pros and cons to either, but that is for future me to decide.
+                    # this code OVERRIDES existing elemination rules
+                    if i not in self.current.eliminations:
+                        self.current.eliminations[i] = dict()
+                    self.current.eliminations[i][digit] = ('digit_in_region', (cell,digit,name))
 
 
     def generate_elimination_proof(self,cell: int, digit: int, hypothesis: str):
@@ -172,7 +182,7 @@ apply H.given{k})""")
         goals_count = self.current.count_goals()
         self.tactic(f'cases h: f {cell}')
         # we know the order of these cases, it's exactly the order of the symbols
-        for digit in SYMBOLS:
+        for digit in self.puzzle.symbols_python:
             if cell in self.current.eliminations and digit in self.current.eliminations[cell]:
                 self.generate_elimination_proof(cell,digit,'h')
                 # TODO we also need to check for accepting cases, not yet
@@ -190,7 +200,7 @@ apply H.given{k})""")
                 print('cell_cases did not prove all the cases')
                 exit(7)
 
-    def support_cases(self, hypothesis: str, digit: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
+    def support_cases(self, hypothesis: str, digit: int | None, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
         """Does support_cases or locked_support_cases on the hypothesis and digit
         the hypothesis is must be of the form SupportSet {...} n or LockedSet {...} {...}
         This function will detect which one is needed. If the hypothesis is a locked set, a digit must be given"""
@@ -209,6 +219,7 @@ apply H.given{k})""")
             exit(7)
         region_is_locked = mat.group('type') == 'Locked'
         cell_set = [int(x.strip()) for x in mat.group('data').split(',')]
+        # if it is a support set, get the digit from the hypothesis
         if not region_is_locked:
             digit = int(mat.group('digit'))
         
@@ -240,10 +251,14 @@ apply H.given{k})""")
         # one, create the hypothesis to run cases on, which has many cases
         # is there a hypothesis by that name in the context?
         qualified_region_name = None
-        if region in regions:
+        if region in self.puzzle.constraints_python:
             # check if it is the correct size for surjective logic
-            if len(regions[region]) != len(SYMBOLS):
-                print("can't do surjective logic on a unique set that isn't the same size as symbols")
+            if self.puzzle.constraints_python[region][0] != 'UniqueSet':
+                raise CommandError(f'Can not do support_cases on region {region}')
+            cells = self.puzzle.constraints_python[region][1]
+
+            if len(cells) != len(self.puzzle.symbols_python):
+                raise CommandError("can't do surjective logic on a unique set that isn't the same size as symbols")
             qualified_region_name = f'(region_full_locked_set H.{region})'
         else:
             for var in self.current.proof_state.goals[0].variables:
@@ -275,7 +290,7 @@ apply H.given{k})""")
         elims = self.current.eliminations[cell]
             
         not_eliminated = None
-        for digit in SYMBOLS:
+        for digit in self.puzzle.symbols_python:
             if digit in elims:
                 continue
             # not eliminated
@@ -293,6 +308,74 @@ apply H.given{k})""")
         
         # naked single macro. fills the cell with the digit by doing cases on that cell
         yield from self.fill(cell,digit,self.cell_cases(cell,{digit: self.rfl()}))
+
+    def finish(self):
+        """Where all the digits are known, this function finishes out the proof.
+        This finishes out the proof by 
+        - creating the function g, 
+        - proving it satisfies all constraints (which could need some proof help, but most of it should be automatic)
+        - showing that it is the only function using all the proofs of each digit that were created in the solving process"""
+
+        # going to be using it a lot, so local variable
+        grid = self.current.grid
+
+
+        if any([x is None for x in grid]):
+            # not all digits are known.
+            raise CommandError('Not all digits are solved, can not finish proof')
+        
+
+        # create the function g and use it
+        # using the digits proved to create the function
+        self.tactic(
+f"""let digits: Array Symbols4 := #{grid}
+-- for use later, say how long it is
+have len: digits.size = {len(grid)} := by decide
+-- define the function g and use it
+let g : Nat → Symbols4 := fun x => digits[x]? |>.getD 1
+use g
+constructor -- splits into testing constraints and uniqueness
+simp only
+apply (H g).mpr
+""")
+        # next is to prove that obeys the constraints of the puzzle
+        # this is done by splitting up the structure
+        # at this point it is all hard coded to the specific puzzle
+        # later there will be functions to prove UniqueSet constraints, theromemeters, etc.
+        self.tactic(
+"""constructor
+-- outside the grid
+intro n hn
+unfold g
+conv => enter [1, 1]; apply Array.getElem?_eq_none (by {rw [len]; assumption})
+simp
+iterate 12 apply injOn_by_card; decide --UniqueSet
+iterate 6 decide -- givens
+"""
+        )   
+        # uniqueness start here
+        self.tactic(
+f"""intro h hh
+replace H := (H h).mp hh
+ext x
+by_cases xin: x < {len(grid)}
+interval_cases x
+"""
+        )
+        # now to get the proof for each cell
+        for cell,digit in enumerate(grid):
+            self.tactic(f'exact (get_d k {cell} {digit}) h hh')
+        # and handle the outside the grid normalization
+        self.tactic(
+f"""rw [H.outside_grid]
+unfold g
+simp at xin
+conv => enter [2,1]; apply Array.getElem?_eq_none (by {{rw [len]; assumption}})
+simp
+push_neg at xin
+apply xin
+"""
+        )
 
 
     def handle_input(self, cmd: str) -> Generator[str,str,None]:
@@ -312,9 +395,9 @@ apply H.given{k})""")
                 digit = int(params[1])
             except ValueError:
                 raise CommandError('digit and cell must be integers')
-            if not (0 <= cell < MAX_CELLS):
+            if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
-            if digit not in SYMBOLS:
+            if digit not in self.puzzle.symbols_python:
                 raise CommandError(f'digit {digit} invalid')
             yield from self.fill(cell,digit)
         elif name == 'have':
@@ -330,7 +413,7 @@ apply H.given{k})""")
                 cell = int(params[0])
             except ValueError:
                 raise CommandError('cell must be an integer')
-            if not (0 <= cell < MAX_CELLS):
+            if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
             yield from self.cell_cases(cell)
         elif name == 'support_cases':
@@ -341,7 +424,7 @@ apply H.given{k})""")
                 digit = int(params[1])
             except ValueError:
                 raise CommandError('digit must be an integer')
-            if digit not in SYMBOLS:
+            if digit not in self.puzzle.symbols_python:
                 raise CommandError(f'digit {digit} invalid')
             yield from self.support_cases_manual(digit, region)
         elif name == 'rfl':
@@ -359,9 +442,13 @@ apply H.given{k})""")
                 cell = int(params[0])
             except ValueError:
                 raise CommandError('cell must be an integer')
-            if not (0 <= cell < MAX_CELLS):
+            if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
             yield from self.naked_single(cell)
+        elif name == 'finish':
+            if len(params) != 0:
+                raise CommandError('finish takes no args')
+            self.finish()
         else:
             raise CommandError(f'unknown command {name}')
         
@@ -374,81 +461,7 @@ apply H.given{k})""")
                 yield from self.handle_input(cmd)
             except CommandError as e:
                 print(f'[!] {e}')
-
-
-
-
-puzzle = """
-structure TestPuzzle (solution: Nat -> Symbols4) where
-  row1: UniqueSet solution { 0, 1, 2, 3}
-  row2: UniqueSet solution { 4, 5, 6, 7}
-  row3: UniqueSet solution { 8, 9,10,11}
-  row4: UniqueSet solution {12,13,14,15}
-  col1: UniqueSet solution { 0, 4, 8,12}
-  col2: UniqueSet solution { 1, 5, 9,13}
-  col3: UniqueSet solution { 2, 6,10,14}
-  col4: UniqueSet solution { 3, 7,11,15}
-  box1: UniqueSet solution { 0, 1, 4, 5}
-  box2: UniqueSet solution { 2, 3, 6, 7}
-  box3: UniqueSet solution { 8, 9,12,13}
-  box4: UniqueSet solution {10,11,14,15}
-  given2: solution 2 = 4
-  given4: solution 4 = 4
-  given6: solution 6 = 3
-  given9: solution 9 = 4
-  given11: solution 11 = 3
-  given13: solution 13 = 1
-  outside_grid: ∀ x, x ≥ 16 -> solution x = Symbols4.one -- just need something to call default
-"""
-
-regions: Dict[str,List[int]] = {
-    'row1': [ 0, 1, 2, 3],
-    'row2': [ 4, 5, 6, 7],
-    'row3': [ 8, 9,10,11],
-    'row4': [12,13,14,15],
-    'col1': [ 0, 4, 8,12],
-    'col2': [ 1, 5, 9,13],
-    'col3': [ 2, 6,10,14],
-    'col4': [ 3, 7,11,15],
-    'box1': [ 0, 1, 4, 5],
-    'box2': [ 2, 3, 6, 7],
-    'box3': [ 8, 9,12,13],
-    'box4': [10,11,14,15],
-}
-givens = {
-    2: 4,
-    4: 4,
-    6: 3,
-    9: 4,
-    11: 3,
-    13: 1,
-}
-
-regions_search: List[List[str]] = []
-
-def generate_search():
-    for _ in range(81):
-        regions_search.append([])
-    for r in regions:
-        for c in regions[r]:
-            regions_search[c].append(r)
-
-generate_search()
-
-
-
-
-
-
-
-
-
-# # this is where the proof begins
-# control = controller()
-# prompt = next(control)
-
-# while True:
-#     print(current_state.goals[0])
-#     cmd = input(f'{prompt}{' ' if prompt else ''}> ').strip()
-#     prompt = control.send(cmd)
-
+    
+    def command(self,cmd:str):
+        self.terminal_prompt = self._active_gen.send(cmd)
+        return self.terminal_prompt
