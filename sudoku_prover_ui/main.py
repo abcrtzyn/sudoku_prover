@@ -187,6 +187,7 @@ class SudokuWindow(arcade.Window):
         """grabs state from the engine and fully updates the UI"""
         grid = self.engine.current.grid
         eliminations = self.engine.current.eliminations
+        proof_state = self.engine.current.proof_state.goals[0]
         # maybe get the proof state too...maybe
         for cell in range(CELLS):
             do_candidates = grid[cell] is None
@@ -202,8 +203,20 @@ class SudokuWindow(arcade.Window):
                     # no candidates show
                     self.cand_text_grid[cell][digit].text = ''
         
+        proof_text = ''
+        if proof_state.name is not None:
+            proof_text += f'case {proof_state.name}\n'
+        
+        for var in proof_state.variables:
+            # don't output these
+            if var.name in ['k','H','S']:
+                continue
+            
+            proof_text += f'{var.name} : {var.t}\n'
+        
+        proof_text += f'⊢ {proof_state.target}'
 
-        self.proof_text.text = self.engine.current.proof_state.goals[0]
+        self.proof_text.text = proof_text
 
     # def change_cell(self,index:int, value:Optional[int]):
     #     self.grid[index] = value
@@ -286,7 +299,7 @@ class SudokuWindow(arcade.Window):
     def terminal_listener(self):
         while True:
             self.terminal_ready.wait()
-            print(self.engine.current.proof_state.goals[0])
+            # print(self.engine.current.proof_state.goals[0])
             cmd = input(f'{self.terminal_prompt}{' ' if self.terminal_prompt else ''}> ').strip()
             self.cmd_waiting = cmd
             self.terminal_ready.clear()
