@@ -1,14 +1,22 @@
 
 import codecs
+import os
 from typing import Any, Dict, List, Tuple, cast
 
-from lark import Token, Tree
+from lark import Lark, Token, Tree
 from lark.visitors import Interpreter
 
 from sudoku_prover_ui.puzzle import Puzzle
 
+def clean_str(token: Token):
+        # get rid of quotes
+        raw: str = token.value[1:-1]
+        # Unescape the backslashes
+        return codecs.decode(raw, "unicode_escape")
 
-class SukoInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
+
+
+class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
     _cell_count: int | None
     _cell_layout: List[Tuple[int,int]] | None
     _symbols: str | None
@@ -21,15 +29,8 @@ class SukoInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
         self._cell_layout = None
         self._symbols = None
         self._constraints = {}
-
-    def _clean_str(self, token: Token):
-        # get rid of quotes
-        raw: str = token.value[1:-1]
-        # Unescape the backslashes
-        return codecs.decode(raw, "unicode_escape")
-
-    def suko(self, tree: Tree[Any]):
-        # go parse the tree
+    
+    def puzzle_definition(self, tree: Tree[Any]):
         self.visit_children(tree) # pyright: ignore[reportUnknownMemberType]
 
         if self._cell_count is None:
@@ -62,7 +63,7 @@ class SukoInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
         raise NotImplementedError('template section is not implemented for a template')
 
     def parent_template(self, tree: Tree[Any]):
-        file_path = self._clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
+        file_path = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
         print('parent_template is not implemented')
 
 
@@ -87,7 +88,7 @@ class SukoInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
         return (int(tree.children[0]),int(tree.children[1])) # pyright: ignore[reportArgumentType]
 
     def symbols(self, tree: Tree[Any]):
-        symbols = self._clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
+        symbols = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
         if self._symbols is not None and self._symbols != symbols:
             # TODO show where the symbols was set previously
             raise ValueError(f"{self.file_name}:{tree.meta.line}:{tree.meta.column} Symbols was already set to {self._symbols}")
@@ -97,7 +98,7 @@ class SukoInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
 
     def imported_constraint(self, tree: Tree[Any]):
         ident = tree.children[0].value # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
-        file_path = self._clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
+        file_path = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
         print('imported_constraint not implemented')
 
     def imported(self, tree: Tree[Any]): # pyright: ignore[reportUnknownParameterType]
@@ -106,7 +107,7 @@ class SukoInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
 
     def constraint(self, tree: Tree[Any]):
         ident = cast(str,tree.children[0].value) # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
-        lean_code = self._clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
+        lean_code = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
 
         if ident in self._constraints:
             # TODO, locaation where the previous was defined
@@ -155,3 +156,54 @@ class SukoInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
     # # 4. Merge logic...
     # self.puzzle.merge(parent_puzzle)
 
+
+
+class ProofInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
+    def __init__(self,file_name:str):
+        self.file_name = file_name
+    
+    def proof_line(self, tree: Tree[Any]) -> Tuple[str,int]:
+        return (tree.children[0].value,tree.meta.line) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue, reportArgumentType]
+
+    # any rules that don't have a function to call end up here
+    # if it is not in the doesn't have rule list, error out
+    # otherwise, carry on with default behaviour
+    def __default__(self, tree: Tree[Any]) -> Any:
+        rule = tree.data
+        if rule not in ['proof_section']:
+            raise NotImplementedError(f"section '{tree.data}' not implemented yet\n")
+        return self.visit_children(tree) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+
+
+def import_file(file_name: str,is_puzzle: bool = True):
+    # check if it exists
+    if not os.path.exists(file_name):
+        print(f"File '{file_name}' could not be found")
+        exit(1)
+    # check if it is a directory
+    if not os.path.isfile(file_name):
+        print(f"'{file_name}' is a directory")
+        exit(1)
+    # get the text
+    try:
+        with open(file_name,'r') as f:
+            text = f.read()
+    except PermissionError:
+        print(f"You do not have permission to read '{file_name}'")
+        exit(1)
+    # process it
+    
+    parser = Lark.open('suko.lark', parser='lalr',start='suko',propagate_positions=True) # pyright: ignore[reportUnknownMemberType]
+    tree = parser.parse(text) # pyright: ignore[reportUnknownMemberType]
+    interpreter = PuzzleInterpreter(file_name, is_puzzle)
+    puzzle = cast(Puzzle,interpreter.visit(tree.children[0])) # pyright: ignore[reportArgumentType, reportUnknownMemberType]
+    if len(tree.children) > 1:
+        assert len(tree.children) == 2
+        # if not is_puzzle:
+        #     print('proof section is not allowed in a file that is not meant to be a puzzle')
+        interpreter = ProofInterpreter(file_name)
+        proof_text = cast(List[Tuple[str,int]],interpreter.visit(tree.children[1])) # pyright: ignore[reportUnknownMemberType, reportArgumentType]
+    else:
+        proof_text = []
+
+    return (puzzle,proof_text)

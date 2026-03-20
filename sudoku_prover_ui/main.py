@@ -5,33 +5,8 @@ import argparse
 import os
 
 from sudoku_prover_ui.proof_engine import ProofEngine
-from sudoku_prover_ui.puzzle import Puzzle
+from sudoku_prover_ui.file_parser import import_file
 
-
-def import_file(file_name: str,is_puzzle: bool = True):
-    # check if it exists
-    if not os.path.exists(file_name):
-        print(f"File '{file_name}' could not be found")
-        exit(1)
-    # check if it is a directory
-    if not os.path.isfile(file_name):
-        print(f"'{file_name}' is a directory")
-        exit(1)
-    # get the text
-    try:
-        with open(file_name,'r') as f:
-            text = f.read()
-    except PermissionError:
-        print(f"You do not have permission to read '{file_name}'")
-        exit(1)
-    # process it
-    parts = text.split("PROOF", 1)
-    definition_text = parts[0]
-    proof_text = (parts[1].strip() if len(parts) > 1 else "").splitlines()
-
-    puzzle = Puzzle.import_puzzle(definition_text,file_name,is_puzzle)
-
-    return (puzzle,proof_text)
 
 def solve(file_name: str, cont: bool):
     
@@ -43,8 +18,12 @@ def solve(file_name: str, cont: bool):
 
     if cont:
         # run through proof steps
-        for line in proof_text:
-            engine.command(line)
+        for line,line_number in proof_text:
+            try:
+                engine.command(line)
+            except Exception as e:
+                e.add_note(f'{file_name}:{line_number} produced this error.')
+                raise e
 
     print('starting up the UI')
     from sudoku_prover_ui import solver_ui # This keeps arcade from trying to run for other commands like verify
@@ -60,8 +39,12 @@ def verify(file_name: str):
     print('done')
 
     print('running through the proof')
-    for line in proof_text:
-        engine.command(line)
+    for line,line_number in proof_text:
+        try:
+            engine.command(line)
+        except Exception as e:
+            e.add_note(f'{file_name}:{line_number} produced this error.')
+            raise e
     
     if engine.current.count_goals() != 0:
         print("the proof looks incomplete")
