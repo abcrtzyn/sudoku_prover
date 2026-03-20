@@ -1,6 +1,7 @@
 
 import codecs
 from dataclasses import dataclass, field
+import re
 import sys
 from typing import Any, Dict, List, Tuple, cast
 
@@ -170,10 +171,32 @@ class Puzzle:
     symbols: str
     symbols_python: List[int] = field(init=False)
     constraints: Dict[str,str]
+    constraints_python: Dict[str,Tuple[str,Any]] = field(init=False)
 
     def __post_init__(self):
         # This runs immediately after __init__
+
+        # go find the symbols definition
+        if self.symbols not in SYMBOLS_DICT:
+            raise ValueError(f'No python implementation of {self.symbols}')
         self.symbols_python = SYMBOLS_DICT[self.symbols]
+
+        self.constraints_python = {}
+        # find python definitions for the constraints
+        for c,code in self.constraints.items():
+            if mat := re.match(r'f\s+(\d+)\s*=\s*(\d+)',code):
+                # given digit constraint
+                self.constraints_python[c] = ('Given',(int(mat.group(1)),int(mat.group(2))))
+            elif mat := re.match(r'UniqueSet\s+f\s+({\s*\d+\s*(,\s*\d+\s*)*})',code):
+                # UniqueSet
+                cells = list(map(int, [item.strip() for item in mat.group(1).strip('{ }').split(',')]))
+                self.constraints_python[c] = ('UniqueSet',cells)
+            else:
+                # unknown constraint type
+                raise ValueError(f'No python implementation of the lean code "{code}", it could also not have parsed correctly')
+
+
+
 
     @staticmethod
     def import_puzzle(text: str,file_name:str):

@@ -1,8 +1,3 @@
-Need to figure out how to use the constraint definitions (like given digits and unique sets and everything else)
-Lean knows what the definitions mean but python doesn't
-
-Then remove the hard coding at the bottom of proof_engine
-
 There is one small refactor to handle running through proof steps in main.
 I think we need a run command function inside proof_engine that stores the prompt in self.prompt for other programs to pick up state wise.
 Basically proof_engine handles it's own generator rather than another program

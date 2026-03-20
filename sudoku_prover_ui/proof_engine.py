@@ -56,20 +56,26 @@ have k: IsSound S [] := by intro c d h; cases h""")
         self.history: List[str] = []
         self.active_gen: Generator[str, str, None] = self.controller()
         
-        # process the puzzle input
-
-        # process given digits
-        for k,v in givens.items():
-            # add the given to the k structure
-            self.tactic(
-f"""replace k := add_fact k {k} {v} (by
+        # process the puzzle constraints
+        for name, constraint in self.puzzle.constraints_python.items():
+            match constraint[0]:
+                case 'Given':
+                    cell = constraint[1][0]
+                    digit = constraint[1][1]
+                    self.tactic(
+f"""replace k := add_fact k {cell} {digit} (by
 intro f hf
 replace H := (H f).mp hf
-apply H.given{k})""")
+apply H.{name})""")
             
-            # create elimination proofs for each
-            self.current.grid[k] = v
-            self.region_eliminate(k,v)
+                    # create elimination proofs for each
+                    self.current.grid[cell] = digit
+                    self.region_eliminate(cell,digit)
+                case 'UniqueSet':
+                    pass
+                case _:
+                    raise NotImplementedError(f'constraint of type {constraint[0]} has no implementation for initialization')
+
 
 
     
@@ -101,16 +107,19 @@ apply H.given{k})""")
 
     def region_eliminate(self, cell: int,digit: int):
         """eliminates all of digit from every cell in every region that cell is a part of"""
-        for r in regions_search[cell]:
-            for i in regions[r]:
-                if i == cell:
-                    continue
-                # we have a choice to override a current elimination rule, or keep the first one
-                # there are pros and cons to either, but that is for future me to decide.
-                # this code OVERRIDES existing elemination rules
-                if i not in self.current.eliminations:
-                    self.current.eliminations[i] = dict()
-                self.current.eliminations[i][digit] = ('digit_in_region', (cell,digit,r))
+        for name, constraint in self.puzzle.constraints_python.items():
+            if constraint[0] != 'UniqueSet':
+                continue
+            if cell in constraint[1]:
+                for i in constraint[1]:
+                    if i == cell:
+                        continue        
+                    # we have a choice to override a current elimination rule, or keep the first one
+                    # there are pros and cons to either, but that is for future me to decide.
+                    # this code OVERRIDES existing elemination rules
+                    if i not in self.current.eliminations:
+                        self.current.eliminations[i] = dict()
+                    self.current.eliminations[i][digit] = ('digit_in_region', (cell,digit,name))
 
 
     def generate_elimination_proof(self,cell: int, digit: int, hypothesis: str):
@@ -241,10 +250,14 @@ apply H.given{k})""")
         # one, create the hypothesis to run cases on, which has many cases
         # is there a hypothesis by that name in the context?
         qualified_region_name = None
-        if region in regions:
+        if region in self.puzzle.constraints_python:
             # check if it is the correct size for surjective logic
-            if len(regions[region]) != len(self.puzzle.symbols_python):
-                print("can't do surjective logic on a unique set that isn't the same size as symbols")
+            if self.puzzle.constraints_python[region][0] != 'UniqueSet':
+                raise CommandError(f'Can not do support_cases on region {region}')
+            cells = self.puzzle.constraints_python[region][1]
+
+            if len(cells) != len(self.puzzle.symbols_python):
+                raise CommandError("can't do surjective logic on a unique set that isn't the same size as symbols")
             qualified_region_name = f'(region_full_locked_set H.{region})'
         else:
             for var in self.current.proof_state.goals[0].variables:
@@ -375,57 +388,3 @@ apply H.given{k})""")
                 yield from self.handle_input(cmd)
             except CommandError as e:
                 print(f'[!] {e}')
-
-
-
-regions: Dict[str,List[int]] = {
-    'row1': [ 0, 1, 2, 3],
-    'row2': [ 4, 5, 6, 7],
-    'row3': [ 8, 9,10,11],
-    'row4': [12,13,14,15],
-    'col1': [ 0, 4, 8,12],
-    'col2': [ 1, 5, 9,13],
-    'col3': [ 2, 6,10,14],
-    'col4': [ 3, 7,11,15],
-    'box1': [ 0, 1, 4, 5],
-    'box2': [ 2, 3, 6, 7],
-    'box3': [ 8, 9,12,13],
-    'box4': [10,11,14,15],
-}
-givens = {
-    2: 4,
-    4: 4,
-    6: 3,
-    9: 4,
-    11: 3,
-    13: 1,
-}
-
-regions_search: List[List[str]] = []
-
-def generate_search():
-    for _ in range(81):
-        regions_search.append([])
-    for r in regions:
-        for c in regions[r]:
-            regions_search[c].append(r)
-
-generate_search()
-
-
-
-
-
-
-
-
-
-# # this is where the proof begins
-# control = controller()
-# prompt = next(control)
-
-# while True:
-#     print(current_state.goals[0])
-#     cmd = input(f'{prompt}{' ' if prompt else ''}> ').strip()
-#     prompt = control.send(cmd)
-
