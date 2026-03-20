@@ -63,22 +63,25 @@ def edit(file_name: str, start_blank: bool, template: bool):
 
 
 def main():
+    opt_file_parser = argparse.ArgumentParser(add_help=False)
+    opt_file_parser.add_argument("file",nargs="?",help="The target file")
+
+    req_file_parser = argparse.ArgumentParser(add_help=False)
+    req_file_parser.add_argument("file",help="The target file")
+
     parser = argparse.ArgumentParser(description="Solve sudokus")
     subparsers = parser.add_subparsers(dest="command", help="Available commands",required=True)
     # solve
-    solve_parser = subparsers.add_parser("solve", help="Open the UI and solve the puzzle")
-    solve_parser.add_argument("file", help="Path to puzzle file")
+    solve_parser = subparsers.add_parser("solve", parents=[req_file_parser],help="Open the UI and solve")
     group = solve_parser.add_mutually_exclusive_group()
     group.add_argument("-c","--continue",action="store_true",dest="cont",default=True,help="Continue from end of the proof text (Default)")
     group.add_argument("-f","--fresh",action="store_false",dest="cont",help="Start the proof from the beginning")
     # verify
-    verify_parser = subparsers.add_parser("verify",help="Check the proof text of the puzzle")
-    verify_parser.add_argument("file",help="Path to puzzle file")
+    verify_parser = subparsers.add_parser("verify",parents=[req_file_parser],help="Check the proof text of the puzzle")
     # edit
-    edit_parser = subparsers.add_parser("edit",help="edit or create a puzzle")
-    edit_parser.add_argument("file",nargs='?',help="file to edit")
+    edit_parser = subparsers.add_parser("edit",parents=[opt_file_parser],help="edit or create a puzzle")
     edit_parser.add_argument("-t","--template",action="store_true",help="Start from a template")
-    edit_parser.add_argument("-b","--blank",action="store_true",help="Start from blank")
+    edit_parser.add_argument("-b","--blank",action="store_true",help="Start from blank (file not required)")
 
 
     args = parser.parse_args()
@@ -87,6 +90,8 @@ def main():
     elif args.command == 'verify':
         verify(args.file)
     elif args.command == 'edit':
+        if not args.file and not args.blank:
+            edit_parser.error("file or blank is required")
         edit(args.file,agrs.blank,args.template)
 
 
