@@ -4,7 +4,6 @@
 import argparse
 from typing import List
 
-from sudoku_prover_ui import solver_ui
 from sudoku_prover_ui.proof_engine import ProofEngine
 from sudoku_prover_ui.puzzle import Puzzle
 
@@ -38,6 +37,7 @@ def solve(args: List[str]):
 
 
     print('starting up the UI')
+    from sudoku_prover_ui import solver_ui # This keeps arcade from trying to run for other commands like verify
     solver_ui.main(puzzle, engine)
 
 
