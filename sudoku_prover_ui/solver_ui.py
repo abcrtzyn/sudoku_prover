@@ -1,5 +1,5 @@
 import threading
-from typing import Any, Dict, List
+from typing import Any, List
 from pyglet.graphics import Batch
 import arcade
 
@@ -82,7 +82,6 @@ class SudokuWindow(arcade.Window):
 
         self.terminal_ready = threading.Event()
         self.cmd_waiting: str = ''
-        self.terminal_prompt = next(self.engine.active_gen)
         self.terminal_thread = threading.Thread(target=self.terminal_listener, daemon=True)
         self.terminal_thread.start()
         self.terminal_ready.set()
@@ -164,7 +163,7 @@ class SudokuWindow(arcade.Window):
         # if the terminal is not ready, there is a command
         # process it
         try:
-            self.terminal_prompt = self.engine.active_gen.send(self.cmd_waiting)
+            self.engine.command(self.cmd_waiting)
         except SystemExit:
             # Catch the exit(0) call and tell Arcade to die
             arcade.exit()
@@ -217,7 +216,7 @@ class SudokuWindow(arcade.Window):
         while True:
             self.terminal_ready.wait()
             print(self.engine.current.proof_state.goals[0])
-            cmd = input(f'{self.terminal_prompt}{' ' if self.terminal_prompt else ''}> ').strip()
+            cmd = input(f'{self.engine.terminal_prompt}{' ' if self.engine.terminal_prompt else ''}> ').strip()
             self.cmd_waiting = cmd
             self.terminal_ready.clear()
 

@@ -54,7 +54,8 @@ have k: IsSound S [] := by intro c d h; cases h""")
 
         self.undo_stack: List[SudokuState] = []
         self.history: List[str] = []
-        self.active_gen: Generator[str, str, None] = self.controller()
+        self._active_gen: Generator[str, str, None] = self.controller()
+        self.terminal_prompt = next(self._active_gen)
         
         # process the puzzle constraints
         for name, constraint in self.puzzle.constraints_python.items():
@@ -388,3 +389,7 @@ apply H.{name})""")
                 yield from self.handle_input(cmd)
             except CommandError as e:
                 print(f'[!] {e}')
+    
+    def command(self,cmd:str):
+        self.terminal_prompt = self._active_gen.send(cmd)
+        return self.terminal_prompt

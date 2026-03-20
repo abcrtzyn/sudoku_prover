@@ -19,13 +19,18 @@ def main():
 
     parts = text.split("PROOF", 1)
     definition_text = parts[0]
-    proof_text = parts[1].strip() if len(parts) > 1 else ""
+    proof_text = (parts[1].strip() if len(parts) > 1 else "").splitlines()
 
     puzzle = Puzzle.import_puzzle(definition_text,args[1])
     
     print('starting up Lean Server',end=' ')
     engine = ProofEngine(puzzle)
     print('done')
+
+    # run through proof steps
+    for line in proof_text:
+        engine.command(line)
+
 
     print('starting up the UI')
     solver_ui.main(puzzle, engine)
