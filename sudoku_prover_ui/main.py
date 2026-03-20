@@ -201,12 +201,26 @@ class SudokuWindow(arcade.Window):
                 else:
                     # no candidates show
                     self.cand_text_grid[cell][digit].text = ''
-        
+
         if not self.engine.current.proof_state.goals:
             # proof finished
             self.proof_text.text = 'Proof finished!'
         else:
-            self.proof_text.text = self.engine.current.proof_state.goals[0]
+            proof_state = self.engine.current.proof_state.goals[0]
+            proof_text = ''
+            if proof_state.name is not None:
+                proof_text += f'case {proof_state.name}\n'
+            
+            for var in proof_state.variables:
+                # don't output these
+                if var.name in ['k','H','S']:
+                    continue
+                
+                proof_text += f'{var.name} : {var.t}\n'
+            
+            proof_text += f'⊢ {proof_state.target}'
+
+            self.proof_text.text = proof_text
 
     # def change_cell(self,index:int, value:Optional[int]):
     #     self.grid[index] = value
