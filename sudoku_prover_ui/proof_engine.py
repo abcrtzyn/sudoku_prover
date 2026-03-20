@@ -344,13 +344,13 @@ apply (H g).mpr
         # later there will be functions to prove UniqueSet constraints, theromemeters, etc.
         self.tactic(
 """constructor
-iterate 12 apply injOn_by_card; decide --UniqueSet
-iterate 6 decide -- givens
 -- outside the grid
 intro n hn
 unfold g
 conv => enter [1, 1]; apply Array.getElem?_eq_none (by {rw [len]; assumption})
 simp
+iterate 12 apply injOn_by_card; decide --UniqueSet
+iterate 6 decide -- givens
 """
         )   
         # uniqueness start here

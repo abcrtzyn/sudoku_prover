@@ -213,7 +213,7 @@ class Puzzle:
 
     def generate_lean_structure(self) -> str:
         definition = f"puzzle = structure Puzzle (f: Nat -> {self.symbols}) where\n"
-        definition += f"  outside_grid: ∀ x, x ≥ 16 -> solution x = {self.symbols_python[0]}\n"
+        definition += f"  outside_grid: ∀ x, x ≥ 16 -> f x = {self.symbols_python[0]}\n"
         for name, constraint in self.constraints.items():
             if '.' in name:
                 raise NotImplementedError('we are not able to handle template constraints yet')
