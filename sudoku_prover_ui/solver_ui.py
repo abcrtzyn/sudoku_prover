@@ -24,8 +24,10 @@ class SudokuWindow(arcade.Window):
         self.row_count = max(rows)+1
         self.column_count = max(cols)+1
 
-        width = (CELL_SIZE*self.column_count+MARGIN*(self.column_count+1))+WINDOW_MARGIN+300
-        height = (CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))+WINDOW_MARGIN*2
+        self.puzzle_width = (CELL_SIZE*self.column_count+MARGIN*(self.column_count+1))+WINDOW_MARGIN*2
+        self.puzzle_height = (CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))+WINDOW_MARGIN*2
+        width = self.puzzle_width+300
+        height = self.puzzle_height
         # these are selfed in the super constructor
         super().__init__(width,height,title="Sudoku Prover")
         
@@ -44,7 +46,7 @@ class SudokuWindow(arcade.Window):
         self.cand_batch = Batch()
 
         self.proof_text = arcade.Text(
-            text="",x=self.width,y=self.height-MARGIN,
+            text="",x=self.puzzle_width,y=self.height-MARGIN,
             width=1000,
             color=arcade.color.BLACK,
             font_size=10,
