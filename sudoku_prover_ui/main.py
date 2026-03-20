@@ -187,7 +187,6 @@ class SudokuWindow(arcade.Window):
         """grabs state from the engine and fully updates the UI"""
         grid = self.engine.current.grid
         eliminations = self.engine.current.eliminations
-        proof_state = self.engine.current.proof_state.goals[0]
         # maybe get the proof state too...maybe
         for cell in range(CELLS):
             do_candidates = grid[cell] is None
@@ -202,21 +201,26 @@ class SudokuWindow(arcade.Window):
                 else:
                     # no candidates show
                     self.cand_text_grid[cell][digit].text = ''
-        
-        proof_text = ''
-        if proof_state.name is not None:
-            proof_text += f'case {proof_state.name}\n'
-        
-        for var in proof_state.variables:
-            # don't output these
-            if var.name in ['k','H','S']:
-                continue
-            
-            proof_text += f'{var.name} : {var.t}\n'
-        
-        proof_text += f'⊢ {proof_state.target}'
 
-        self.proof_text.text = proof_text
+        if not self.engine.current.proof_state.goals:
+            # proof finished
+            self.proof_text.text = 'Proof finished!'
+        else:
+            proof_state = self.engine.current.proof_state.goals[0]
+            proof_text = ''
+            if proof_state.name is not None:
+                proof_text += f'case {proof_state.name}\n'
+            
+            for var in proof_state.variables:
+                # don't output these
+                if var.name in ['k','H','S']:
+                    continue
+                
+                proof_text += f'{var.name} : {var.t}\n'
+            
+            proof_text += f'⊢ {proof_state.target}'
+
+            self.proof_text.text = proof_text
 
     # def change_cell(self,index:int, value:Optional[int]):
     #     self.grid[index] = value
@@ -262,6 +266,7 @@ class SudokuWindow(arcade.Window):
         
         # gone through the states, we may or may not have an active proof
         
+
         # update the UI crudely
         self.refresh()
         # terminal can go
