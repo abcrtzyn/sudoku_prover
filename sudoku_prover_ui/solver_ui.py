@@ -104,9 +104,26 @@ class SudokuWindow(arcade.Window):
                 else:
                     # no candidates show
                     self.cand_text_grid[cell][digit].text = ''
-        
 
-        self.proof_text.text = self.engine.current.proof_state.goals[0]
+        if not self.engine.current.proof_state.goals:
+            # proof finished
+            self.proof_text.text = 'Proof finished!'
+        else:
+            proof_state = self.engine.current.proof_state.goals[0]
+            proof_text = ''
+            if proof_state.name is not None:
+                proof_text += f'case {proof_state.name}\n'
+            
+            for var in proof_state.variables:
+                # don't output these
+                if var.name in ['k','H','S']:
+                    continue
+                
+                proof_text += f'{var.name} : {var.t}\n'
+            
+            proof_text += f'⊢ {proof_state.target}'
+
+            self.proof_text.text = proof_text
 
     def get_cell_coords(self, index: int):
         """gets the center pixel coordinates for a cell at index"""
@@ -215,7 +232,7 @@ class SudokuWindow(arcade.Window):
     def terminal_listener(self):
         while True:
             self.terminal_ready.wait()
-            print(self.engine.current.proof_state.goals[0])
+            # print(self.engine.current.proof_state.goals[0])
             cmd = input(f'{self.engine.terminal_prompt}{' ' if self.engine.terminal_prompt else ''}> ').strip()
             self.cmd_waiting = cmd
             self.terminal_ready.clear()

@@ -309,6 +309,74 @@ apply H.{name})""")
         # naked single macro. fills the cell with the digit by doing cases on that cell
         yield from self.fill(cell,digit,self.cell_cases(cell,{digit: self.rfl()}))
 
+    def finish(self):
+        """Where all the digits are known, this function finishes out the proof.
+        This finishes out the proof by 
+        - creating the function g, 
+        - proving it satisfies all constraints (which could need some proof help, but most of it should be automatic)
+        - showing that it is the only function using all the proofs of each digit that were created in the solving process"""
+
+        # going to be using it a lot, so local variable
+        grid = self.current.grid
+
+
+        if any([x is None for x in grid]):
+            # not all digits are known.
+            raise CommandError('Not all digits are solved, can not finish proof')
+        
+
+        # create the function g and use it
+        # using the digits proved to create the function
+        self.tactic(
+f"""let digits: Array Symbols4 := #{grid}
+-- for use later, say how long it is
+have len: digits.size = {len(grid)} := by decide
+-- define the function g and use it
+let g : Nat → Symbols4 := fun x => digits[x]? |>.getD 1
+use g
+constructor -- splits into testing constraints and uniqueness
+simp only
+apply (H g).mpr
+""")
+        # next is to prove that obeys the constraints of the puzzle
+        # this is done by splitting up the structure
+        # at this point it is all hard coded to the specific puzzle
+        # later there will be functions to prove UniqueSet constraints, theromemeters, etc.
+        self.tactic(
+"""constructor
+iterate 12 apply injOn_by_card; decide --UniqueSet
+iterate 6 decide -- givens
+-- outside the grid
+intro n hn
+unfold g
+conv => enter [1, 1]; apply Array.getElem?_eq_none (by {rw [len]; assumption})
+simp
+"""
+        )   
+        # uniqueness start here
+        self.tactic(
+f"""intro h hh
+replace H := (H h).mp hh
+ext x
+by_cases xin: x < {len(grid)}
+interval_cases x
+"""
+        )
+        # now to get the proof for each cell
+        for cell,digit in enumerate(grid):
+            self.tactic(f'exact (get_d k {cell} {digit}) h hh')
+        # and handle the outside the grid normalization
+        self.tactic(
+f"""rw [H.outside_grid]
+unfold g
+simp at xin
+conv => enter [2,1]; apply Array.getElem?_eq_none (by {{rw [len]; assumption}})
+simp
+push_neg at xin
+apply xin
+"""
+        )
+
 
     def handle_input(self, cmd: str) -> Generator[str,str,None]:
         if cmd == '':
@@ -377,6 +445,10 @@ apply H.{name})""")
             if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
             yield from self.naked_single(cell)
+        elif name == 'finish':
+            if len(params) != 0:
+                raise CommandError('finish takes no args')
+            self.finish()
         else:
             raise CommandError(f'unknown command {name}')
         

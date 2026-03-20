@@ -24,9 +24,14 @@ constraints
 - given11 "f 11 = 3"
 - given13 "f 13 = 1"
 PROOF
-fill 5 2
-cell_cases 5
-rfl
-fill 1 3
-support_cases col2 3
-exact h
+naked_single 5
+naked_single 1
+naked_single 0
+naked_single 3
+naked_single 7
+naked_single 8
+naked_single 10
+naked_single 12
+naked_single 14
+naked_single 15
+finish
