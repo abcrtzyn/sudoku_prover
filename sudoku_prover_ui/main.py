@@ -13,6 +13,7 @@ def main():
     args = sys.argv
     if len(args) != 2:
         print('please give a .suko file to use as input')
+        exit(1)
 
     with open(args[1],'r') as f:
         text = f.read()
