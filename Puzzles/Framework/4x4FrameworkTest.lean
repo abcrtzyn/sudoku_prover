@@ -27,7 +27,7 @@ structure TestPuzzle (solution: Nat -> Symbols4) where
   given9: solution 9 = 4
   given11: solution 11 = 3
   given13: solution 13 = 1
-  outside_grid: ∀ x, x ≥ 16 -> solution x = Symbols4.one -- just need something to call default
+  outside_grid: ∀ x, x ≥ 16 -> solution x = 1 -- just need something to call default
 
 -- 1 3 4 2
 -- 4 2 3 1

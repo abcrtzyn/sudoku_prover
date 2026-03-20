@@ -1,0 +1,31 @@
+suko: template_section? metadata_section? definition_section
+
+template_section: "TEMPLATE" _NL "lean_source" STRING _NL
+
+metadata_section: "METADATA" _NL (metadata_entry)*
+metadata_entry: ID STRING _NL
+
+definition_section: "DEFINITION" _NL (definition_entry)*
+definition_entry: "template" STRING _NL -> parent_template
+    | "cell_count" NUMBER _NL -> cell_count
+    | "cell_layout" list _NL -> cell_layout
+    | "symbols" STRING _NL -> symbols
+    | "imported_constraints" _NL (DASH imported_constraint _NL)+ -> imported
+    | "constraints" _NL (DASH constraint _NL)+ -> local
+
+list: "[" tuple* "]" -> _list
+tuple: "(" NUMBER ","? NUMBER ")" -> _tuple
+imported_constraint: ID STRING
+constraint: ID STRING
+
+proof_section: "PROOF" _NL?
+
+DASH: "-"
+
+ID: /[a-zA-Z_][a-zA-Z0-9_]*/
+NUMBER: /[0-9]+/
+STRING: /"([^"\\\r\n]|\\.)*"/
+
+_NL: /[\r\n]+/
+%import common.WS_INLINE
+%ignore WS_INLINE
