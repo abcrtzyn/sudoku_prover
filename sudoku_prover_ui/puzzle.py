@@ -199,12 +199,12 @@ class Puzzle:
 
 
     @staticmethod
-    def import_puzzle(text: str,file_name:str):
+    def import_puzzle(text: str,file_name:str,is_puzzle: bool = True):
         """text is from beginning of file to proof"""
         parser = Lark.open('suko.lark', parser='lalr',start='suko',propagate_positions=True) # pyright: ignore[reportUnknownMemberType]
         tree = parser.parse(text) # pyright: ignore[reportUnknownMemberType]
 
-        interpreter = SukoInterpreter(file_name)
+        interpreter = SukoInterpreter(file_name, is_puzzle)
         puzzle = cast(Puzzle,interpreter.visit(tree)) # pyright: ignore[reportUnknownMemberType]
         return puzzle
 
