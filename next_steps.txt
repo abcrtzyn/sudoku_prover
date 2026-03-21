@@ -1,0 +1,10 @@
+On this branch the most important goals are
+- recursive parsing to read templates #62
+And
+- saving files, puzzle def and proof (should be a fun task) #10
+- finding a spot to put the save command
+- actually adding the save button to the ui
+
+Other goals
+multi line strings and cell_layout list #63 and #64
+lean imports #74
