@@ -1,5 +1,3 @@
-Read [next_steps.txt](next_steps.txt) to see what is to happen next on this branch.
-
 # Sudoku Prover
 
 This project is based on the idea that you have to prove your deductions to solve a sudoku puzzle.
