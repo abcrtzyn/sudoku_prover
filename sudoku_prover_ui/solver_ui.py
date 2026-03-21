@@ -1,10 +1,22 @@
 import threading
 from typing import Any, List
+import arcade.gui as gui
 from pyglet.graphics import Batch
 import arcade
 
 from sudoku_prover_ui.proof_engine import ProofEngine
 from sudoku_prover_ui.puzzle import Puzzle
+
+NORMAL_STYLE = gui.UIFlatButton.DEFAULT_STYLE
+
+# A highlighted look for the active mode
+ACTIVE_STYLE = {
+    "normal": gui.UIFlatButton.UIStyle(bg=arcade.color.ARMY_GREEN),
+    "hover": gui.UIFlatButton.UIStyle(bg=arcade.color.FIELD_DRAB),
+    "press": gui.UIFlatButton.UIStyle(bg=arcade.color.BITTER_LEMON),
+}
+
+
 
 CELL_SIZE = 50
 
@@ -35,10 +47,10 @@ class SudokuWindow(arcade.Window):
         self.row_count = max(rows)+1
         self.column_count = max(cols)+1
 
-        self.puzzle_width = (CELL_SIZE*self.column_count+MARGIN*(self.column_count+1))+WINDOW_MARGIN*2
-        self.puzzle_height = (CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))+WINDOW_MARGIN*2
-        width = self.puzzle_width+300
-        height = self.puzzle_height
+        self.puzzle_width = (CELL_SIZE*self.column_count+MARGIN*(self.column_count+1))
+        self.puzzle_height = (CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))
+        width = self.puzzle_width+300+WINDOW_MARGIN*2
+        height = self.puzzle_height+50+WINDOW_MARGIN*2
         # these are selfed in the super constructor
         super().__init__(width,height,title="Sudoku Prover")
         
@@ -57,7 +69,7 @@ class SudokuWindow(arcade.Window):
         self.cand_batch = Batch()
 
         self.proof_text = arcade.Text(
-            text="",x=self.puzzle_width,y=self.height-MARGIN,
+            text="",x=self.puzzle_width+WINDOW_MARGIN*2,y=self.height-MARGIN,
             width=1000,
             color=arcade.color.BLACK,
             font_size=10,
@@ -98,6 +110,22 @@ class SudokuWindow(arcade.Window):
         self.terminal_thread = threading.Thread(target=self.terminal_listener, daemon=True)
         self.terminal_thread.start()
         self.terminal_ready.set()
+
+        self.ui = gui.UIManager()
+        self.mode_row = gui.UIButtonRow(vertical=False,space_between=10,width=self.puzzle_width,height=CELL_SIZE-10,size_hint=None)
+        button_mouse = self.mode_row.add_button('mouse',size_hint=(1,1))
+        button_single = self.mode_row.add_button('fill ns',size_hint=(1,1))
+        button_candidate = self.mode_row.add_button('toggle',size_hint=(1,1))
+
+        anchor = self.ui.add(gui.UIAnchorLayout())
+        anchor.add(self.mode_row,anchor_x="left",anchor_y="bottom",align_y=WINDOW_MARGIN,align_x=WINDOW_MARGIN)
+
+        for btn in self.mode_row.children:
+            btn.on_click = self.handle_mode_change
+        self.mode = "mouse"
+        self.update_mode_button_style()
+
+        self.ui.enable()
 
     def refresh(self):
         """grabs state from the engine and fully updates the UI"""
@@ -219,7 +247,8 @@ class SudokuWindow(arcade.Window):
 
         # draws all the cell dividers with one simple trick
         # until we have odd shaped puzzles...
-        arcade.draw_rect_filled(arcade.LBWH(WINDOW_MARGIN,WINDOW_MARGIN,(CELL_SIZE*self.column_count+MARGIN*(self.column_count+1)),(CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))),arcade.color.BLACK)
+
+        arcade.draw_rect_filled(arcade.LBWH(WINDOW_MARGIN,self.height-self.puzzle_height-WINDOW_MARGIN,self.puzzle_width,self.puzzle_height),arcade.color.BLACK)
 
         # draw cells
         self.shape_list.draw()
@@ -243,6 +272,7 @@ class SudokuWindow(arcade.Window):
         #     x,y = center_coords(self.selected_cell)
         #     arcade.draw_rect_outline(arcade.XYWH(x,y,0.85*CELL_SIZE,0.85*CELL_SIZE),arcade.color.BLUE,3)
         # draw ui stuff
+        self.ui.draw()
 
     def terminal_listener(self):
         while True:
@@ -251,6 +281,18 @@ class SudokuWindow(arcade.Window):
             cmd = input(f'{self.engine.terminal_prompt}{' ' if self.engine.terminal_prompt else ''}> ').strip()
             self.cmd_waiting = cmd
             self.terminal_ready.clear()
+
+    def handle_mode_change(self, event):
+        self.mode = event.source.text
+        print(f"mode changed to {self.mode}")
+        self.update_mode_button_style()
+    
+    def update_mode_button_style(self):
+        for btn in self.mode_row.children:
+            if btn.text == self.mode:
+                btn.style = ACTIVE_STYLE
+            else:
+                btn.style = NORMAL_STYLE
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         print('mouse press',x,y)
