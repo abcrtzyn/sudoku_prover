@@ -198,29 +198,6 @@ class SudokuWindow(arcade.Window):
                 pass
         return None
 
-
-    # def change_cell(self,index:int, value:Optional[int]):
-    #     self.grid[index] = value
-    #     self.digits_text_grid[index].text = str(value) if value is not None else ""
-
-    # def update_elims_text(self):
-    #     for cell,elims in eliminations.items():
-    #         for digit in elims.keys():
-    #             if self.grid[cell] is None:
-    #                 self.cand_text_grid[cell][digit-1].text = str(digit)
-    #             else:
-    #                 # if the digit is placed, remove the elim shown
-    #                 self.cand_text_grid[cell][digit-1].text = ""
-
-    # def update_cell(self,index:int,value:Optional[int]):
-    #     # check for validity
-    #     raise NotImplementedError('update cell is no longer implemented')
-    #     if value is None:
-    #         print('setting a cell back to empty is not supported at the moment')
-    #         return
-    #         # self.change_cell(index,value)
-    #         # return
-
     def on_update(self, delta_time: float) -> bool | None:
         # check for a cli command to run
         if self.terminal_ready.is_set():
