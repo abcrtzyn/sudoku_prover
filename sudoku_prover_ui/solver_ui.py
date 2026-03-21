@@ -122,7 +122,7 @@ class SudokuWindow(arcade.Window):
 
         for btn in self.mode_row.children:
             btn.on_click = self.handle_mode_change
-        self.mode = "mouse"
+        self.mode: str = "mouse"
         self.update_mode_button_style()
 
         self.ui.enable()
@@ -222,22 +222,9 @@ class SudokuWindow(arcade.Window):
             return
         # if the terminal is not ready, there is a command
         # process it
-        try:
-            self.engine.command(self.cmd_waiting)
-        except SystemExit:
-            # Catch the exit(0) call and tell Arcade to die
-            arcade.exit()
-            return
-        except Exception as e:
-            # If you want it to hard-crash on other errors too:
-            print(e)
-            arcade.exit()
-            return
         
-        # gone through the states, we may or may not have an active proof
-        
-        # update the UI crudely
-        self.refresh()
+        self.run_command_list([self.cmd_waiting])
+
         # terminal can go
         self.terminal_ready.set()
 
@@ -295,41 +282,47 @@ class SudokuWindow(arcade.Window):
                 btn.style = NORMAL_STYLE
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        print('mouse press',x,y)
         # get the cell
         cell = self.coords_to_grid_cell(x,y)
+        if cell is None:
+            print('mouse press',x,y)
+            # no cell pressed, carry on
+            return
+        # cell pressed
+        print('mouse press cell',cell)
+        match self.mode:
+            case 'mouse':
+                # nothing for this yet
+                pass
+            case 'fill ns':
+                self.run_command_list([f'naked_single {cell}'])
+            case 'toggle':
+                pass
+            case _:
+                raise ValueError(f'unknown solve mode {self.mode}, did you forget to change some mode text?')
         
-
-        # first, check for mode switch
-        # if on a mode ui button
-        # if ui button := False:
-        #     print(f'click mode {ui button}')
-        #     self.mode = ui button
-        #     # reset args
-        #     self.function_args = []
-        #     return
-        # # if it wasn't selecting a new mode
-
-        # # Convert the clicked mouse position into grid coordinates
-        # if index := coords_to_grid_cell(x,y):
-        #     print(f'click cell {index}')
-        #     if self.mode == 'mouse':
-        #         if index == self.selected_cell:
-        #             self.selected_cell = None
-        #         else:
-        #             self.selected_cell = index
-        #     else:
-        #         # TODO check for correct call signiture first
-        #         self.function_args.append(('cell',index))
-
-        # check for correct number of args
-
 
     # def on_key_press(self, symbol, modifiers): # type: ignore
     #     if self.selected_cell is not None and arcade.key.KEY_1 <= symbol <= arcade.key.KEY_9:
     #         digit = int(chr(symbol))
     #         self.update_cell(self.selected_cell,digit)
 
+    def run_command_list(self,commands: List[str]):
+        """runs the command and updates then refreshes the screen"""
+        try:
+            for cmd in commands:
+                self.engine.command(cmd)
+        except SystemExit:
+            # Catch the exit(0) call and tell Arcade to die
+            arcade.exit()
+            return
+        except Exception as e:
+            # If you want it to hard-crash on other errors too:
+            print(e)
+            arcade.exit()
+            return
+
+        self.refresh()
 
 
 
