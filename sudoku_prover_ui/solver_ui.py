@@ -13,6 +13,17 @@ MARGIN = 2
 # and the margin from the edge of the window to the cell
 WINDOW_MARGIN = 5
 
+# # if traversing the cells list for 81 cells, this will create a dictionary map which is fast
+# def create_cell_map(cells: List[Tuple[int,int]]) -> Dict[Tuple[int,int],int]:
+#     """given cells list, it creates a grid used to find the cells when clicked
+#     this function is meant to replace the index function, if it is too slow"""
+#     # we will have already checked that the cells are unique
+#     grid = {}
+#     for i,cell in enumerate(cells):
+#         grid[cell] = i
+
+
+
 
 class SudokuWindow(arcade.Window):
     def __init__(self,puzzle: Puzzle, engine: ProofEngine):
@@ -135,20 +146,22 @@ class SudokuWindow(arcade.Window):
         return (x,y)
     
     def coords_to_grid_cell(self,x:int,y:int) -> int | None:
-        raise NotImplementedError('coords to grid cell needs refactoring, maybe needs a search table or something')
+        """Finds the cell at the coord x,y"""
         x = x - WINDOW_MARGIN - MARGIN
-        y = WINDOW_HEIGHT - y - WINDOW_MARGIN - MARGIN
-        # x and y are now at the top left of the 0th cell
+        y = self.height - y - WINDOW_MARGIN - MARGIN
+        # x and y are now at the top left at (0,0)
         # anything 0 to cell_size is a valid position
         col = x // (CELL_SIZE+MARGIN)
         x_in_cell = x % (CELL_SIZE+MARGIN) <= CELL_SIZE
         row = y // (CELL_SIZE+MARGIN)
         y_in_cell = y % (CELL_SIZE+MARGIN) <= CELL_SIZE
-        if 0 <= col < COLUMN_COUNT and 0 <= row < ROW_COUNT and x_in_cell and y_in_cell:
-            return row*COLUMN_COUNT+col
-        else:
-            return None
 
+        if x_in_cell and y_in_cell:
+            try:
+                return self.puzzle.cell_layout.index((row,col))
+            except:
+                pass
+        return None
 
 
     # def change_cell(self,index:int, value:Optional[int]):
@@ -239,12 +252,17 @@ class SudokuWindow(arcade.Window):
             self.cmd_waiting = cmd
             self.terminal_ready.clear()
 
-    # def on_mouse_press(self, x, y, button, modifiers):
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        print('mouse press',x,y)
+        # get the cell
+        cell = self.coords_to_grid_cell(x,y)
+        
+
         # first, check for mode switch
-        # if on a mode button
-        # if button := False:
-        #     print(f'click mode {button}')
-        #     self.mode = button
+        # if on a mode ui button
+        # if ui button := False:
+        #     print(f'click mode {ui button}')
+        #     self.mode = ui button
         #     # reset args
         #     self.function_args = []
         #     return
