@@ -1,10 +1,22 @@
 import threading
 from typing import Any, List
+import arcade.gui as gui
 from pyglet.graphics import Batch
 import arcade
 
 from sudoku_prover_ui.proof_engine import ProofEngine
 from sudoku_prover_ui.puzzle import Puzzle
+
+NORMAL_STYLE = gui.UIFlatButton.DEFAULT_STYLE
+
+# A highlighted look for the active mode
+ACTIVE_STYLE = {
+    "normal": gui.UIFlatButton.UIStyle(bg=arcade.color.ARMY_GREEN),
+    "hover": gui.UIFlatButton.UIStyle(bg=arcade.color.FIELD_DRAB),
+    "press": gui.UIFlatButton.UIStyle(bg=arcade.color.BITTER_LEMON),
+}
+
+
 
 CELL_SIZE = 50
 
@@ -35,10 +47,10 @@ class SudokuWindow(arcade.Window):
         self.row_count = max(rows)+1
         self.column_count = max(cols)+1
 
-        self.puzzle_width = (CELL_SIZE*self.column_count+MARGIN*(self.column_count+1))+WINDOW_MARGIN*2
-        self.puzzle_height = (CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))+WINDOW_MARGIN*2
-        width = self.puzzle_width+300
-        height = self.puzzle_height
+        self.puzzle_width = (CELL_SIZE*self.column_count+MARGIN*(self.column_count+1))
+        self.puzzle_height = (CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))
+        width = self.puzzle_width+300+WINDOW_MARGIN*2
+        height = self.puzzle_height+50+WINDOW_MARGIN*2
         # these are selfed in the super constructor
         super().__init__(width,height,title="Sudoku Prover")
         
@@ -53,11 +65,12 @@ class SudokuWindow(arcade.Window):
         self.shape_list: arcade.shape_list.ShapeElementList[Any] = arcade.shape_list.ShapeElementList()
         self.digits_text_grid: List[arcade.Text] = [None for _ in range(self.puzzle.cell_count)] # type: ignore
         self.digits_batch = Batch()
+        self.show_candidates_grid: List[bool] = [False for _ in range(self.puzzle.cell_count)]
         self.cand_text_grid: List[List[arcade.Text]] = [[None for _ in range(9)] for _ in range(self.puzzle.cell_count)] # type: ignore
         self.cand_batch = Batch()
 
         self.proof_text = arcade.Text(
-            text="",x=self.puzzle_width,y=self.height-MARGIN,
+            text="",x=self.puzzle_width+WINDOW_MARGIN*2,y=self.height-MARGIN,
             width=1000,
             color=arcade.color.BLACK,
             font_size=10,
@@ -99,24 +112,32 @@ class SudokuWindow(arcade.Window):
         self.terminal_thread.start()
         self.terminal_ready.set()
 
+        self.ui = gui.UIManager()
+        self.mode_row = gui.UIButtonRow(vertical=False,space_between=10,width=self.puzzle_width,height=CELL_SIZE-10,size_hint=None)
+        button_mouse = self.mode_row.add_button('mouse',size_hint=(1,1))
+        button_single = self.mode_row.add_button('fill ns',size_hint=(1,1))
+        button_candidate = self.mode_row.add_button('toggle',size_hint=(1,1))
+
+        anchor = self.ui.add(gui.UIAnchorLayout())
+        anchor.add(self.mode_row,anchor_x="left",anchor_y="bottom",align_y=WINDOW_MARGIN,align_x=WINDOW_MARGIN)
+
+        for btn in self.mode_row.children:
+            btn.on_click = self.handle_mode_change
+        self.mode: str = "mouse"
+        self.update_mode_button_style()
+
+        self.ui.enable()
+
     def refresh(self):
         """grabs state from the engine and fully updates the UI"""
         grid = self.engine.current.grid
-        eliminations = self.engine.current.eliminations
         # maybe get the proof state too...maybe
         for cell in range(self.puzzle.cell_count):
-            do_candidates = grid[cell] is None
-            self.digits_text_grid[cell].text = grid[cell] if not do_candidates else ''
+            cell_filled = grid[cell] is not None
+            self.show_candidates_grid[cell] &= not cell_filled
+            self.digits_text_grid[cell].text = grid[cell] if cell_filled else ''
 
-            for digit in self.engine.puzzle.symbols_python:
-                if do_candidates:
-                    if cell in eliminations and digit in eliminations[cell]:
-                        self.cand_text_grid[cell][digit].text = ''
-                    else:
-                        self.cand_text_grid[cell][digit].text = digit
-                else:
-                    # no candidates show
-                    self.cand_text_grid[cell][digit].text = ''
+            self.refresh_candidate_text(cell)
 
         if not self.engine.current.proof_state.goals:
             # proof finished
@@ -137,6 +158,20 @@ class SudokuWindow(arcade.Window):
             proof_text += f'⊢ {proof_state.target}'
 
             self.proof_text.text = proof_text
+
+    def refresh_candidate_text(self, cell: int):
+        """special limited refresh, only updates the candidates in the specific cell"""
+        eliminations = self.engine.current.eliminations
+        for digit in self.engine.puzzle.symbols_python:
+            if self.show_candidates_grid[cell]:
+                if cell in eliminations and digit in eliminations[cell]:
+                    self.cand_text_grid[cell][digit].text = ''
+                else:
+                    self.cand_text_grid[cell][digit].text = digit
+            else:
+                # no candidates show
+                self.cand_text_grid[cell][digit].text = ''
+
 
     def get_cell_coords(self, index: int):
         """gets the center pixel coordinates for a cell at index"""
@@ -163,29 +198,6 @@ class SudokuWindow(arcade.Window):
                 pass
         return None
 
-
-    # def change_cell(self,index:int, value:Optional[int]):
-    #     self.grid[index] = value
-    #     self.digits_text_grid[index].text = str(value) if value is not None else ""
-
-    # def update_elims_text(self):
-    #     for cell,elims in eliminations.items():
-    #         for digit in elims.keys():
-    #             if self.grid[cell] is None:
-    #                 self.cand_text_grid[cell][digit-1].text = str(digit)
-    #             else:
-    #                 # if the digit is placed, remove the elim shown
-    #                 self.cand_text_grid[cell][digit-1].text = ""
-
-    # def update_cell(self,index:int,value:Optional[int]):
-    #     # check for validity
-    #     raise NotImplementedError('update cell is no longer implemented')
-    #     if value is None:
-    #         print('setting a cell back to empty is not supported at the moment')
-    #         return
-    #         # self.change_cell(index,value)
-    #         # return
-
     def on_update(self, delta_time: float) -> bool | None:
         # check for a cli command to run
         if self.terminal_ready.is_set():
@@ -194,22 +206,9 @@ class SudokuWindow(arcade.Window):
             return
         # if the terminal is not ready, there is a command
         # process it
-        try:
-            self.engine.command(self.cmd_waiting)
-        except SystemExit:
-            # Catch the exit(0) call and tell Arcade to die
-            arcade.exit()
-            return
-        except Exception as e:
-            # If you want it to hard-crash on other errors too:
-            print(e)
-            arcade.exit()
-            return
         
-        # gone through the states, we may or may not have an active proof
-        
-        # update the UI crudely
-        self.refresh()
+        self.run_command_list([self.cmd_waiting])
+
         # terminal can go
         self.terminal_ready.set()
 
@@ -219,7 +218,8 @@ class SudokuWindow(arcade.Window):
 
         # draws all the cell dividers with one simple trick
         # until we have odd shaped puzzles...
-        arcade.draw_rect_filled(arcade.LBWH(WINDOW_MARGIN,WINDOW_MARGIN,(CELL_SIZE*self.column_count+MARGIN*(self.column_count+1)),(CELL_SIZE*self.row_count+MARGIN*(self.row_count+1))),arcade.color.BLACK)
+
+        arcade.draw_rect_filled(arcade.LBWH(WINDOW_MARGIN,self.height-self.puzzle_height-WINDOW_MARGIN,self.puzzle_width,self.puzzle_height),arcade.color.BLACK)
 
         # draw cells
         self.shape_list.draw()
@@ -243,6 +243,7 @@ class SudokuWindow(arcade.Window):
         #     x,y = center_coords(self.selected_cell)
         #     arcade.draw_rect_outline(arcade.XYWH(x,y,0.85*CELL_SIZE,0.85*CELL_SIZE),arcade.color.BLUE,3)
         # draw ui stuff
+        self.ui.draw()
 
     def terminal_listener(self):
         while True:
@@ -252,42 +253,65 @@ class SudokuWindow(arcade.Window):
             self.cmd_waiting = cmd
             self.terminal_ready.clear()
 
+    def handle_mode_change(self, event):
+        self.mode = event.source.text
+        print(f"mode changed to {self.mode}")
+        self.update_mode_button_style()
+    
+    def update_mode_button_style(self):
+        for btn in self.mode_row.children:
+            if btn.text == self.mode:
+                btn.style = ACTIVE_STYLE
+            else:
+                btn.style = NORMAL_STYLE
+
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        print('mouse press',x,y)
         # get the cell
         cell = self.coords_to_grid_cell(x,y)
+        if cell is None:
+            print('mouse press',x,y)
+            # no cell pressed, carry on
+            return
+        # cell pressed
+        print('mouse press cell',cell)
+        match self.mode:
+            case 'mouse':
+                # nothing for this yet
+                pass
+            case 'fill ns':
+                self.run_command_list([f'naked_single {cell}'])
+            case 'toggle':
+                # negate the flag
+                if self.engine.current.grid[cell] is not None:
+                    # digit in cell, take no action
+                    return
+                self.show_candidates_grid[cell] ^= True
+                self.refresh_candidate_text(cell)
+            case _:
+                raise ValueError(f'unknown solve mode {self.mode}, did you forget to change some mode text?')
         
-
-        # first, check for mode switch
-        # if on a mode ui button
-        # if ui button := False:
-        #     print(f'click mode {ui button}')
-        #     self.mode = ui button
-        #     # reset args
-        #     self.function_args = []
-        #     return
-        # # if it wasn't selecting a new mode
-
-        # # Convert the clicked mouse position into grid coordinates
-        # if index := coords_to_grid_cell(x,y):
-        #     print(f'click cell {index}')
-        #     if self.mode == 'mouse':
-        #         if index == self.selected_cell:
-        #             self.selected_cell = None
-        #         else:
-        #             self.selected_cell = index
-        #     else:
-        #         # TODO check for correct call signiture first
-        #         self.function_args.append(('cell',index))
-
-        # check for correct number of args
-
 
     # def on_key_press(self, symbol, modifiers): # type: ignore
     #     if self.selected_cell is not None and arcade.key.KEY_1 <= symbol <= arcade.key.KEY_9:
     #         digit = int(chr(symbol))
     #         self.update_cell(self.selected_cell,digit)
 
+    def run_command_list(self,commands: List[str]):
+        """runs the command and updates then refreshes the screen"""
+        try:
+            for cmd in commands:
+                self.engine.command(cmd)
+        except SystemExit:
+            # Catch the exit(0) call and tell Arcade to die
+            arcade.exit()
+            return
+        except Exception as e:
+            # If you want it to hard-crash on other errors too:
+            print(e)
+            arcade.exit()
+            return
+
+        self.refresh()
 
 
 
