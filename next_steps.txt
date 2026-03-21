@@ -1,0 +1,11 @@
+On this branch. The next/only task is to un-hardcode the final proof
+
+Basically, when the finish command is issued, need to change the finish command to
+1. define the solution function g
+2. iterate through each constraint of the puzzle in the order it was defined in lean structure
+    (I'm no realizing that it was set up as a dictionary of constraints, so we need to garuntee order in some way
+    I would personally like it to just stay in the order that they were defined in the suko file.
+    There is extra processing here to convert list of tuple to dict and back.)
+3. prove it with known proofs, UniqueSet is Inj.card_on; decide, givens are decide
+
+We will need another easy sudoku to test on, one with only naked singles and some hidden singles, a 9x9 would be good though.
