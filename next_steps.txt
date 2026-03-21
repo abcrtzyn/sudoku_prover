@@ -1,0 +1,14 @@
+I want to get a start on having mode buttons
+
+There will be mouse mode, which will allow just selecting cells
+There will be naked single mode, which will fill a cell if it only has one candidate when prodded #20
+There will be show/hide candidates mode, which will show/hide the candidates in a cell when prodded #30 #32
+
+Each of these modes will be toggled, radio button style I guess
+Mouse is default, if any mode is deselected, mouse is selected
+if any mode is selected, switch to that mode
+
+I think it makes sense to put these buttons below the grid, leave the right space for the proof and theorem buttons
+
+There is some commented code lying around for cell selection that can be adapted.
+
