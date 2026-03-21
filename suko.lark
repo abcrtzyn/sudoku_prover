@@ -1,4 +1,5 @@
-suko: template_section? metadata_section? definition_section
+suko: puzzle_definition proof_section?
+puzzle_definition: template_section? metadata_section? definition_section
 
 template_section: "TEMPLATE" _NL "lean_source" STRING _NL
 
@@ -18,7 +19,8 @@ tuple: "(" NUMBER ","? NUMBER ")" -> _tuple
 imported_constraint: ID STRING
 constraint: ID STRING
 
-proof_section: "PROOF" _NL?
+proof_section: "PROOF" _NL proof_line*
+proof_line: /[^\n]+/ _NL | _NL
 
 DASH: "-"
 
