@@ -14,3 +14,4 @@ Options
 - have one dict that stores them all, and have some sort of boolean to show which are in top level or not...
 
 
+I'm considering a refactor described by #85 on this branch.
