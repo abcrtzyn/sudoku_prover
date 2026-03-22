@@ -63,7 +63,7 @@ class DummyProofEngine:
         self.history: List[str] = []
         
         # process the puzzle constraints
-        for name, constraint in self.puzzle.constraints_python.items():
+        for name, constraint in self.puzzle.qualified_constraints_python.items():
             match constraint[0]:
                 case 'Given':
                     cell = constraint[1][0]

@@ -8,4 +8,9 @@ Basically, when the finish command is issued, need to change the finish command 
     There is extra processing here to convert list of tuple to dict and back.)
 3. prove it with known proofs, UniqueSet is Inj.card_on; decide, givens are decide
 
-We will need another easy sudoku to test on, one with only naked singles and some hidden singles, a 9x9 would be good though.
+Need to keep thinking about how constraints are stored to making constraints and theorems easier to implement
+Options
+- keep the 2 seperate dictionaries to handle the top level (exactly whan lean sees) and the qualified names full constraints
+- have one dict that stores them all, and have some sort of boolean to show which are in top level or not...
+
+

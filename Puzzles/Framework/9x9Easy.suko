@@ -1,0 +1,90 @@
+METADATA
+name "Easiest Sudoku"
+description "this is the easiest sudoku from Andrew Stuart Sudoku Wiki"
+DEFINITION
+template "Puzzles/NormalSudoku.suko"
+symbols "Symbols9"
+constraints
+- given0   "f  0 = 3"
+- given3   "f  3 = 9"
+- given4   "f  4 = 6"
+- given5   "f  5 = 7"
+- given8   "f  8 = 1"
+- given10  "f 10 = 4"
+- given12  "f 12 = 3"
+- given14  "f 14 = 2"
+- given16  "f 16 = 8"
+- given19  "f 19 = 2"
+- given25  "f 25 = 7"
+- given28  "f 28 = 7"
+- given34  "f 34 = 9"
+- given39  "f 39 = 8"
+- given40  "f 40 = 7"
+- given41  "f 41 = 3"
+- given45  "f 45 = 5"
+- given49  "f 49 = 1"
+- given53  "f 53 = 3"
+- given56  "f 56 = 4"
+- given57  "f 57 = 7"
+- given59  "f 59 = 5"
+- given60  "f 60 = 1"
+- given63  "f 63 = 9"
+- given65  "f 65 = 5"
+- given69  "f 69 = 2"
+- given71  "f 71 = 7"
+- given72  "f 72 = 8"
+- given75  "f 75 = 6"
+- given76  "f 76 = 2"
+- given77  "f 77 = 1"
+- given80  "f 80 = 4"
+PROOF
+naked_single 66
+naked_single 68
+naked_single 67
+naked_single 58
+naked_single 70
+naked_single 64
+naked_single 73
+naked_single 74
+naked_single 79
+naked_single 78
+naked_single 61
+naked_single 62
+naked_single 55
+naked_single 54
+naked_single 37
+naked_single 46
+naked_single 1
+naked_single 2
+naked_single 6
+naked_single 7
+naked_single 13
+naked_single 15
+naked_single 17
+naked_single 26
+naked_single 24
+naked_single 23
+naked_single 22
+naked_single 21
+naked_single 11
+naked_single 9
+naked_single 18
+naked_single 31
+naked_single 48
+naked_single 27
+naked_single 36
+naked_single 47
+naked_single 50
+naked_single 51
+naked_single 52
+naked_single 38
+naked_single 42
+naked_single 43
+naked_single 44
+naked_single 35
+naked_single 33
+naked_single 32
+naked_single 30
+naked_single 29
+naked_single 20
+finish

@@ -77,7 +77,7 @@ have k: IsSound S [] := by intro c d h; cases h""")
         self.terminal_prompt = next(self._active_gen)
         
         # process the puzzle constraints
-        for name, constraint in self.puzzle.constraints_python.items():
+        for name, constraint in self.puzzle.qualified_constraints_python.items():
             match constraint[0]:
                 case 'Given':
                     cell = constraint[1][0]
@@ -102,6 +102,7 @@ apply H.{name})""")
     def tactic(self, tactic: Tactic):
         """helper that handles the state variables
         updates the proof state and returns it"""
+        print(tactic)
         new_state = self.server.goal_tactic(self.current.proof_state, tactic) # pyright: ignore[reportUnknownMemberType]
         # can handle errors here
         # before updating state
@@ -127,7 +128,7 @@ apply H.{name})""")
 
     def region_eliminate(self, cell: int,digit: int):
         """eliminates all of digit from every cell in every region that cell is a part of"""
-        for name, constraint in self.puzzle.constraints_python.items():
+        for name, constraint in self.puzzle.qualified_constraints_python.items():
             if constraint[0] != 'UniqueSet':
                 continue
             if cell in constraint[1]:
@@ -179,7 +180,6 @@ apply H.{name})""")
         self.tactic(TacticHave(goal,'h'))
         # check if it is a top level have, that needs the forall f in S removed
         if self.current.proof_state.goals[0].target.startswith('∀ f ∈ S'):
-            print('did the thing')
             self.tactic("""intro f hf; replace H := (H f).mp hf""")
         # solve the goal using a command
         yield from self._execute_or_prompt(command,goal)
@@ -270,11 +270,11 @@ apply H.{name})""")
         # one, create the hypothesis to run cases on, which has many cases
         # is there a hypothesis by that name in the context?
         qualified_region_name = None
-        if region in self.puzzle.constraints_python:
+        if region in self.puzzle.qualified_constraints_python:
             # check if it is the correct size for surjective logic
-            if self.puzzle.constraints_python[region][0] != 'UniqueSet':
+            if self.puzzle.qualified_constraints_python[region][0] != 'UniqueSet':
                 raise CommandError(f'Can not do support_cases on region {region}')
-            cells = self.puzzle.constraints_python[region][1]
+            cells = self.puzzle.qualified_constraints_python[region][1]
 
             if len(cells) != len(self.puzzle.symbols_python):
                 raise CommandError("can't do surjective logic on a unique set that isn't the same size as symbols")
@@ -346,7 +346,7 @@ apply H.{name})""")
 
         # create the function g and use it
         # using the digits proved to create the function
-        self.tactic(
+        state = self.tactic(
 f"""let digits: Array {self.puzzle.symbols} := #{str(grid).replace("'","")}
 -- for use later, say how long it is
 have len: digits.size = {len(grid)} := by decide
@@ -361,17 +361,29 @@ apply (H g).mpr
         # this is done by splitting up the structure
         # at this point it is all hard coded to the specific puzzle
         # later there will be functions to prove UniqueSet constraints, theromemeters, etc.
+        print(state.goals[0])
         self.tactic(
 """constructor
 -- outside the grid
 intro n hn
 unfold g
 conv => enter [1, 1]; apply Array.getElem?_eq_none (by {rw [len]; assumption})
-simp
-iterate 12 apply injOn_by_card; decide --UniqueSet
-iterate 6 decide -- givens
-"""
-        )   
+simp"""
+        )
+        # this relies on the order of .items() and values() being consistent, we can change data structures to a list or something if that ends up not being true
+        for constraint in self.puzzle.constraints.values():
+            print(constraint)
+
+            match constraint[0]:
+                case "":
+                    self.tactic("decide")
+                case "NormalSudoku f":
+                    self.tactic("constructor; iterate 27 apply injOn_by_card; decide")
+                case _:
+                    raise ValueError(f'do not know how to prove the constraint {constraint}')
+
+        print(state.goals[0])
+        exit()
         # uniqueness start here
         self.tactic(
 f"""intro h hh
@@ -482,5 +494,6 @@ apply xin
                 print(f'[!] {e}')
     
     def command(self,cmd:str):
+        # print(cmd)
         self.terminal_prompt = self._active_gen.send(cmd)
         return self.terminal_prompt
