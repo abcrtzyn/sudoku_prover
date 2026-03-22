@@ -328,11 +328,11 @@ apply H.{name})""")
         # create the function g and use it
         # using the digits proved to create the function
         self.tactic(
-f"""let digits: Array Symbols4 := #{grid}
+f"""let digits: Array {self.puzzle.symbols} := #{str(grid).replace("'","")}
 -- for use later, say how long it is
 have len: digits.size = {len(grid)} := by decide
 -- define the function g and use it
-let g : Nat → Symbols4 := fun x => digits[x]? |>.getD 1
+let g : Nat → {self.puzzle.symbols} := fun x => digits[x]? |>.getD {self.puzzle.symbols_python[0]}
 use g
 constructor -- splits into testing constraints and uniqueness
 simp only
