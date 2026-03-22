@@ -66,7 +66,7 @@ class SudokuWindow(arcade.Window):
         self.digits_text_grid: List[arcade.Text] = [None for _ in range(self.puzzle.cell_count)] # type: ignore
         self.digits_batch = Batch()
         self.show_candidates_grid: List[bool] = [False for _ in range(self.puzzle.cell_count)]
-        self.cand_text_grid: List[List[arcade.Text]] = [[None for _ in range(9)] for _ in range(self.puzzle.cell_count)] # type: ignore
+        self.cand_text_grid: List[List[arcade.Text]] = [[None for _ in self.puzzle.symbols_python] for _ in range(self.puzzle.cell_count)] # type: ignore
         self.cand_batch = Batch()
 
         self.proof_text = arcade.Text(
@@ -92,7 +92,7 @@ class SudokuWindow(arcade.Window):
                 anchor_x="center",anchor_y="center",
                 batch=self.digits_batch,
             )
-            for d in range(9):
+            for d in range(len(self.puzzle.symbols_python)):
                 ex = x + CELL_SIZE/3 * (d%3-1)
                 ey = y - CELL_SIZE/3 * (d//3-1) - 0.05*CELL_SIZE
                 self.cand_text_grid[i][d] = arcade.Text(
@@ -162,12 +162,12 @@ class SudokuWindow(arcade.Window):
     def refresh_candidate_text(self, cell: int):
         """special limited refresh, only updates the candidates in the specific cell"""
         eliminations = self.engine.current.eliminations
-        for digit in self.engine.puzzle.symbols_python:
+        for digit,digit_value in enumerate(self.engine.puzzle.symbols_python):
             if self.show_candidates_grid[cell]:
-                if cell in eliminations and digit in eliminations[cell]:
+                if cell in eliminations and digit_value in eliminations[cell]:
                     self.cand_text_grid[cell][digit].text = ''
                 else:
-                    self.cand_text_grid[cell][digit].text = digit
+                    self.cand_text_grid[cell][digit].text = digit_value
             else:
                 # no candidates show
                 self.cand_text_grid[cell][digit].text = ''
@@ -307,8 +307,8 @@ class SudokuWindow(arcade.Window):
             return
         except Exception as e:
             # If you want it to hard-crash on other errors too:
-            print(e)
             arcade.exit()
+            raise e
             return
 
         self.refresh()

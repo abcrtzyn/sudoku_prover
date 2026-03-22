@@ -100,11 +100,11 @@ instance : OfNat Symbols9 9 where ofNat := Symbols9.nine
 @[simp] theorem Symbols9_two_eq_2   : Symbols9.two   = (2 : Symbols9) := rfl
 @[simp] theorem Symbols9_three_eq_3 : Symbols9.three = (3 : Symbols9) := rfl
 @[simp] theorem Symbols9_four_eq_4  : Symbols9.four  = (4 : Symbols9) := rfl
-@[simp] theorem Symbols9_four_eq_5  : Symbols9.five  = (5 : Symbols9) := rfl
-@[simp] theorem Symbols9_four_eq_6  : Symbols9.six   = (6 : Symbols9) := rfl
-@[simp] theorem Symbols9_four_eq_7  : Symbols9.seven = (7 : Symbols9) := rfl
-@[simp] theorem Symbols9_four_eq_8  : Symbols9.eight = (8 : Symbols9) := rfl
-@[simp] theorem Symbols9_four_eq_9  : Symbols9.nine  = (9 : Symbols9) := rfl
+@[simp] theorem Symbols9_five_eq_5  : Symbols9.five  = (5 : Symbols9) := rfl
+@[simp] theorem Symbols9_six_eq_6  : Symbols9.six   = (6 : Symbols9) := rfl
+@[simp] theorem Symbols9_seven_eq_7  : Symbols9.seven = (7 : Symbols9) := rfl
+@[simp] theorem Symbols9_eight_eq_8  : Symbols9.eight = (8 : Symbols9) := rfl
+@[simp] theorem Symbols9_nine_eq_9  : Symbols9.nine  = (9 : Symbols9) := rfl
 
 
 
