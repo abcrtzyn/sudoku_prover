@@ -1,11 +1,10 @@
 import SudokuProverLogic.Basic
-import SudokuProverLogic.Symbols9
 -- this file has common puzzle baselines to save some lines of text I'd say
 
 set_option linter.style.whitespace false
 
 -- Normal Sudoku Rules Apply!
-structure NormalSudoku (solution: Nat -> Symbols9) where
+structure NormalSudoku {α} (solution: Nat -> α) where
   row1: UniqueSet solution { 0, 1, 2, 3, 4, 5, 6, 7, 8}
   row2: UniqueSet solution { 9,10,11,12,13,14,15,16,17}
   row3: UniqueSet solution {18,19,20,21,22,23,24,25,26}

@@ -1,12 +1,16 @@
 
 import codecs
 import os
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Dict, List, Set, Tuple, cast
 
 from lark import Lark, Token, Tree
+from lark.exceptions import UnexpectedInput
 from lark.visitors import Interpreter
 
-from sudoku_prover_ui.puzzle import Puzzle
+from sudoku_prover_ui.puzzle import Puzzle, Template
+
+class FileParseError(Exception):
+    pass
 
 def clean_str(token: Token):
         # get rid of quotes
@@ -17,89 +21,164 @@ def clean_str(token: Token):
 
 
 class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
-    _cell_count: int | None
-    _cell_layout: List[Tuple[int,int]] | None
-    _symbols: str | None
-    _constraints: Dict[str,str]
+    _name: str | None
+    def _add_name(self,name: str):
+        if self._name is not None and self._name != name:
+            raise ValueError('duplicate name given')
+        self._name = name
 
-    def __init__(self,file_name:str,is_puzzle:bool=True):
+    _cell_count: int | None
+    def _add_cell_count(self,cell_count: int):
+        if self._cell_count is not None and self._cell_count != cell_count:
+            raise ValueError('duplicate cell_count given')
+        self._cell_count = cell_count
+    
+    _cell_layout: List[Tuple[int,int]] | None
+    def _add_cell_layout(self,cell_layout: List[Tuple[int,int]]):
+        if self._cell_layout is not None and self._cell_layout != cell_layout:
+            raise ValueError('duplicate cell_layout given')
+        self._cell_layout = cell_layout
+
+    _symbols: str | None
+    def _add_symbols(self,symbols: str):
+        if self._symbols is not None and self._symbols != symbols:
+            raise ValueError('duplicate symbols given')
+        self._symbols = symbols
+    
+    _qualified_constraints: Dict[str,str]
+    _constraints: Dict[str,str]
+    def _add_constraint(self,name:str,constraint:str):
+        # this is for all top level contsraints, adds them to both sets
+        if name.find('.') > 0:
+            raise Exception(f'dot notation in constraint names is reserved for imported constraints, {name} is invalid')
+        if name in self._qualified_constraints:
+            raise Exception(f'constraint {name} already defined with definition "{self._constraints[name]}"')
+        self._qualified_constraints[name] = constraint
+        self._constraints[name] = constraint
+        
+
+    def _add_imported_contstraint(self,ident:str,lean_name:str,constraints:Dict[str,str]):
+        # this is for all imported constraints
+        if ident.find('.') > 0:
+            raise Exception(f'dot notation in constraint names is reserved for imported constraints, {ident} is invalid')
+        if ident in self._constraints:
+            raise Exception(f'constraint {ident} already defined with definition "{self._constraints[ident]}"')
+        self._constraints[ident] = f'{lean_name} f'
+        for name, constraint in constraints.items():
+            name = f'{ident}.{name}'
+            if name in self._qualified_constraints:
+                raise Exception(f'constraint {name} already defined with definition "{self._qualified_constraints[name]}"')
+            self._qualified_constraints[name] = constraint
+
+
+    _lean_imports: List[str] # a list of lean modules (files) to import
+    def _add_lean_imports(self,lean_imports:List[str]):
+        for imp in lean_imports:
+            if imp not in self._lean_imports:
+                self._lean_imports.append(imp)
+    
+
+    def __init__(self,file_name:str,seen_files:Set[str],is_puzzle:bool=True):
         self.is_puzzle = is_puzzle
         self.file_name = file_name
+        self._name = None
         self._cell_count = None
         self._cell_layout = None
         self._symbols = None
+        self._qualified_constraints = {}
         self._constraints = {}
+        self._lean_imports = []
+        self.seen_files = seen_files
     
     def puzzle_definition(self, tree: Tree[Any]):
         self.visit_children(tree) # pyright: ignore[reportUnknownMemberType]
-
-        if self._cell_count is None:
-            raise ValueError('No cell_count was given')
-        if self._cell_layout is None:
-            raise ValueError('No cell_layout was given')
-        if len(self._cell_layout) != self._cell_count:
-            raise ValueError('Number of cells in cell_layout did not match cell_count')
-        if self._symbols is None:
-            raise ValueError('No symbols object was provided')
-        # TODO check that symbols can be found in lean
-
-        rows, cols = zip(*self._cell_layout)
-        min_row = min(rows)
-        min_col = min(cols)
-
-        # if the mins are not zero, offset the entire cell layout to make it 0.
-        if min_row != 0 or min_col != 0:
-            print('WARNING, the puzzle should have a cell in row 0 and column 0')
-            print('it does not have to have a cell at (0,0) though')
-            self._cell_layout = [(row-min_row,col-min_col) for row, col in self._cell_layout]
         
-        # any other data validation we need
+        if self.is_puzzle:
+            if self._cell_count is None:
+                raise ValueError('No cell_count was given')
+            if self._cell_layout is None:
+                raise ValueError('No cell_layout was given')
+            if len(self._cell_layout) != self._cell_count:
+                raise ValueError('Number of cells in cell_layout did not match cell_count')
+            if self._symbols is None:
+                raise ValueError('No symbols object was provided')
+            # TODO check that symbols can be found in lean
 
-        return Puzzle(self._cell_count,self._cell_layout,self._symbols,self._constraints)
+            rows, cols = zip(*self._cell_layout)
+            min_row = min(rows)
+            min_col = min(cols)
+
+            # if the mins are not zero, offset the entire cell layout to make it 0.
+            if min_row != 0 or min_col != 0:
+                print('WARNING, the puzzle should have a cell in row 0 and column 0')
+                print('it does not have to have a cell at (0,0) though')
+                self._cell_layout = [(row-min_row,col-min_col) for row, col in self._cell_layout]
+            
+            # any other data validation we need
+
+            return Puzzle(self._cell_count,self._cell_layout,self._symbols,self._qualified_constraints,self._constraints,self._lean_imports)
+
+        else:
+            # its a template
+            # no data validation here
+            if self._name is None:
+                raise ValueError(f'{self.file_name} Template files are required to have the name field in the metadata, this is how to address it')
+            return Template(self._name,self._cell_count,self._cell_layout,self._symbols,self._qualified_constraints,self._constraints,self._lean_imports)
+
 
     def template_section(self, tree: Tree[Any]):
         if self.is_puzzle:
             raise Exception(f"{self.file_name}:{tree.meta.line}:{tree.meta.column} Can not create a puzzle from a suko TEMPLATE")
-        raise NotImplementedError('template section is not implemented for a template')
+        lean_module = clean_str(self.visit_children(tree)[0]) # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+        self._add_lean_imports([lean_module])
+    
+    def metadata_entry(self, tree: Tree[Any]):
+        key = tree.children[0].value # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
+        if key == 'name':
+            self._add_name(clean_str(tree.children[1])) # pyright: ignore[reportArgumentType]
+            
+    def _import_template(self,file_name:str,ident:str,tree: Tree[Any]):
+        puzzle, _ = cast(Tuple[Template,Any],import_file(file_name,is_puzzle=False,seen_files=self.seen_files))
+        
+        if puzzle.cell_count is not None:
+            self._add_cell_count(puzzle.cell_count) 
+        if puzzle.cell_layout is not None:
+            self._add_cell_layout(puzzle.cell_layout)
+        if puzzle.symbols is not None:
+            self._add_symbols(puzzle.symbols)
+        # for constraints, we can ignore the normal constraints and just do the qualified ones
+        # this is because the template that we are currently parsing will be the object that goes in constraints
+        self._add_imported_contstraint(ident,puzzle.name,puzzle.qualified_constraints)
+        self._add_lean_imports(puzzle.lean_imports)
+
 
     def parent_template(self, tree: Tree[Any]):
         file_path = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
-        print('parent_template is not implemented')
+        self._import_template(file_path,'base',tree)
 
 
 
     def cell_count(self, tree: Tree[Any]):
         val = int(tree.children[0]) # pyright: ignore[reportArgumentType]
-        if self._cell_count is not None and self._cell_count != val:
-            # TODO show where the cell count was set previously
-            raise ValueError(f"{self.file_name}:{tree.meta.line}:{tree.meta.column} Cell count was already set to {self._cell_count}")
-        # either cell_count is none or the value is the same
-        self._cell_count = val
+        self._add_cell_count(val)
 
     def cell_layout(self, tree: Tree[Any]):
         layout = cast(List[Tuple[int, int]],self.visit_children(tree)[0]) # pyright: ignore[reportUnknownMemberType]
-        if self._cell_layout is not None and self._cell_layout != layout:
-            # TODO show where the cell layout was set previously
-            # TODO this will be a long error message, maybe just show where the last set was?
-            raise ValueError(f"{self.file_name}:{tree.meta.line}:{tree.meta.column} Cell layout was already set to {self._cell_layout}")
-        self._cell_layout = layout
+        self._add_cell_layout(layout)
 
     def _tuple(self, tree: Tree[Any]):
         return (int(tree.children[0]),int(tree.children[1])) # pyright: ignore[reportArgumentType]
 
     def symbols(self, tree: Tree[Any]):
         symbols = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
-        if self._symbols is not None and self._symbols != symbols:
-            # TODO show where the symbols was set previously
-            raise ValueError(f"{self.file_name}:{tree.meta.line}:{tree.meta.column} Symbols was already set to {self._symbols}")
-        # TODO check that we can find the symbols lean object, maybe need to provide a symbols source field too, maybe this is the source.
-        # the wierd thing about symbols compared to constraints is that the exact lean code is given to python for constraints in these files, but the definition of symbols is not...
-        self._symbols = symbols
+        self._add_symbols(symbols)
 
     def imported_constraint(self, tree: Tree[Any]):
-        ident = tree.children[0].value # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
+        # i believe that this code is exact same as a template, just with a name
+        # maybe constraints aren't supposed to have a cell layout...
+        ident = cast(str,tree.children[0].value)  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
         file_path = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
-        print('imported_constraint not implemented')
+        self._import_template(file_path,ident,tree)
 
     def imported(self, tree: Tree[Any]): # pyright: ignore[reportUnknownParameterType]
         # not sure what this will do yet, if anything
@@ -108,54 +187,17 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
     def constraint(self, tree: Tree[Any]):
         ident = cast(str,tree.children[0].value) # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
         lean_code = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
+        self._add_constraint(ident,lean_code)
 
-        if ident in self._constraints:
-            # TODO, locaation where the previous was defined
-            raise Exception(f'{self.file_name}:{tree.meta.line}:{tree.meta.column} constraint {ident} already defined with definition "{self._constraints[ident]}"')
-        self._constraints[ident] = lean_code
 
     # any rules that don't have a function to call end up here
     # if it is not in the doesn't have rule list, error out
     # otherwise, carry on with default behaviour
     def __default__(self, tree: Tree[Any]) -> Any:
         rule = tree.data
-        if rule not in ['metadata_section','metadata_entry','definition_section','_list','local']:
+        if rule not in ['metadata_section','definition_section','_list','local']:
             raise NotImplementedError(f"section '{tree.data}' not implemented yet\n")
         return self.visit_children(tree) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
-
-# steps and code stuffs for template importing
-# def parent_template(self, tree):
-#     path = tree.children[0].strip('"')
-#     # RECURSION: Load the template file using the SAME logic
-#     parent = Puzzle.load_puzzle(path, is_puzzle=False)
-#     self.puzzle.merge(parent)
-
-    # path = tree.children[0].strip('"')
-    # # Load the parent file
-    # parent_puzzle = Puzzle.load_puzzle(path, is_puzzle=False)
-    # # Merge parent data into OUR temporary state
-    # if parent_puzzle.cell_count:
-    #     if self._cell_count and self._cell_count != parent_puzzle.cell_count:
-    #         raise ValueError("Template count conflicts with local count")
-    #     self._cell_count = parent_puzzle.cell_count
-    # # ... repeat for layout, symbols, etc.
-
-# in the class
-# self.seen_files = seen_files or set()
-    # # 1. Resolve to an absolute path
-    # relative_path = tree.children.strip('"')
-    # abs_path = os.path.abspath(relative_path)
-    # # 2. Check for circular reference
-    # if abs_path in self.seen_files:
-    #     raise RecursionError(f"Circular template reference detected: {abs_path}")
-    # # 3. Add to stack and recurse
-    # new_seen = self.seen_files.copy()
-    # new_seen.add(abs_path)
-    # # Pass the 'seen' set to the next interpreter
-    # parent_puzzle = Puzzle.load_puzzle(abs_path, is_puzzle=False, seen_files=new_seen)
-    # # 4. Merge logic...
-    # self.puzzle.merge(parent_puzzle)
-
 
 
 class ProofInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
@@ -175,7 +217,19 @@ class ProofInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument
         return self.visit_children(tree) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
 
-def import_file(file_name: str,is_puzzle: bool = True):
+def import_file(file_name: str,is_puzzle: bool = True, seen_files: Set[str] | None = None):
+    # change the file to a full path for error reporting
+    if file_name:
+        file_name = os.path.abspath(file_name)
+    
+    if seen_files is not None:
+        if file_name in seen_files:
+            raise RecursionError(f"Circular import detected, {file_name} has already been imported")
+        seen_files.add(file_name)
+    else:
+        # if it is none, start it up
+        seen_files = {file_name}
+
     # check if it exists
     if not os.path.exists(file_name):
         print(f"File '{file_name}' could not be found")
@@ -194,16 +248,23 @@ def import_file(file_name: str,is_puzzle: bool = True):
     # process it
     
     parser = Lark.open('suko.lark', parser='lalr',start='suko',propagate_positions=True) # pyright: ignore[reportUnknownMemberType]
-    tree = parser.parse(text) # pyright: ignore[reportUnknownMemberType]
-    interpreter = PuzzleInterpreter(file_name, is_puzzle)
-    puzzle = cast(Puzzle,interpreter.visit(tree.children[0])) # pyright: ignore[reportArgumentType, reportUnknownMemberType]
+    try:
+        tree = parser.parse(text) # pyright: ignore[reportUnknownMemberType]
+    except UnexpectedInput as e:
+        e.add_note(f"{file_name}:{e.line}:{e.column}")
+        raise e
+
+    interpreter = PuzzleInterpreter(file_name, seen_files, is_puzzle)
+    puzzle = cast(Puzzle | Template,interpreter.visit(tree.children[0])) # pyright: ignore[reportArgumentType, reportUnknownMemberType]
     if len(tree.children) > 1:
         assert len(tree.children) == 2
-        # if not is_puzzle:
-        #     print('proof section is not allowed in a file that is not meant to be a puzzle')
+        if not is_puzzle:
+            raise ValueError(f'{file_name} PROOF section is not allowed in a file that is not meant to be a puzzle')
         interpreter = ProofInterpreter(file_name)
         proof_text = cast(List[Tuple[str,int]],interpreter.visit(tree.children[1])) # pyright: ignore[reportUnknownMemberType, reportArgumentType]
     else:
         proof_text = []
 
+    # we are done with this file, get rid of it
+    seen_files.remove(file_name)
     return (puzzle,proof_text)
