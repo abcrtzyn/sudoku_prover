@@ -1,5 +1,3 @@
-This branch is for finding and fixing hard coded symbols bugs throughout the code
-
 # Sudoku Prover
 
 This project is based on the idea that you have to prove your deductions to solve a sudoku puzzle.
