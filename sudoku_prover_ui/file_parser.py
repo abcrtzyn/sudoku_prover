@@ -173,9 +173,11 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self._add_symbols(symbols)
 
     def imported_constraint(self, tree: Tree[Any]):
-        ident = tree.children[0].value # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
+        # i believe that this code is exact same as a template, just with a name
+        # maybe constraints aren't supposed to have a cell layout...
+        ident = cast(str,tree.children[0].value)  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
         file_path = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
-        print('imported_constraint not implemented')
+        self._import_template(file_path,ident,tree)
 
     def imported(self, tree: Tree[Any]): # pyright: ignore[reportUnknownParameterType]
         # not sure what this will do yet, if anything
@@ -186,7 +188,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         lean_code = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
         self._add_constraint(ident,lean_code)
 
-        
+
     # any rules that don't have a function to call end up here
     # if it is not in the doesn't have rule list, error out
     # otherwise, carry on with default behaviour
