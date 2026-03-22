@@ -51,21 +51,6 @@ class Puzzle:
                 raise ValueError(f'No python implementation of the lean code "{code}", it could also not have parsed correctly')
 
 
-
-
-    @staticmethod
-    def import_puzzle(text: str,file_name:str,is_puzzle: bool = True):
-        """text is from beginning of file to proof"""
-        parser = Lark.open('suko.lark', parser='lalr',start='suko',propagate_positions=True) # pyright: ignore[reportUnknownMemberType]
-        tree = parser.parse(text) # pyright: ignore[reportUnknownMemberType]
-
-        interpreter = SukoInterpreter(file_name, is_puzzle)
-        puzzle = cast(Puzzle,interpreter.visit(tree)) # pyright: ignore[reportUnknownMemberType]
-        return puzzle
-
-
-
-
     def generate_lean_structure(self) -> str:
         definition = f"puzzle = structure Puzzle (f: Nat -> {self.symbols}) where\n"
         definition += f"  outside_grid: ∀ x, x ≥ 16 -> f x = {self.symbols_python[0]}\n"
@@ -76,30 +61,3 @@ class Puzzle:
 
 
         return definition
-
-
-def main(argv: List[str]):
-    """attempts to import the puzzle file provided by command line args
-    used for testing purposes"""
-    if len(argv) > 1:
-        file = argv[1]
-    else:
-        print('provide a file to parse as an argument')
-        exit()
-
-    with open(file,'r') as f:
-        text = f.read()
-
-    parts = text.split("PROOF", 1)
-    definition_text = parts[0]
-    proof_text = parts[1] if len(parts) > 1 else ""
-
-    puzzle = Puzzle.import_puzzle(definition_text,file)
-    print(puzzle)
-
-
-
-
-
-if __name__ == '__main__':
-    main(sys.argv)
