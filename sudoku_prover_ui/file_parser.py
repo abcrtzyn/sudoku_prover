@@ -1,7 +1,7 @@
 
 import codecs
 import os
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Dict, List, Set, Tuple, cast
 
 from lark import Lark, Token, Tree
 from lark.exceptions import UnexpectedInput
@@ -78,7 +78,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
                 self._lean_imports.append(imp)
     
 
-    def __init__(self,file_name:str,is_puzzle:bool=True):
+    def __init__(self,file_name:str,seen_files:Set[str],is_puzzle:bool=True):
         self.is_puzzle = is_puzzle
         self.file_name = file_name
         self._name = None
@@ -88,6 +88,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self._qualified_constraints = {}
         self._constraints = {}
         self._lean_imports = []
+        self.seen_files = seen_files
     
     def puzzle_definition(self, tree: Tree[Any]):
         self.visit_children(tree) # pyright: ignore[reportUnknownMemberType]
@@ -137,7 +138,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
             self._add_name(clean_str(tree.children[1])) # pyright: ignore[reportArgumentType]
             
     def _import_template(self,file_name:str,ident:str,tree: Tree[Any]):
-        puzzle, _ = cast(Tuple[Template,Any],import_file(file_name,is_puzzle=False))
+        puzzle, _ = cast(Tuple[Template,Any],import_file(file_name,is_puzzle=False,seen_files=self.seen_files))
         
         if puzzle.cell_count is not None:
             self._add_cell_count(puzzle.cell_count) 
@@ -198,40 +199,6 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
             raise NotImplementedError(f"section '{tree.data}' not implemented yet\n")
         return self.visit_children(tree) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
-# steps and code stuffs for template importing
-# def parent_template(self, tree):
-#     path = tree.children[0].strip('"')
-#     # RECURSION: Load the template file using the SAME logic
-#     parent = Puzzle.load_puzzle(path, is_puzzle=False)
-#     self.puzzle.merge(parent)
-
-    # path = tree.children[0].strip('"')
-    # # Load the parent file
-    # parent_puzzle = Puzzle.load_puzzle(path, is_puzzle=False)
-    # # Merge parent data into OUR temporary state
-    # if parent_puzzle.cell_count:
-    #     if self._cell_count and self._cell_count != parent_puzzle.cell_count:
-    #         raise ValueError("Template count conflicts with local count")
-    #     self._cell_count = parent_puzzle.cell_count
-    # # ... repeat for layout, symbols, etc.
-
-# in the class
-# self.seen_files = seen_files or set()
-    # # 1. Resolve to an absolute path
-    # relative_path = tree.children.strip('"')
-    # abs_path = os.path.abspath(relative_path)
-    # # 2. Check for circular reference
-    # if abs_path in self.seen_files:
-    #     raise RecursionError(f"Circular template reference detected: {abs_path}")
-    # # 3. Add to stack and recurse
-    # new_seen = self.seen_files.copy()
-    # new_seen.add(abs_path)
-    # # Pass the 'seen' set to the next interpreter
-    # parent_puzzle = Puzzle.load_puzzle(abs_path, is_puzzle=False, seen_files=new_seen)
-    # # 4. Merge logic...
-    # self.puzzle.merge(parent_puzzle)
-
-
 
 class ProofInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument]
     def __init__(self,file_name:str):
@@ -250,11 +217,19 @@ class ProofInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument
         return self.visit_children(tree) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
 
-def import_file(file_name: str,is_puzzle: bool = True):
+def import_file(file_name: str,is_puzzle: bool = True, seen_files: Set[str] | None = None):
     # change the file to a full path for error reporting
     if file_name:
         file_name = os.path.abspath(file_name)
     
+    if seen_files is not None:
+        if file_name in seen_files:
+            raise RecursionError(f"Circular import detected, {file_name} has already been imported")
+        seen_files.add(file_name)
+    else:
+        # if it is none, start it up
+        seen_files = {file_name}
+
     # check if it exists
     if not os.path.exists(file_name):
         print(f"File '{file_name}' could not be found")
@@ -279,7 +254,7 @@ def import_file(file_name: str,is_puzzle: bool = True):
         e.add_note(f"{file_name}:{e.line}:{e.column}")
         raise e
 
-    interpreter = PuzzleInterpreter(file_name, is_puzzle)
+    interpreter = PuzzleInterpreter(file_name, seen_files, is_puzzle)
     puzzle = cast(Puzzle | Template,interpreter.visit(tree.children[0])) # pyright: ignore[reportArgumentType, reportUnknownMemberType]
     if len(tree.children) > 1:
         assert len(tree.children) == 2
@@ -290,4 +265,6 @@ def import_file(file_name: str,is_puzzle: bool = True):
     else:
         proof_text = []
 
+    # we are done with this file, get rid of it
+    seen_files.remove(file_name)
     return (puzzle,proof_text)
