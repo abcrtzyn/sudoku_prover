@@ -40,7 +40,7 @@ class ProofEngine:
             'SudokuProverLogic.Basic',
             f'SudokuProverLogic.{self.puzzle.symbols}',
             'SudokuProverLogic.Tactics'
-        ],timeout=60)
+        ] + self.puzzle.lean_imports,timeout=60)
         grid: List[int | None] = [None for _ in range(self.puzzle.cell_count)]
         eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = {}
 

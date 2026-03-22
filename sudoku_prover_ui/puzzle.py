@@ -20,8 +20,10 @@ class Puzzle:
     cell_layout: List[Tuple[int,int]]
     symbols: str
     symbols_python: List[Any] = field(init=False)
+    qualified_constraints: Dict[str,str]
     constraints: Dict[str,str]
     constraints_python: Dict[str,Tuple[str,Any]] = field(init=False)
+    lean_imports: List[str]
 
     def __post_init__(self):
         # This runs immediately after __init__
@@ -33,7 +35,7 @@ class Puzzle:
 
         self.constraints_python = {}
         # find python definitions for the constraints
-        for c,code in self.constraints.items():
+        for c,code in self.qualified_constraints.items():
             if mat := re.match(r'f\s+(\d+)\s*=\s*(\w+)',code):
                 # given digit constraint
                 symbol = mat.group(2)
@@ -52,12 +54,24 @@ class Puzzle:
 
 
     def generate_lean_structure(self) -> str:
-        definition = f"puzzle = structure Puzzle (f: Nat -> {self.symbols}) where\n"
+        definition = f"structure Puzzle (f: Nat -> {self.symbols}) where\n"
         definition += f"  outside_grid: ∀ x, x ≥ 16 -> f x = {self.symbols_python[0]}\n"
         for name, constraint in self.constraints.items():
             if '.' in name:
                 raise NotImplementedError('we are not able to handle template constraints yet')
             definition += f"  {name}: {constraint}\n"
-
+            
 
         return definition
+
+
+
+@dataclass
+class Template:
+    name: str
+    cell_count: int | None
+    cell_layout: List[Tuple[int,int]] | None
+    symbols: str | None
+    qualified_constraints: Dict[str,str]
+    constraints: Dict[str,str]
+    lean_imports: List[str]
