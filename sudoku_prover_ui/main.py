@@ -2,15 +2,16 @@
 # should have options for solve, edit, verify, edit from template, anything really
 
 import argparse
-import os
+from typing import List, Tuple, cast
 
 from sudoku_prover_ui.proof_engine import ProofEngine
 from sudoku_prover_ui.file_parser import import_file
+from sudoku_prover_ui.puzzle import Puzzle
 
 
 def solve(file_name: str, cont: bool):
     
-    puzzle, proof_text = import_file(file_name)
+    puzzle, proof_text = cast(Tuple[Puzzle, List[Tuple[str, int]]],import_file(file_name))
 
     print('starting up Lean Server',end=' ',flush=True)
     engine = ProofEngine(puzzle)
@@ -32,7 +33,7 @@ def solve(file_name: str, cont: bool):
 
 def verify(file_name: str):
     # verifies the proof of a suko file
-    puzzle, proof_text = import_file(file_name)
+    puzzle, proof_text = cast(Tuple[Puzzle, List[Tuple[str, int]]],import_file(file_name))
 
     print('starting up Lean Server',end=' ',flush=True)
     engine = ProofEngine(puzzle)
@@ -93,9 +94,6 @@ def main():
 
 
     args = parser.parse_args()
-    # change the file to a full path for error reporting
-    if args.file:
-        args.file = os.path.abspath(args.file)
 
     if args.command == 'solve':
         solve(args.file,args.cont)
