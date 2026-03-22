@@ -7,8 +7,9 @@ from typing import Any, Dict, List, Tuple, cast
 
 # these tell python exactly what and in what order the symbols are
 # very important
-SYMBOLS_DICT: Dict[str,List[int]] = {
+SYMBOLS_DICT: Dict[str,List[Any]] = {
     'Symbols4': [1,2,3,4],
+    'SymbolsABCD': ['A','B','C','D'],
     'Symbols9': [1,2,3,4,5,6,7,8,9]
 }
 
@@ -18,7 +19,7 @@ class Puzzle:
     cell_count: int
     cell_layout: List[Tuple[int,int]]
     symbols: str
-    symbols_python: List[int] = field(init=False)
+    symbols_python: List[Any] = field(init=False)
     constraints: Dict[str,str]
     constraints_python: Dict[str,Tuple[str,Any]] = field(init=False)
 
@@ -33,9 +34,14 @@ class Puzzle:
         self.constraints_python = {}
         # find python definitions for the constraints
         for c,code in self.constraints.items():
-            if mat := re.match(r'f\s+(\d+)\s*=\s*(\d+)',code):
+            if mat := re.match(r'f\s+(\d+)\s*=\s*(\w+)',code):
                 # given digit constraint
-                self.constraints_python[c] = ('Given',(int(mat.group(1)),int(mat.group(2))))
+                symbol = mat.group(2)
+                if symbol.isnumeric():
+                    symbol = int(symbol)
+                if symbol not in self.symbols_python:
+                    raise ValueError(f'Could not unify {symbol} with anything in {self.symbols_python}')
+                self.constraints_python[c] = ('Given',(int(mat.group(1)),symbol))
             elif mat := re.match(r'UniqueSet\s+f\s+({\s*\d+\s*(,\s*\d+\s*)*})',code):
                 # UniqueSet
                 cells = list(map(int, [item.strip() for item in mat.group(1).strip('{ }').split(',')]))
