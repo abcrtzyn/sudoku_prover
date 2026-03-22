@@ -1,6 +1,7 @@
 import Mathlib.Tactic.IntervalCases
 import SudokuProverLogic.Basic
 import SudokuProverLogic.Symbols4
+import SudokuProverLogic.SymbolsABCD
 import SudokuProverLogic.Symbols9
 import SudokuProverLogic.Tactics
 import SudokuProverLogic.Thermometer

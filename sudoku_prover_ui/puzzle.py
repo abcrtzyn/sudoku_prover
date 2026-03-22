@@ -7,8 +7,9 @@ from typing import Any, Dict, List, Tuple, cast
 
 # these tell python exactly what and in what order the symbols are
 # very important
-SYMBOLS_DICT: Dict[str,List[int]] = {
+SYMBOLS_DICT: Dict[str,List[Any]] = {
     'Symbols4': [1,2,3,4],
+    'SymbolsABCD': ['A','B','C','D'],
     'Symbols9': [1,2,3,4,5,6,7,8,9]
 }
 
@@ -18,7 +19,7 @@ class Puzzle:
     cell_count: int
     cell_layout: List[Tuple[int,int]]
     symbols: str
-    symbols_python: List[int] = field(init=False)
+    symbols_python: List[Any] = field(init=False)
     constraints: Dict[str,str]
     constraints_python: Dict[str,Tuple[str,Any]] = field(init=False)
 
