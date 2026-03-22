@@ -3,6 +3,8 @@ import re
 from typing import Any, Dict, Generator, List, Tuple
 from pantograph import Server # pyright: ignore[reportMissingTypeStubs]
 from pantograph.expr import Tactic, TacticHave # pyright: ignore[reportMissingTypeStubs]
+from pantograph.message import ServerError # pyright: ignore[reportMissingTypeStubs]
+from pantograph.data import CompilationUnit # pyright: ignore[reportMissingTypeStubs]
 
 from sudoku_prover_ui.puzzle import Puzzle
 from sudoku_prover_ui.sudoku_state import SudokuState
@@ -38,12 +40,29 @@ class ProofEngine:
             'SudokuProverLogic.Basic',
             f'SudokuProverLogic.{self.puzzle.symbols}',
             'SudokuProverLogic.Tactics'
-        ],timeout=60)
+        ] + self.puzzle.lean_imports,timeout=60)
         grid: List[int | None] = [None for _ in range(self.puzzle.cell_count)]
         eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = {}
 
         # give the puzzle to Lean
-        self.server.load_definitions(self.puzzle.generate_lean_structure()) # pyright: ignore[reportUnknownMemberType]
+        
+        # # this code is in place of server.load_definitions because it wasn't reporting parisng errors
+        result = self.server.run('frontend.process',{ # pyright: ignore[reportUnknownMemberType]
+            'file': self.puzzle.generate_lean_structure(),
+            "newConstants": False,
+            "readHeader": False,
+            "inheritEnv": True,
+        })
+        if "error" in result:
+            raise ServerError(result)
+        
+        is_error = False
+        for unit in result['units']:
+            for message in unit['messages']:
+                print(message)
+                is_error = True
+        if is_error:
+            raise Exception('Lean Server could not parse the input, see above for details')
 
         # start the proof
         proof_state = self.server.goal_start(f"∀ (S: Set (Nat → {self.puzzle.symbols})) (_ : ∀ f, f ∈ S ↔ Puzzle f), ∃! (g: Nat -> {self.puzzle.symbols}), g ∈ S") # pyright: ignore[reportUnknownMemberType]
