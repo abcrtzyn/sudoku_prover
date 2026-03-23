@@ -5,14 +5,11 @@ requires-python = ">=3.13"
 dependencies = [
     "arcade>=3.3.3",
     "lark>=1.3.1",
-    "pantograph",
+    "lean-interact>=0.11.1",
 ]
 
 [tool.uv]
 package = true
-
-[tool.uv.sources]
-pantograph = { git = "https://github.com/stanford-centaur/PyPantograph" }
 
 [project.scripts]
 sudoku = "sudoku_prover_ui.main:main"
