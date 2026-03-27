@@ -44,6 +44,7 @@ class ProofEngine:
         self.puzzle = puzzle
         self._active_gen: Generator[str, str, None]
         self.terminal_prompt: str
+        self.place_dot: bool = False
 
     def setup(self):
         self.repl.open()
@@ -102,11 +103,9 @@ class ProofEngine:
         updates the proof state and returns it"""
         tactic_text = ''
         for line in tactic.splitlines(True):
-            dot_adjust = line[0] == '·'
-                
-            tactic_text += '  '*(self.proof_level-dot_adjust) + line
+            tactic_text += f'{'  '*(self.proof_level-self.place_dot)}{'· ' if self.place_dot else ''}{line}'
+            self.place_dot = False
 
-        # print(tactic_text)
         goals, diags = self.repl.run_command(tactic_text)
         # print(diags)
 
@@ -148,14 +147,14 @@ class ProofEngine:
                     self.current.eliminations[i][digit] = ('digit_in_region', (cell,name,proof_name))
 
 
-    def generate_elimination_proof(self,cell: int, digit: int, hypothesis: str, prepend_dot: bool):
+    def generate_elimination_proof(self,cell: int, digit: int, hypothesis: str):
         """Given the current cell and digit and hypothesis name to eliminate
         eliminates this contradictory case"""
         
         goals_count = self.current.count_goals()
         if self.current.grid[cell] is not None:
             proof = f'exact digit_in_cell {hypothesis} (c{cell} P)'
-            self.tactic(f'{'· ' if prepend_dot else ''}exfalso; {proof}')
+            self.tactic(f'exfalso; {proof}')
         elif cell in self.current.eliminations and digit in self.current.eliminations[cell]:
             elim = self.current.eliminations[cell][digit]
             if elim[0] == 'digit_in_region':
@@ -163,7 +162,7 @@ class ProofEngine:
             else:
                 print('unknown elimination reason',elim[0])
                 exit(4)
-            self.tactic(f'{'· ' if prepend_dot else ''}exfalso; {proof}')
+            self.tactic(f'exfalso; {proof}')
         else:
             print(f'no elimination present for {cell} {digit}')
             exit(5)
@@ -213,8 +212,9 @@ class ProofEngine:
         self.proof_level += 1
         # we know the order of these cases, it's exactly the order of the symbols
         for digit in self.puzzle.symbols_python:
+            self.place_dot = True
             if cell in self.current.eliminations and digit in self.current.eliminations[cell]:
-                self.generate_elimination_proof(cell,digit,'h',True)
+                self.generate_elimination_proof(cell,digit,'h')
                 # TODO we also need to check for accepting cases, not yet
             else:
                 yield from self._execute_dict_or_prompt(commands,digit,f'cell_cases {digit}')
@@ -259,6 +259,7 @@ class ProofEngine:
         self.tactic(f"""{'locked_support_cases' if region_is_locked else 'support_cases'} h {digit}""")
         self.proof_level += 1
         for cell in cell_set:
+            self.place_dot = True
             if (self.current.grid[cell] is not None) or (cell in self.current.eliminations and digit in self.current.eliminations[cell]):
                 self.generate_elimination_proof(cell,digit,'h')
             # TODO we also need to check for accepting cases, not yet
@@ -304,12 +305,12 @@ class ProofEngine:
         yield from self.support_cases('h',digit)
 
     def rfl(self) -> Generator[str,str,None]:
-        self.tactic('· rfl')
+        self.tactic('rfl')
         return
         yield
     
     def exact(self,hypothesis: str) -> Generator[str,str,None]:
-        self.tactic(f'· exact {hypothesis}')
+        self.tactic(f'exact {hypothesis}')
         return
         yield
 
