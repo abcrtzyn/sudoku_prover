@@ -77,7 +77,7 @@ Any constraint that requires something else besides grid cells to be solved—I'
 ## License & Acknowledgments
 This project is licensed under the Apache License 2.0. This repository imports and builds upon the following open-source libraries:
 - **Lean 4** & **Mathlib4** – The foundation for formal verification and mathematics (Apache License 2.0). 
-- **PyPantograph** – Python interface for Lean (Apache License 2.0).
+- **leanclient** - Python interface for the Lean LSP server (MIT License).
 - **Python Arcade** – Powering the visual engine (MIT License).
 - **Lark Parser** – Used for parsing logic and syntax (MIT License).
 
