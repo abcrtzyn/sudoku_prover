@@ -91,16 +91,12 @@ wheels = [
 
 [[package]]
 name = "leanclient"
-version = "0.9.4"
-source = { registry = "https://pypi.org/simple" }
+version = "0.9.3"
+source = { git = "https://github.com/abcrtzyn/leanclient.git#8cb6dcb46508452083d31bbe1e17c13554b0ed69" }
 dependencies = [
     { name = "orjson" },
     { name = "psutil" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/65/93/d7926947ecf15d9e4a627afe84f02527f79281a49f52ba22f08edec79ddb/leanclient-0.9.4.tar.gz", hash = "sha256:01a14e19259cadba1f6c02a70408a1189b4d93d6f0668f3c7051452e998d04b5", size = 1127947, upload-time = "2026-03-17T09:49:23.685Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/5e/6347d3ad4e07f9bdb95f7421f6b7030c1874f9a4c244151dc5c53305874b/leanclient-0.9.4-py3-none-any.whl", hash = "sha256:a3ee790e2fe97d41e2760d1cefd0ac00d4b981ece88c824f15c9497d52aa45c8", size = 40404, upload-time = "2026-03-17T09:49:22.5Z" },
 ]
 
 [[package]]
@@ -288,7 +284,7 @@ dependencies = [
 requires-dist = [
     { name = "arcade", specifier = ">=3.3.3" },
     { name = "lark", specifier = ">=1.3.1" },
-    { name = "leanclient", specifier = ">=0.9.4" },
+    { name = "leanclient", git = "https://github.com/abcrtzyn/leanclient.git" },
 ]
 
 [[package]]
