@@ -40,9 +40,7 @@ lemma c5 {f: Nat -> Symbols4} (P: TestPuzzle f): f 5 = 2 := by
   · exfalso; exact digit_in_region h P.row2 P.given6
   · exfalso; exact digit_in_region h P.box1 P.given4
 
-lemma c1 {S: Set (Nat -> Symbols4)} (H: ∀ f, f ∈ S ↔ TestPuzzle f): ∀ f ∈ S, f 1 = 3 := by
-  intro f hf
-  replace P := (H f).mp hf
+lemma c1 {f: Nat -> Symbols4} (P: TestPuzzle f): f 1 = 3 := by
   let h := (region_full_locked_set P.col2)
   locked_support_cases h 3
   · assumption
@@ -56,78 +54,78 @@ theorem SolveTestPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ Tes
   have k : IsSound S [] := by intro c d h; cases h
   -- here we go
 
-  -- replace k := add_fact k 0 1 (by
-  --   intro f hf
-  --   replace H := (H f).mp hf
-  --   cases h: f 0 with
-  --   | one => rfl
-  --   | two => exfalso; exact digit_in_region h H.box1 ((get_d k 5 2) f hf)
-  --   | three => exfalso; exact digit_in_region h H.box1 ((get_d k 1 3) f hf)
-  --   | four => exfalso; exact digit_in_region h H.box1 H.given4
-  -- )
-  -- replace k := add_fact k 3 2 (by
-  --   intro f hf
-  --   replace H := (H f).mp hf
-  --   cases h: f 3 with
-  --   | two => rfl
-  --   | one => exfalso; exact digit_in_region h H.row1 ((get_d k 0 1) f hf)
-  --   | three => exfalso; exact digit_in_region h H.row1 ((get_d k 1 3) f hf)
-  --   | four => exfalso; exact digit_in_region h H.row1 H.given2
-  -- )
-  -- replace k := add_fact k 7 1 (by
-  --   intro f hf
-  --   replace H := (H f).mp hf
-  --   cases h: f 7 with
-  --   | one => rfl
-  --   | two => exfalso; exact digit_in_region h H.row2 ((get_d k 5 2) f hf)
-  --   | three => exfalso; exact digit_in_region h H.row2 H.given6
-  --   | four => exfalso; exact digit_in_region h H.row2 H.given4
-  -- )
-  -- replace k := add_fact k 15 4 (by
-  --   intro f hf
-  --   replace H := (H f).mp hf
-  --   cases h: f 15 with
-  --   | four => rfl
-  --   | one => exfalso; exact digit_in_region h H.col4 ((get_d k 7 1) f hf)
-  --   | two => exfalso; exact digit_in_region h H.col4 ((get_d k 3 2) f hf)
-  --   | three => exfalso; exact digit_in_region h H.col4 H.given11
-  -- )
-  -- replace k := add_fact k 14 2 (by
-  --   intro f hf
-  --   replace H := (H f).mp hf
-  --   cases h: f 14 with
-  --   | two => rfl
-  --   | one => exfalso; exact digit_in_region h H.row4 H.given13
-  --   | three => exfalso; exact digit_in_region h H.box4 H.given11
-  --   | four => exfalso; exact digit_in_region h H.row4 ((get_d k 15 4) f hf)
-  -- )
-  -- replace k := add_fact k 10 1 (by
-  --   intro f hf
-  --   replace H := (H f).mp hf
-  --   cases h: f 10 with
-  --   | one => rfl
-  --   | two => exfalso; exact digit_in_region h H.box4 ((get_d k 14 2) f hf)
-  --   | three => exfalso; exact digit_in_region h H.box4 H.given11
-  --   | four => exfalso; exact digit_in_region h H.box4 ((get_d k 15 4) f hf)
-  -- )
-  -- replace k := add_fact k 8 2 (by
-  --   intro f hf
-  --   replace H := (H f).mp hf
-  --   cases h: f 8 with
-  --   | two => rfl
-  --   | one => exfalso; exact digit_in_region h H.row3 ((get_d k 10 1) f hf)
-  --   | three => exfalso; exact digit_in_region h H.row3 H.given11
-  --   | four => exfalso; exact digit_in_region h H.row3 H.given9
-  -- )
-  -- replace k := add_fact k 12 3 (by
-  --   intro f hf
-  --   replace H := (H f).mp hf
-  --   cases h: f 12 with
-  --   | three => rfl
-  --   | one => exfalso; exact digit_in_region h H.box3 H.given13
-  --   | two => exfalso; exact digit_in_region h H.box3 ((get_d k 8 2) f hf)
-  --   | four => exfalso; exact digit_in_region h H.box3 H.given9
-  -- )
+  replace k := add_fact k 0 1 (by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 0 with
+    | one => rfl
+    | two => exfalso; exact digit_in_region h H.box1 (c5 H)
+    | three => exfalso; exact digit_in_region h H.box1 (c1 H)
+    | four => exfalso; exact digit_in_region h H.box1 H.given4
+  )
+  replace k := add_fact k 3 2 (by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 3 with
+    | two => rfl
+    | one => exfalso; exact digit_in_region h H.row1 ((get_d k 0 1) f hf)
+    | three => exfalso; exact digit_in_region h H.row1 (c1 H)
+    | four => exfalso; exact digit_in_region h H.row1 H.given2
+  )
+  replace k := add_fact k 7 1 (by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 7 with
+    | one => rfl
+    | two => exfalso; exact digit_in_region h H.row2 (c5 H)
+    | three => exfalso; exact digit_in_region h H.row2 H.given6
+    | four => exfalso; exact digit_in_region h H.row2 H.given4
+  )
+  replace k := add_fact k 15 4 (by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 15 with
+    | four => rfl
+    | one => exfalso; exact digit_in_region h H.col4 ((get_d k 7 1) f hf)
+    | two => exfalso; exact digit_in_region h H.col4 ((get_d k 3 2) f hf)
+    | three => exfalso; exact digit_in_region h H.col4 H.given11
+  )
+  replace k := add_fact k 14 2 (by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 14 with
+    | two => rfl
+    | one => exfalso; exact digit_in_region h H.row4 H.given13
+    | three => exfalso; exact digit_in_region h H.box4 H.given11
+    | four => exfalso; exact digit_in_region h H.row4 ((get_d k 15 4) f hf)
+  )
+  replace k := add_fact k 10 1 (by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 10 with
+    | one => rfl
+    | two => exfalso; exact digit_in_region h H.box4 ((get_d k 14 2) f hf)
+    | three => exfalso; exact digit_in_region h H.box4 H.given11
+    | four => exfalso; exact digit_in_region h H.box4 ((get_d k 15 4) f hf)
+  )
+  replace k := add_fact k 8 2 (by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 8 with
+    | two => rfl
+    | one => exfalso; exact digit_in_region h H.row3 ((get_d k 10 1) f hf)
+    | three => exfalso; exact digit_in_region h H.row3 H.given11
+    | four => exfalso; exact digit_in_region h H.row3 H.given9
+  )
+  replace k := add_fact k 12 3 (by
+    intro f hf
+    replace H := (H f).mp hf
+    cases h: f 12 with
+    | three => rfl
+    | one => exfalso; exact digit_in_region h H.box3 H.given13
+    | two => exfalso; exact digit_in_region h H.box3 ((get_d k 8 2) f hf)
+    | four => exfalso; exact digit_in_region h H.box3 H.given9
+  )
   -- create th function g and use it
   let digits: Array Symbols4 :=
     #[1,3,4,2,
@@ -158,7 +156,7 @@ theorem SolveTestPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ Tes
   by_cases xin: x < 16
   · interval_cases x
     · sorry
-    · exact c1 H h hh
+    · exact c1 P
     · sorry
     · sorry
     · sorry
@@ -166,14 +164,14 @@ theorem SolveTestPuzzle {S : Set (Nat → Symbols4)} (H : ∀ f, f ∈ S ↔ Tes
     · exact P.given6
     · exact (get_d k 7 1) h hh
     · exact (get_d k 8 2) h hh
-    · exact H.given9
+    · exact P.given9
     · exact (get_d k 10 1) h hh
-    · exact H.given11
+    · exact P.given11
     · exact (get_d k 12 3) h hh
-    · exact H.given13
+    · exact P.given13
     · exact (get_d k 14 2) h hh
     · exact (get_d k 15 4) h hh
-  rw [H.outside_grid]
+  rw [P.outside_grid]
   · unfold g
     simp at xin
     conv =>
