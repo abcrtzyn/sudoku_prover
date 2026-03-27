@@ -1,12 +1,12 @@
 import os
 import tempfile
 from typing import Any, Dict, List, Tuple, cast
+import leanclient as lc  # pyright: ignore[reportMissingTypeStubs]
 
 # temp dir from the lean project path
 TEMP_DIR = ".lean_temp"
 
 
-import leanclient as lc  # pyright: ignore[reportMissingTypeStubs]
 
 def get_temp_file(project_root: str):
     """Creates a tempfile at [projoct_root]/[TEMP_DIR] and returns the relative path from cwd"""
@@ -89,8 +89,8 @@ class LeanLspRepl:
         line_num = self.full_text.count('\n')
         col_num = 0
 
-        if g := cast(Dict[str,List[str]] | None, self.sfc.get_goal(line_num,col_num)): # pyright: ignore[reportUnknownMemberType]
-            goals = g['goals']
+        if g := cast(Dict[str,Any] | None, self.sfc.get_goal(line_num,col_num)): # pyright: ignore[reportUnknownMemberType]
+            goals = cast(List[str],g['goals'])
         else:
             goals = []
         
@@ -128,7 +128,6 @@ class LeanLspRepl:
             raise Exception('Lean gave some errors, look above traceback')
 
         return (goals,real_diags) # pyright: ignore[reportUnknownVariableType]
-
 
 def main():
     with LeanLspRepl(".") as repl:
