@@ -106,6 +106,7 @@ class ProofEngine:
             tactic_text += f'{'  '*(self.proof_level-self.place_dot)}{'· ' if self.place_dot else ''}{line}'
             self.place_dot = False
 
+        # print(tactic_text)
         goals, diags = self.repl.run_command(tactic_text)
         # print(diags)
 
@@ -370,43 +371,50 @@ have len: digits.size = {len(grid)} := by decide
 let g : Nat → {self.puzzle.symbols} := fun x => digits[x]? |>.getD {self.puzzle.symbols_python[0]}
 use g
 constructor -- splits into testing constraints and uniqueness
-simp only
-apply (H g).mpr""")
+· simp only
+  apply (H g).mpr""")
+        self.proof_level += 1
         # next is to prove that obeys the constraints of the puzzle
         # this is done by splitting up the structure
         # at this point it is all hard coded to the specific puzzle
         # later there will be functions to prove UniqueSet constraints, theromemeters, etc.
         self.tactic(
 """constructor
--- outside the grid
-intro n hn
-unfold g
-conv => enter [1, 1]; apply Array.getElem?_eq_none (by {rw [len]; assumption})
-simp
+· -- outside the grid
+  intro n hn
+  unfold g
+  conv => enter [1, 1]; apply Array.getElem?_eq_none (by {rw [len]; assumption})
+  simp
 iterate 12 apply injOn_by_card; decide --UniqueSet
 iterate 6 decide -- givens"""
         )   
         # uniqueness start here
+        self.place_dot = True
         self.tactic(
 f"""intro h hh
 replace H := (H h).mp hh
 ext x
 by_cases xin: x < {len(grid)}
-interval_cases x"""
+· interval_cases x"""
         )
+        self.proof_level += 2
         # now to get the proof for each cell
         for cell in range(len(grid)):
+            self.place_dot = True
             self.tactic(f'exact (c{cell} H)')
+        self.proof_level -= 1
         # and handle the outside the grid normalization
+        self.place_dot = True
         _, diags = self.tactic(
 f"""rw [H.outside_grid]
-unfold g
-simp at xin
-conv => enter [2,1]; apply Array.getElem?_eq_none (by {{rw [len]; assumption}})
-simp
+· unfold g
+  simp at xin
+  conv => enter [2,1]; apply Array.getElem?_eq_none (by {{rw [len]; assumption}})
+  simp
 push_neg at xin
 apply xin"""
         )
+        self.proof_level -= 2
         print(self.repl.full_text)
 
         if not diags:
@@ -415,8 +423,6 @@ apply xin"""
             print('Lean diag level',diag['severity'])
             print(diag['fullRange'],diag['range'])
             print(diag['message'])
-        
-
 
         raise Exception()
 
