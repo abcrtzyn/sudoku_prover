@@ -363,7 +363,6 @@ class ProofEngine:
         - proving it satisfies all constraints (which could need some proof help, but most of it should be automatic)
         - showing that it is the only function using all the proofs of each digit that were created in the solving process"""
 
-
         # going to be using it a lot, so local variable
         grid = self.current.grid
 
