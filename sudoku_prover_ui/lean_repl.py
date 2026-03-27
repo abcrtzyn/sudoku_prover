@@ -76,11 +76,12 @@ class LeanLspRepl:
         self.close()
 
     def update_server(self):
-        self.full_text = "\n".join(self.history) + '\n'
+        self.full_text = "".join(self.history)
         self.sfc.update_file_content(self.full_text)
         # print('file content\n',self.sfc.get_file_content(),sep='')
 
     def run_command(self, code: str) -> Tuple[List[str],List[Dict[str,Any]]]:
+        code += '\n'
         # Append the new code to history
         self.history.append(code)
         self.update_server()

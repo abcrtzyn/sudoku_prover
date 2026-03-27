@@ -195,7 +195,8 @@ class ProofEngine:
         if self.current.count_goals() > goals_count:
             print('the have goal was not finished')
             exit(6)
-        
+        # add a newline
+        self.tactic('')
         self.proof_level -= 1
 
 
