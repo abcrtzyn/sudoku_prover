@@ -44,7 +44,7 @@ class ProofEngine:
         self.puzzle = puzzle
         self._active_gen: Generator[str, str, None]
         self.terminal_prompt: str
-        self.place_dot: bool = False
+        self._place_dot: bool = False
 
     def setup(self):
         self.repl.open()
@@ -97,14 +97,17 @@ class ProofEngine:
 
         return self
 
+    def place_dot(self):
+        self._place_dot = True
+
 
     def tactic(self, tactic: str):
         """helper that handles the state variables
         updates the proof state and returns it"""
         tactic_text = ''
         for line in tactic.splitlines(True):
-            tactic_text += f'{'  '*(self.proof_level-self.place_dot)}{'· ' if self.place_dot else ''}{line}'
-            self.place_dot = False
+            tactic_text += f'{'  '*(self.proof_level-self._place_dot)}{'· ' if self._place_dot else ''}{line}'
+            self._place_dot = False
 
         # print(tactic_text)
         goals, diags = self.repl.run_command(tactic_text)
@@ -213,7 +216,7 @@ class ProofEngine:
         self.proof_level += 1
         # we know the order of these cases, it's exactly the order of the symbols
         for digit in self.puzzle.symbols_python:
-            self.place_dot = True
+            self.place_dot()
             if cell in self.current.eliminations and digit in self.current.eliminations[cell]:
                 self.generate_elimination_proof(cell,digit,'h')
                 # TODO we also need to check for accepting cases, not yet
@@ -260,7 +263,7 @@ class ProofEngine:
         self.tactic(f"""{'locked_support_cases' if region_is_locked else 'support_cases'} h {digit}""")
         self.proof_level += 1
         for cell in cell_set:
-            self.place_dot = True
+            self.place_dot()
             if (self.current.grid[cell] is not None) or (cell in self.current.eliminations and digit in self.current.eliminations[cell]):
                 self.generate_elimination_proof(cell,digit,'h')
             # TODO we also need to check for accepting cases, not yet
@@ -389,7 +392,7 @@ iterate 12 apply injOn_by_card; decide --UniqueSet
 iterate 6 decide -- givens"""
         )   
         # uniqueness start here
-        self.place_dot = True
+        self.place_dot()
         self.tactic(
 f"""intro h hh
 replace H := (H h).mp hh
@@ -400,11 +403,11 @@ by_cases xin: x < {len(grid)}
         self.proof_level += 2
         # now to get the proof for each cell
         for cell in range(len(grid)):
-            self.place_dot = True
+            self.place_dot()
             self.tactic(f'exact (c{cell} H)')
         self.proof_level -= 1
         # and handle the outside the grid normalization
-        self.place_dot = True
+        self.place_dot()
         _, diags = self.tactic(
 f"""rw [H.outside_grid]
 · unfold g
