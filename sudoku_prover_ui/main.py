@@ -14,21 +14,21 @@ def solve(file_name: str, cont: bool):
     puzzle, proof_text = cast(Tuple[Puzzle, List[Tuple[str, int]]],import_file(file_name))
 
     print('starting up Lean Server',end=' ',flush=True)
-    engine = ProofEngine(puzzle)
-    print('done')
+    with ProofEngine(puzzle) as engine:
+        print('done')
 
-    if cont:
-        # run through proof steps
-        for line,line_number in proof_text:
-            try:
-                engine.command(line)
-            except Exception as e:
-                e.add_note(f'{file_name}:{line_number} produced this error.')
-                raise e
+        if cont:
+            # run through proof steps
+            for line,line_number in proof_text:
+                try:
+                    engine.command(line)
+                except Exception as e:
+                    e.add_note(f'{file_name}:{line_number} produced this error.')
+                    raise e
 
-    print('starting up the UI')
-    from sudoku_prover_ui import solver_ui # This keeps arcade from trying to run for other commands like verify
-    solver_ui.main(puzzle, engine)
+        print('starting up the UI')
+        from sudoku_prover_ui import solver_ui # This keeps arcade from trying to run for other commands like verify
+        solver_ui.main(puzzle, engine)
 
 
 def verify(file_name: str):
@@ -36,23 +36,24 @@ def verify(file_name: str):
     puzzle, proof_text = cast(Tuple[Puzzle, List[Tuple[str, int]]],import_file(file_name))
 
     print('starting up Lean Server',end=' ',flush=True)
-    engine = ProofEngine(puzzle)
-    print('done')
+    with ProofEngine(puzzle) as engine:
+        print('done')
 
-    print('running through the proof')
-    for line,line_number in proof_text:
-        try:
-            engine.command(line)
-        except Exception as e:
-            e.add_note(f'{file_name}:{line_number} produced this error.')
-            raise e
+        print('running through the proof')
+        for line,line_number in proof_text:
+            try:
+                engine.command(line)
+            except Exception as e:
+                e.add_note(f'{file_name}:{line_number} produced this error.')
+                raise e
+        
+        if engine.current.count_goals() != 0:
+            print("the proof looks incomplete")
+            print("ended with the following proof state")
+            print(engine.current.grid)
+            print(engine.current.proof_state)
+            exit(2)
     
-    if engine.current.count_goals() != 0:
-        print("the proof looks incomplete")
-        print("ended with the following proof state")
-        print(engine.current.grid)
-        print(engine.current.proof_state)
-        exit(2)
 
     # proof succeded here, yay
     print('the proof is correct')
