@@ -16,6 +16,7 @@ SYMBOLS_DICT: Dict[str,List[Any]] = {
 
 @dataclass
 class Puzzle:
+    metadata: Dict[str,str]
     cell_count: int
     cell_layout: List[Tuple[int,int]]
     symbols: str

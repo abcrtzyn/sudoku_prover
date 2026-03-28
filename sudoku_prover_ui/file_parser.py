@@ -81,6 +81,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
     def __init__(self,file_name:str,seen_files:Set[str],is_puzzle:bool=True):
         self.is_puzzle = is_puzzle
         self.file_name = file_name
+        self._metadata: Dict[str,str] = {}
         self._name = None
         self._cell_count = None
         self._cell_layout = None
@@ -116,7 +117,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
             
             # any other data validation we need
 
-            return Puzzle(self._cell_count,self._cell_layout,self._symbols,self._qualified_constraints,self._constraints,self._lean_imports)
+            return Puzzle(self._metadata,self._cell_count,self._cell_layout,self._symbols,self._qualified_constraints,self._constraints,self._lean_imports)
 
         else:
             # its a template
@@ -134,8 +135,10 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
     
     def metadata_entry(self, tree: Tree[Any]):
         key = tree.children[0].value # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
+        value = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
         if key == 'name':
-            self._add_name(clean_str(tree.children[1])) # pyright: ignore[reportArgumentType]
+            self._add_name(value) # pyright: ignore[reportArgumentType]
+        self._metadata[key] = value
             
     def _import_template(self,file_name:str,ident:str,tree: Tree[Any]):
         puzzle, _ = cast(Tuple[Template,Any],import_file(file_name,is_puzzle=False,seen_files=self.seen_files))
