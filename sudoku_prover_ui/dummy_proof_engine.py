@@ -54,16 +54,15 @@ class DummyProofEngine:
         # start the proof
         # proof_state = self.server.goal_start(f"∀ (S: Set (Nat → {self.puzzle.symbols})) (_ : ∀ f, f ∈ S ↔ Puzzle f), ∃! (g: Nat -> {self.puzzle.symbols}), g ∈ S") # pyright: ignore[reportUnknownMemberType]
         # proof_state = self.server.goal_tactic(proof_state,  # pyright: ignore[reportUnknownMemberType]
-        proof_state = DummyGoalState()
 # """intro S H
 # have k: IsSound S [] := by intro c d h; cases h""")
-        self.current = SudokuState(proof_state,grid,eliminations)
+        self.current = SudokuState([],grid,eliminations)
 
         self.undo_stack: List[SudokuState] = []
         self.history: List[str] = []
         
         # process the puzzle constraints
-        for name, constraint in self.puzzle.constraints_python.items():
+        for name, constraint in self.puzzle.qualified_constraints_python.items():
             match constraint[0]:
                 case 'Given':
                     cell = constraint[1][0]
