@@ -93,6 +93,7 @@ class ProofEngine:
         
         # get a new line in there for spacing reasons
         self.tactic('')
+        self._send_proof()
                 
         self._active_gen: Generator[str, str, None] = self.controller()
         self.terminal_prompt = next(self._active_gen)
