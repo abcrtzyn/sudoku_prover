@@ -65,7 +65,7 @@ class SudokuWindow(arcade.Window):
         self.shape_list: arcade.shape_list.ShapeElementList[Any] = arcade.shape_list.ShapeElementList()
         self.digits_text_grid: List[arcade.Text] = [None for _ in range(self.puzzle.cell_count)] # type: ignore
         self.digits_batch = Batch()
-        self.show_candidates_grid: List[bool] = [True for _ in range(self.puzzle.cell_count)]
+        self.show_candidates_grid: List[bool] = [False for _ in range(self.puzzle.cell_count)]
         self.cand_text_grid: List[List[arcade.Text]] = [[None for _ in self.puzzle.symbols_python] for _ in range(self.puzzle.cell_count)] # type: ignore
         self.cand_batch = Batch()
 
