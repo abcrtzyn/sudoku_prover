@@ -21,10 +21,10 @@ class Puzzle:
     cell_layout: List[Tuple[int,int]]
     symbols: str
     symbols_python: List[Any] = field(init=False)
-    qualified_constraints: Dict[str,str]
-    qualified_constraints_python: Dict[str,Tuple[str,Any]] = field(init=False)
-    constraints: Dict[str,str]
-    constraints_python: Dict[str,Tuple[str,Any]] = field(init=False)
+    puzzle_level_constraints: Dict[str,str]
+    import_constraints: Dict[str,str]
+    imported_constraints: Dict[str,str]
+    pythonized_constraints: Dict[str,Tuple[str,Any]] = field(init=False)
     lean_imports: List[str]
 
     def __post_init__(self):
