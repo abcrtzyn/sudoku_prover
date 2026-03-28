@@ -1,8 +1,38 @@
-On this branch the most important goals are
-- saving files, puzzle def and proof (should be a fun task) #10
-- finding a spot to put the save command
-- actually adding the save button to the ui
+This was a necessary change, this branch is going to do it.
 
-Other goals
-multi line strings and cell_layout list #63 and #64
-lean imports #74
+Constraints are changing to make them easier to program with. 
+
+I have written docs for the suko files to help me better understand what the goal of this is.
+No more template field under definition, everything is an imported constraint instead.
+cell_count, cell_layout, and symbols are all required by at least one file.
+
+See below for how constraints will now be stored.
+
+
+Here are the thoughts
+
+We need to know the following information
+- Lean needs to know
+    - Name, 
+    - lean code
+    - if its imported, what lean file
+- Python needs to know
+    - Name
+    - What is it (right now, just the lean code)
+    - If its imported, the same knowns for each sub constraint
+
+
+Here is what I have come up with, three dictionaries, each with sligtly different information.
+imports
+Name: (lean code right now name f, which lean file)
+Includes imported imports
+
+puzzle level
+Name: (lean code)
+
+imported
+Name: (lean code)
+
+Lean cares about puzzle level and imports (indiscriminately)
+Python cares about puzzle level and imported (indiscriminately)
+Files care about puzzle level and imports separately
