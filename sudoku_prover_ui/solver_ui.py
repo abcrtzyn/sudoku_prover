@@ -292,11 +292,11 @@ class SudokuWindow(arcade.Window):
         # get the cell
         cell = self.coords_to_grid_cell(x,y)
         if cell is None:
-            print('mouse press',x,y)
+            # print('mouse press',x,y)
             # no cell pressed, carry on
             return
         # cell pressed
-        print('mouse press cell',cell)
+        # print('mouse press cell',cell)
         match self.mode:
             case 'mouse':
                 # nothing for this yet
@@ -333,7 +333,6 @@ class SudokuWindow(arcade.Window):
             arcade.exit()
             raise e
             return
-
         self.refresh()
 
 

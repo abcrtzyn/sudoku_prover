@@ -46,6 +46,7 @@ class ProofEngine:
         self._active_gen: Generator[str, str, None]
         self.terminal_prompt: str
         self._place_dot: bool = False
+        self.prepared_text = ''
 
     def setup(self):
         self.repl.open()
@@ -75,7 +76,7 @@ class ProofEngine:
 
         # start with any initial constraints, might just be given digits
         # anything that I would consider part of the solution that is given gets processed here
-        for name, constraint in self.puzzle.constraints_python.items():
+        for name, constraint in self.puzzle.qualified_constraints_python.items():
             match constraint[0]:
                 case 'Given':
                     cell = constraint[1][0]
@@ -119,13 +120,14 @@ class ProofEngine:
             self._place_dot = False
 
         # print(tactic_text)
-        goals, diags = self.repl.run_command(tactic_text)
-        # print(diags)
+        self.prepared_text += tactic_text + '\n'
 
+    def _send_proof(self):
+        goals, diags = self.repl.run_command(self.prepared_text)
+        self.prepared_text = ''
         self.current.proof_state = goals
-
-
         return self.current.proof_state, diags
+
 
     def _execute_or_prompt(self, command: Generator[str, str, None] | None, prompt: str) -> Generator[str, str, None]:
         """if a command is given, run the command, else, get one from the interface and run it"""
@@ -145,7 +147,7 @@ class ProofEngine:
 
     def region_eliminate(self, cell: int,digit: int,proof_name:str):
         """eliminates all of digit from every cell in every region that cell is a part of"""
-        for name, constraint in self.puzzle.constraints_python.items():
+        for name, constraint in self.puzzle.qualified_constraints_python.items():
             if constraint[0] != 'UniqueSet':
                 continue
             if cell in constraint[1]:
@@ -164,7 +166,6 @@ class ProofEngine:
         """Given the current cell and digit and hypothesis name to eliminate
         eliminates this contradictory case"""
         
-        goals_count = self.current.count_goals()
         if self.current.grid[cell] is not None:
             proof = f'exact digit_in_cell {hypothesis} (c{cell} P)'
             self.tactic(f'exfalso; {proof}')
@@ -179,20 +180,9 @@ class ProofEngine:
         else:
             print(f'no elimination present for {cell} {digit}')
             exit(5)
-        if self.current.count_goals() != goals_count - 1:
-            # not the correct number of goals
-            if  self.current.count_goals() < goals_count - 1:
-                print(self.current.proof_state)
-                print('generate_elimination_proof managed to solve more cases than it was supposed to. Did you dormant a goal?')
-                exit(6)
-            else:
-                print(self.current.proof_state)
-                print('generate_elimination_proof did not prove all the cases')
-                exit(7)
 
     def have(self, name: str, goal: str, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
         """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
-        goals_count = self.current.count_goals()
 
         # if it is a top level goal, need to start a new lemma, otherwise do a have statement
         if self.proof_level == 0:
@@ -205,11 +195,8 @@ class ProofEngine:
             # solve the goal using a command
             yield from self._execute_or_prompt(command,goal)
 
-            if self.current.count_goals() > goals_count:
-                print('the have goal was not finished')
-                exit(6)
-            # add a newline
-            self.tactic('')
+        # add a newline
+        self.tactic('')
         
 
 
@@ -221,7 +208,6 @@ class ProofEngine:
         self.region_eliminate(cell,digit,f'c{cell}')
 
     def cell_cases(self, cell: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
-        goals_count = self.current.count_goals()
         self.tactic(f'cases h: f {cell}')
         
         with self.indent():
@@ -233,24 +219,13 @@ class ProofEngine:
                     # TODO we also need to check for accepting cases, not yet
                 else:
                     yield from self._execute_dict_or_prompt(commands,digit,f'cell_cases {digit}')
-                
-            if self.current.count_goals() != goals_count - 1:
-                # not the correct number of goals
-                if self.current.count_goals() < goals_count - 1:
-                    print(self.current.proof_state)
-                    print('cell_cases managed to solve more cases than it was supposed to. Did you dormant a goal?')
-                    exit(6)
-                else:
-                    print(self.current.proof_state)
-                    print('cell_cases did not prove all the cases')
-                    exit(7)
+            
         
 
     def support_cases(self, hypothesis: str, digit: int | None, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
         """Does support_cases or locked_support_cases on the hypothesis and digit
         the hypothesis is must be of the form SupportSet {...} n or LockedSet {...} {...}
         This function will detect which one is needed. If the hypothesis is a locked set, a digit must be given"""
-        goals_count = self.current.count_goals()
         for var in self.current.proof_state.goals[0].variables:
             if var.name == hypothesis:
                 break
@@ -281,28 +256,17 @@ class ProofEngine:
                 else:
                     yield from self._execute_dict_or_prompt(commands,cell,f'support_cases {cell}')
             
-            if self.current.count_goals() != goals_count - 1:
-                # not the correct number of goals
-                if self.current.count_goals() < goals_count - 1:
-                    print(self.current.proof_state)
-                    print('support_cases managed to solve more cases than it was supposed to. Did you dormant a goal?')
-                    exit(6)
-                else:
-                    print(self.current.proof_state)
-                    print('support_cases did not prove all the cases')
-                    exit(7)
-            
         
     def support_cases_manual(self, digit: int, region: str) -> Generator[str,str,None]:
         # couple things we have to do in order to call support cases
         # one, create the hypothesis to run cases on, which has many cases
         # is there a hypothesis by that name in the context?
         qualified_region_name = None
-        if region in self.puzzle.constraints_python:
+        if region in self.puzzle.qualified_constraints_python:
             # check if it is the correct size for surjective logic
-            if self.puzzle.constraints_python[region][0] != 'UniqueSet':
+            if self.puzzle.qualified_constraints_python[region][0] != 'UniqueSet':
                 raise CommandError(f'Can not do support_cases on region {region}')
-            cells = self.puzzle.constraints_python[region][1]
+            cells = self.puzzle.qualified_constraints_python[region][1]
 
             if len(cells) != len(self.puzzle.symbols_python):
                 raise CommandError("can't do surjective logic on a unique set that isn't the same size as symbols")
@@ -372,11 +336,11 @@ class ProofEngine:
             raise CommandError('Not all digits are solved, can not finish proof')
         
         self.tactic(f'theorem SolvePuzzle {{S : Set (Nat → {self.puzzle.symbols})}} (H : ∀ f, f ∈ S ↔ Puzzle f): ∃! (g: Nat -> {self.puzzle.symbols}), g ∈ S := by')
-        with self.indent():
+        self.proof_level += 1
 
-            # create the function g and use it
-            # using the digits proved to create the function
-            self.tactic(
+        # create the function g and use it
+        # using the digits proved to create the function
+        self.tactic(
 f"""let digits: Array {self.puzzle.symbols} := #{str(grid).replace("'","")}
 -- for use later, say how long it is
 have len: digits.size = {len(grid)} := by decide
@@ -386,39 +350,53 @@ use g
 constructor -- splits into testing constraints and uniqueness
 · simp only
   apply (H g).mpr""")
-            with self.indent():
-                # next is to prove that obeys the constraints of the puzzle
-                # this is done by splitting up the structure
-                # at this point it is all hard coded to the specific puzzle
-                # later there will be functions to prove UniqueSet constraints, theromemeters, etc.
-                self.tactic(
+        self.proof_level += 1
+        # next is to prove that obeys the constraints of the puzzle
+        # this is done by splitting up the structure
+        # at this point it is all hard coded to the specific puzzle
+        # later there will be functions to prove UniqueSet constraints, theromemeters, etc.
+        self.tactic(
 """constructor
 · -- outside the grid
   intro n hn
   unfold g
   conv => enter [1, 1]; apply Array.getElem?_eq_none (by {rw [len]; assumption})
-  simp
-iterate 12 apply injOn_by_card; decide --UniqueSet
-iterate 6 decide -- givens"""
-                )   
-                # uniqueness start here
-                self.place_dot()
-                self.tactic(
+  simp"""
+        )
+        self.proof_level += 1
+        # this relies on the order of .items() and values() being consistent, we can change data structures to a list or something if that ends up not being true
+        for constraint in self.puzzle.constraints.values():
+            self.place_dot()
+            if re.match(r'f\s+\d+\s*=\s*\d',constraint):
+                self.tactic("decide")
+            elif constraint.startswith('UniqueSet'):
+                self.tactic('apply injOn_by_card; decide')
+            else:
+                match constraint:
+                    case "NormalSudoku f":
+                        self.tactic("constructor; iterate 27 apply injOn_by_card; decide")
+                    case _:
+                        raise ValueError(f'do not know how to prove the constraint {constraint}')
+
+        self.proof_level -= 1
+        # uniqueness start here
+        self.place_dot()
+        self.tactic(
 f"""intro h hh
 replace H := (H h).mp hh
 ext x
 by_cases xin: x < {len(grid)}
 · interval_cases x"""
-                )
-                self.proof_level += 2
-                # now to get the proof for each cell
-                for cell in range(len(grid)):
-                    self.place_dot()
-                    self.tactic(f'exact (c{cell} H)')
-                self.proof_level -= 1
-                # and handle the outside the grid normalization
-                self.place_dot()
-                _, diags = self.tactic(
+        )
+        self.proof_level += 2
+        # now to get the proof for each cell
+        for cell in range(len(grid)):
+            self.place_dot()
+            self.tactic(f'exact (c{cell} H)')
+        self.proof_level -= 1
+        # and handle the outside the grid normalization
+        self.place_dot()
+        self.tactic(
 f"""rw [H.outside_grid]
 · unfold g
   simp at xin
@@ -426,10 +404,13 @@ f"""rw [H.outside_grid]
   simp
 push_neg at xin
 apply xin"""
-                )
-                self.proof_level -= 1
+        )
+        _, diags = self._send_proof()
+
+        self.proof_level -= 3
+        
         # proof complete
-        print(self.repl.full_text)
+        # print(self.repl.full_text)
 
         if not diags:
             return
@@ -522,9 +503,12 @@ apply xin"""
             cmd = yield ''
             try:
                 yield from self.handle_input(cmd)
+                # send off that block of text
+                self._send_proof()
             except CommandError as e:
                 print(f'[!] {e}')
     
     def command(self,cmd:str):
+        # print(cmd)
         self.terminal_prompt = self._active_gen.send(cmd)
         return self.terminal_prompt
