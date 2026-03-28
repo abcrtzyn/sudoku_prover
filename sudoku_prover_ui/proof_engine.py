@@ -119,7 +119,7 @@ class ProofEngine:
             tactic_text += f'{'  '*(self.proof_level-self._place_dot)}{'· ' if self._place_dot else ''}{line}'
             self._place_dot = False
 
-        print(tactic_text)
+        # print(tactic_text)
         self.prepared_text += tactic_text + '\n'
 
     def _send_proof(self):
@@ -410,7 +410,7 @@ apply xin"""
         self.proof_level -= 3
         
         # proof complete
-        print(self.repl.full_text)
+        # print(self.repl.full_text)
 
         if not diags:
             return
