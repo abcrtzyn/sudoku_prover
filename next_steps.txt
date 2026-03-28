@@ -1,0 +1,7 @@
+The goal of this branch is to bring the proof state to life in the ui, take a look at #15
+examples are sub issues
+- fill in digits for hypotheses f 4 = 2 #16
+- corner pencil marks for support set hypotheses #17 (I think we will have to wait for further proof engine dev for this)
+- hover over hypotheses to see cells involved #18
+
+More of this will be useful for recursive proofs, doesn't really apply to naked_single 5 because it doesn't do much on its own.
