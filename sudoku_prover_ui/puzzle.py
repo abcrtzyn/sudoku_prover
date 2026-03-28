@@ -68,6 +68,7 @@ class Puzzle:
 
 @dataclass
 class Template:
+    metadata: Dict[str,str]
     name: str
     cell_count: int | None
     cell_layout: List[Tuple[int,int]] | None

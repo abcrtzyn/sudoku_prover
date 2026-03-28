@@ -124,7 +124,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
             # no data validation here
             if self._name is None:
                 raise ValueError(f'{self.file_name} Template files are required to have the name field in the metadata, this is how to address it')
-            return Template(self._name,self._cell_count,self._cell_layout,self._symbols,self._qualified_constraints,self._constraints,self._lean_imports)
+            return Template(self._metadata,self._name,self._cell_count,self._cell_layout,self._symbols,self._qualified_constraints,self._constraints,self._lean_imports)
 
 
     def template_section(self, tree: Tree[Any]):
