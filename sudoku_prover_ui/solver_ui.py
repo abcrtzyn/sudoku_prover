@@ -130,34 +130,57 @@ class SudokuWindow(arcade.Window):
 
     def refresh(self):
         """grabs state from the engine and fully updates the UI"""
-        grid = self.engine.current.grid
-        # maybe get the proof state too...maybe
-        for cell in range(self.puzzle.cell_count):
-            cell_filled = grid[cell] is not None
-            self.show_candidates_grid[cell] &= not cell_filled
-            self.digits_text_grid[cell].text = grid[cell] if cell_filled else ''
+        try:
+            grid = self.engine.current.grid
+            # maybe get the proof state too...maybe
+            for cell in range(self.puzzle.cell_count):
+                cell_filled = grid[cell] is not None
+                self.show_candidates_grid[cell] &= not cell_filled
+                self.digits_text_grid[cell].text = grid[cell] if cell_filled else ''
 
-            self.refresh_candidate_text(cell)
+                self.refresh_candidate_text(cell)
 
-        if not self.engine.current.proof_state.goals:
-            # proof finished
-            self.proof_text.text = 'Proof finished!'
-        else:
-            proof_state = self.engine.current.proof_state.goals[0]
-            proof_text = ''
-            if proof_state.name is not None:
-                proof_text += f'case {proof_state.name}\n'
+            proof_state = self.engine.current.proof_state
             
-            for var in proof_state.variables:
-                # don't output these
-                if var.name in ['k','H','S']:
-                    continue
-                
-                proof_text += f'{var.name} : {var.t}\n'
-            
-            proof_text += f'⊢ {proof_state.target}'
 
-            self.proof_text.text = proof_text
+            if proof_state:
+                show_text = ''
+                context = proof_state[0]
+                # assumes that everything is single lines, not sure if that is true
+                lines = context.splitlines(True)
+                first = lines[0]
+                # this is not a perfect check, maybe we want to use some sort of regex
+                if not (':' in first or '⊢' in first):
+                    # context name
+                    show_text += first
+                    lines.pop(0)
+                # parse the rest of the lines normally
+                for line in lines:
+                    if line.startswith('⊢'):
+                        # goal line
+                        show_text += line
+                        continue
+
+                    var_name, _ = tuple([x.strip() for x in line.split(':',1)])
+                    if var_name in ['f','P']:
+                        # don't show these hypotheses
+                        continue
+
+                    show_text += line
+                self.proof_text.text = show_text
+
+            else:
+                self.proof_text.text = 'Awaiting next step'
+        
+        except SystemExit:
+            # Catch the exit(0) call and tell Arcade to die
+            arcade.exit()
+            return
+        except Exception as e:
+            # If you want it to hard-crash on other errors too:
+            arcade.exit()
+            raise e
+            return
 
     def refresh_candidate_text(self, cell: int):
         """special limited refresh, only updates the candidates in the specific cell"""
@@ -269,11 +292,11 @@ class SudokuWindow(arcade.Window):
         # get the cell
         cell = self.coords_to_grid_cell(x,y)
         if cell is None:
-            print('mouse press',x,y)
+            # print('mouse press',x,y)
             # no cell pressed, carry on
             return
         # cell pressed
-        print('mouse press cell',cell)
+        # print('mouse press cell',cell)
         match self.mode:
             case 'mouse':
                 # nothing for this yet
@@ -310,7 +333,6 @@ class SudokuWindow(arcade.Window):
             arcade.exit()
             raise e
             return
-
         self.refresh()
 
 
