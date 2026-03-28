@@ -68,11 +68,12 @@ class Puzzle:
 
 @dataclass
 class Template:
-    metadata: Dict[str,str]
-    name: str
+    # lean source file will be added to imports
+    lean_code: str
     cell_count: int | None
     cell_layout: List[Tuple[int,int]] | None
     symbols: str | None
-    qualified_constraints: Dict[str,str]
-    constraints: Dict[str,str]
+    puzzle_level_constraints: Dict[str,str]
+    import_constraints: Dict[str,str]
+    imported_constraints: Dict[str,str]
     lean_imports: List[str]
