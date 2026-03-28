@@ -46,6 +46,7 @@ class ProofEngine:
         self._active_gen: Generator[str, str, None]
         self.terminal_prompt: str
         self._place_dot: bool = False
+        self.prepared_text = ''
 
     def setup(self):
         self.repl.open()
@@ -119,13 +120,14 @@ class ProofEngine:
             self._place_dot = False
 
         print(tactic_text)
-        goals, diags = self.repl.run_command(tactic_text)
-        # print(diags)
+        self.prepared_text += tactic_text + '\n'
 
+    def _send_proof(self):
+        goals, diags = self.repl.run_command(self.prepared_text)
+        self.prepared_text = ''
         self.current.proof_state = goals
-
-
         return self.current.proof_state, diags
+
 
     def _execute_or_prompt(self, command: Generator[str, str, None] | None, prompt: str) -> Generator[str, str, None]:
         """if a command is given, run the command, else, get one from the interface and run it"""
@@ -164,7 +166,6 @@ class ProofEngine:
         """Given the current cell and digit and hypothesis name to eliminate
         eliminates this contradictory case"""
         
-        goals_count = self.current.count_goals()
         if self.current.grid[cell] is not None:
             proof = f'exact digit_in_cell {hypothesis} (c{cell} P)'
             self.tactic(f'exfalso; {proof}')
@@ -179,20 +180,9 @@ class ProofEngine:
         else:
             print(f'no elimination present for {cell} {digit}')
             exit(5)
-        if self.current.count_goals() != goals_count - 1:
-            # not the correct number of goals
-            if  self.current.count_goals() < goals_count - 1:
-                print(self.current.proof_state)
-                print('generate_elimination_proof managed to solve more cases than it was supposed to. Did you dormant a goal?')
-                exit(6)
-            else:
-                print(self.current.proof_state)
-                print('generate_elimination_proof did not prove all the cases')
-                exit(7)
 
     def have(self, name: str, goal: str, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
         """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
-        goals_count = self.current.count_goals()
 
         # if it is a top level goal, need to start a new lemma, otherwise do a have statement
         if self.proof_level == 0:
@@ -205,11 +195,8 @@ class ProofEngine:
             # solve the goal using a command
             yield from self._execute_or_prompt(command,goal)
 
-            if self.current.count_goals() > goals_count:
-                print('the have goal was not finished')
-                exit(6)
-            # add a newline
-            self.tactic('')
+        # add a newline
+        self.tactic('')
         
 
 
@@ -221,7 +208,6 @@ class ProofEngine:
         self.region_eliminate(cell,digit,f'c{cell}')
 
     def cell_cases(self, cell: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
-        goals_count = self.current.count_goals()
         self.tactic(f'cases h: f {cell}')
         
         with self.indent():
@@ -233,24 +219,13 @@ class ProofEngine:
                     # TODO we also need to check for accepting cases, not yet
                 else:
                     yield from self._execute_dict_or_prompt(commands,digit,f'cell_cases {digit}')
-                
-            if self.current.count_goals() != goals_count - 1:
-                # not the correct number of goals
-                if self.current.count_goals() < goals_count - 1:
-                    print(self.current.proof_state)
-                    print('cell_cases managed to solve more cases than it was supposed to. Did you dormant a goal?')
-                    exit(6)
-                else:
-                    print(self.current.proof_state)
-                    print('cell_cases did not prove all the cases')
-                    exit(7)
+            
         
 
     def support_cases(self, hypothesis: str, digit: int | None, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
         """Does support_cases or locked_support_cases on the hypothesis and digit
         the hypothesis is must be of the form SupportSet {...} n or LockedSet {...} {...}
         This function will detect which one is needed. If the hypothesis is a locked set, a digit must be given"""
-        goals_count = self.current.count_goals()
         for var in self.current.proof_state.goals[0].variables:
             if var.name == hypothesis:
                 break
@@ -280,17 +255,6 @@ class ProofEngine:
                 # TODO we also need to check for accepting cases, not yet
                 else:
                     yield from self._execute_dict_or_prompt(commands,cell,f'support_cases {cell}')
-            
-            if self.current.count_goals() != goals_count - 1:
-                # not the correct number of goals
-                if self.current.count_goals() < goals_count - 1:
-                    print(self.current.proof_state)
-                    print('support_cases managed to solve more cases than it was supposed to. Did you dormant a goal?')
-                    exit(6)
-                else:
-                    print(self.current.proof_state)
-                    print('support_cases did not prove all the cases')
-                    exit(7)
             
         
     def support_cases_manual(self, digit: int, region: str) -> Generator[str,str,None]:
@@ -432,7 +396,7 @@ by_cases xin: x < {len(grid)}
         self.proof_level -= 1
         # and handle the outside the grid normalization
         self.place_dot()
-        _, diags = self.tactic(
+        self.tactic(
 f"""rw [H.outside_grid]
 · unfold g
   simp at xin
@@ -441,6 +405,8 @@ f"""rw [H.outside_grid]
 push_neg at xin
 apply xin"""
         )
+        _, diags = self._send_proof()
+
         self.proof_level -= 3
         
         # proof complete
@@ -537,6 +503,8 @@ apply xin"""
             cmd = yield ''
             try:
                 yield from self.handle_input(cmd)
+                # send off that block of text
+                self._send_proof()
             except CommandError as e:
                 print(f'[!] {e}')
     
