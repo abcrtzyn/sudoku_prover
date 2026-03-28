@@ -155,9 +155,9 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self._add_lean_imports(puzzle.lean_imports)
 
 
-    def parent_template(self, tree: Tree[Any]):
-        file_path = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
-        self._import_template(file_path,'base',tree)
+    # def parent_template(self, tree: Tree[Any]):
+    #     file_path = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
+    #     self._import_template(file_path,'base',tree)
 
 
 
