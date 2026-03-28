@@ -19,7 +19,7 @@ The sections are
 The template section is only for template files. Being the first line in the file, it signifies to the parser that it is a template file. Template files are not required to fill all the definition fields, and must not have a proof section
 Template section contains two fields:
 - `lean_source`, the file path to the lean file where it is defined
-- `name`, how it should be used by other files like 'NormalSudoku f'
+- `lean_code`, how it should be used by other files like 'NormalSudoku f'
 
 ### METADATA
 
