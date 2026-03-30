@@ -76,7 +76,7 @@ class ProofEngine:
 
         # start with any initial constraints, might just be given digits
         # anything that I would consider part of the solution that is given gets processed here
-        for name, constraint in self.puzzle.qualified_constraints_python.items():
+        for name, constraint in self.puzzle.pythonized_constraints.items():
             match constraint[0]:
                 case 'Given':
                     cell = constraint[1][0]
@@ -148,7 +148,7 @@ class ProofEngine:
 
     def region_eliminate(self, cell: int,digit: int,proof_name:str):
         """eliminates all of digit from every cell in every region that cell is a part of"""
-        for name, constraint in self.puzzle.qualified_constraints_python.items():
+        for name, constraint in self.puzzle.pythonized_constraints.items():
             if constraint[0] != 'UniqueSet':
                 continue
             if cell in constraint[1]:
@@ -263,11 +263,11 @@ class ProofEngine:
         # one, create the hypothesis to run cases on, which has many cases
         # is there a hypothesis by that name in the context?
         qualified_region_name = None
-        if region in self.puzzle.qualified_constraints_python:
+        if region in self.puzzle.pythonized_constraints:
             # check if it is the correct size for surjective logic
-            if self.puzzle.qualified_constraints_python[region][0] != 'UniqueSet':
+            if self.puzzle.pythonized_constraints[region][0] != 'UniqueSet':
                 raise CommandError(f'Can not do support_cases on region {region}')
-            cells = self.puzzle.qualified_constraints_python[region][1]
+            cells = self.puzzle.pythonized_constraints[region][1]
 
             if len(cells) != len(self.puzzle.symbols_python):
                 raise CommandError("can't do surjective logic on a unique set that isn't the same size as symbols")
@@ -366,18 +366,19 @@ constructor -- splits into testing constraints and uniqueness
         )
         self.proof_level += 1
         # this relies on the order of .items() and values() being consistent, we can change data structures to a list or something if that ends up not being true
-        for constraint in self.puzzle.constraints.values():
-            self.place_dot()
-            if re.match(r'f\s+\d+\s*=\s*\d',constraint):
-                self.tactic("decide")
-            elif constraint.startswith('UniqueSet'):
-                self.tactic('apply injOn_by_card; decide')
-            else:
-                match constraint:
-                    case "NormalSudoku f":
-                        self.tactic("constructor; iterate 27 apply injOn_by_card; decide")
-                    case _:
-                        raise ValueError(f'do not know how to prove the constraint {constraint}')
+        for constraint_dict in [self.puzzle.import_constraints,self.puzzle.puzzle_level_constraints]:
+            for constraint in constraint_dict.values():
+                self.place_dot()
+                if re.match(r'f\s+\d+\s*=\s*\d',constraint):
+                    self.tactic("decide")
+                elif constraint.startswith('UniqueSet'):
+                    self.tactic('apply injOn_by_card; decide')
+                else:
+                    match constraint:
+                        case "NormalSudoku f":
+                            self.tactic("constructor; iterate 27 apply injOn_by_card; decide")
+                        case _:
+                            raise ValueError(f'do not know how to prove the constraint {constraint}')
 
         self.proof_level -= 1
         # uniqueness start here
