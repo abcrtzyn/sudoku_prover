@@ -149,16 +149,15 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         
         self._add_lean_imports(puzzle.lean_imports)
         # all puzzle_level and imported need to be added to imported, don't care about import
-        for constraints_dict in [puzzle.puzzle_level_constraints, puzzle.imported_constraints]:
-            for name, constraint in constraints_dict.items():
-                new_name = f'{ident}.{name}'
-                # this is for top level constraints
-                if new_name in self._puzzle_level_constraints:
-                    raise ValueError(f'constraint {new_name} already defined with definition "{self._puzzle_level_constraints[new_name]}"')
-                elif new_name in self._imported_constraints:
-                    raise ValueError(f'constraint {new_name} already defined with definition "{self._imported_constraints[new_name]}"')
+        for name, constraint in puzzle.qualified_constraints():
+            new_name = f'{ident}.{name}'
+            # this is for top level constraints
+            if new_name in self._puzzle_level_constraints:
+                raise ValueError(f'constraint {new_name} already defined with definition "{self._puzzle_level_constraints[new_name]}"')
+            elif new_name in self._imported_constraints:
+                raise ValueError(f'constraint {new_name} already defined with definition "{self._imported_constraints[new_name]}"')
 
-                self._imported_constraints[new_name] = constraint
+            self._imported_constraints[new_name] = constraint
 
     def cell_count(self, tree: Tree[Any]):
         val = int(tree.children[0]) # pyright: ignore[reportArgumentType]

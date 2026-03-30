@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 import re
 import sys
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Dict, Generator, List, Tuple, cast
 
 # these tell python exactly what and in what order the symbols are
 # very important
@@ -37,34 +37,43 @@ class Puzzle:
 
         self.pythonized_constraints = {}
         # find python definitions for the constraints
-        for constraints_dict in [self.puzzle_level_constraints, self.imported_constraints]:
-            for c,code in constraints_dict.items():
-                if mat := re.match(r'f\s+(\d+)\s*=\s*(\w+)',code):
-                    # given digit constraint
-                    symbol = mat.group(2)
-                    if symbol.isnumeric():
-                        symbol = int(symbol)
-                    if symbol not in self.symbols_python:
-                        raise ValueError(f'Could not unify {symbol} with anything in {self.symbols_python}')
-                    self.pythonized_constraints[c] = ('Given',(int(mat.group(1)),symbol))
-                elif mat := re.match(r'UniqueSet\s+f\s+({\s*\d+\s*(,\s*\d+\s*)*})',code):
-                    # UniqueSet
-                    cells = list(map(int, [item.strip() for item in mat.group(1).strip('{ }').split(',')]))
-                    self.pythonized_constraints[c] = ('UniqueSet',cells)
-                else:
-                    # unknown constraint type
-                    raise ValueError(f'No python implementation of the lean code "{code}", it could also not have parsed correctly')
+
+        for c,code in self.qualified_constraints():
+            if mat := re.match(r'f\s+(\d+)\s*=\s*(\w+)',code):
+                # given digit constraint
+                symbol = mat.group(2)
+                if symbol.isnumeric():
+                    symbol = int(symbol)
+                if symbol not in self.symbols_python:
+                    raise ValueError(f'Could not unify {symbol} with anything in {self.symbols_python}')
+                self.pythonized_constraints[c] = ('Given',(int(mat.group(1)),symbol))
+            elif mat := re.match(r'UniqueSet\s+f\s+({\s*\d+\s*(,\s*\d+\s*)*})',code):
+                # UniqueSet
+                cells = list(map(int, [item.strip() for item in mat.group(1).strip('{ }').split(',')]))
+                self.pythonized_constraints[c] = ('UniqueSet',cells)
+            else:
+                # unknown constraint type
+                raise ValueError(f'No python implementation of the lean code "{code}", it could also not have parsed correctly')
 
 
     def generate_lean_structure(self) -> str:
         definition = f"structure Puzzle (f: Nat -> {self.symbols}) where\n"
         definition += f"  outside_grid: ∀ x, x ≥ {self.cell_count} -> f x = {self.symbols_python[0]}\n"
-        for constraint_dict in [self.import_constraints,self.imported_constraints]:
-            for name, constraint in constraint_dict.items():
-                definition += f"  {name}: {constraint}\n"
+        
+        for name, constraint in self.top_level_constraints():
+            definition += f"  {name}: {constraint}\n"
             
 
         return definition
+    
+    def top_level_constraints(self) -> Generator[Tuple[str,str],None,None]:
+        for constraints_dict in [self.import_constraints, self.puzzle_level_constraints]:
+            yield from constraints_dict.items()
+    
+    def qualified_constraints(self) -> Generator[Tuple[str,str],None,None]:
+        for constraint_dict in [self.imported_constraints, self.puzzle_level_constraints]:
+            yield from constraint_dict.items()
+                
 
 
 
@@ -79,3 +88,11 @@ class Template:
     import_constraints: Dict[str,str]
     imported_constraints: Dict[str,str]
     lean_imports: List[str]
+
+    def top_level_constraints(self) -> Generator[Tuple[str,str],None,None]:
+        for constraints_dict in [self.import_constraints, self.puzzle_level_constraints]:
+            yield from constraints_dict.items()
+    
+    def qualified_constraints(self) -> Generator[Tuple[str,str],None,None]:
+        for constraint_dict in [self.imported_constraints, self.puzzle_level_constraints]:
+            yield from constraint_dict.items()

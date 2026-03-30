@@ -366,19 +366,18 @@ constructor -- splits into testing constraints and uniqueness
         )
         self.proof_level += 1
         # this relies on the order of .items() and values() being consistent, we can change data structures to a list or something if that ends up not being true
-        for constraint_dict in [self.puzzle.import_constraints,self.puzzle.puzzle_level_constraints]:
-            for constraint in constraint_dict.values():
-                self.place_dot()
-                if re.match(r'f\s+\d+\s*=\s*\d',constraint):
-                    self.tactic("decide")
-                elif constraint.startswith('UniqueSet'):
-                    self.tactic('apply injOn_by_card; decide')
-                else:
-                    match constraint:
-                        case "NormalSudoku f":
-                            self.tactic("constructor; iterate 27 apply injOn_by_card; decide")
-                        case _:
-                            raise ValueError(f'do not know how to prove the constraint {constraint}')
+        for _, constraint in self.puzzle.top_level_constraints():
+            self.place_dot()
+            if re.match(r'f\s+\d+\s*=\s*\d',constraint):
+                self.tactic("decide")
+            elif constraint.startswith('UniqueSet'):
+                self.tactic('apply injOn_by_card; decide')
+            else:
+                match constraint:
+                    case "NormalSudoku f":
+                        self.tactic("constructor; iterate 27 apply injOn_by_card; decide")
+                    case _:
+                        raise ValueError(f'do not know how to prove the constraint {constraint}')
 
         self.proof_level -= 1
         # uniqueness start here
