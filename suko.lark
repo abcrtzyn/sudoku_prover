@@ -1,14 +1,13 @@
 suko: puzzle_definition proof_section?
 puzzle_definition: template_section? metadata_section? definition_section
 
-template_section: "TEMPLATE" _NL "lean_source" STRING _NL
+template_section: "TEMPLATE" _NL "lean_source" STRING _NL "lean_code" STRING _NL
 
 metadata_section: "METADATA" _NL (metadata_entry)*
 metadata_entry: ID STRING _NL
 
 definition_section: "DEFINITION" _NL (definition_entry)*
-definition_entry: "template" STRING _NL -> parent_template
-    | "cell_count" NUMBER _NL -> cell_count
+definition_entry: "cell_count" NUMBER _NL -> cell_count
     | "cell_layout" list _NL -> cell_layout
     | "symbols" STRING _NL -> symbols
     | "imported_constraints" _NL (DASH imported_constraint _NL)+ -> imported

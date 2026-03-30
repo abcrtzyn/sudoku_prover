@@ -51,52 +51,56 @@ class ProofEngine:
     def setup(self):
         self.repl.open()
 
-        # imports
-        import_text = ''
-        for imp in ['Mathlib.Tactic.IntervalCases','SudokuProverLogic.Basic',
-                    f'SudokuProverLogic.{self.puzzle.symbols}','SudokuProverLogic.Tactics'] + self.puzzle.lean_imports:
-            import_text += f'import {imp}\n'
-        self.repl.run_command(import_text)
+        try:
+            # imports
+            import_text = ''
+            for imp in ['Mathlib.Tactic.IntervalCases','SudokuProverLogic.Basic',
+                        f'SudokuProverLogic.{self.puzzle.symbols}','SudokuProverLogic.Tactics'] + self.puzzle.lean_imports:
+                import_text += f'import {imp}\n'
+            self.repl.run_command(import_text)
 
-        # set options, maybe we will format how lean wants later, but I don't care
-        self.repl.run_command('set_option linter.style.whitespace false\nset_option linter.style.longLine false\n')
-        
-        # give the puzzle to Lean
-        self.repl.run_command(self.puzzle.generate_lean_structure())
-        
-        # create the state
-        grid: List[int | None] = [None for _ in range(self.puzzle.cell_count)]
-        eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = {}
-        self.current = SudokuState([],grid,eliminations)
-
-        # this keeps track of what level of proof we are on, it also determines how much indent there is
-        # indent is 2*proof_level
-        # any lemma or have block increases this by one, also any cases will but with the exception of the center dots
-        self.proof_level = 0
-
-        # start with any initial constraints, might just be given digits
-        # anything that I would consider part of the solution that is given gets processed here
-        for name, constraint in self.puzzle.qualified_constraints_python.items():
-            match constraint[0]:
-                case 'Given':
-                    cell = constraint[1][0]
-                    digit = constraint[1][1]
-                    self.tactic(f"lemma c{cell} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): f {cell} = {digit} := P.{name}")
+            # set options, maybe we will format how lean wants later, but I don't care
+            self.repl.run_command('set_option linter.style.whitespace false\nset_option linter.style.longLine false\n')
             
-                    # create elimination proofs for each
-                    self.current.grid[cell] = digit
-                    self.region_eliminate(cell,digit,f'c{cell}')
-                case 'UniqueSet':
-                    pass
-                case _:
-                    raise NotImplementedError(f'constraint of type {constraint[0]} has no implementation for initialization')
-        
-        # get a new line in there for spacing reasons
-        self.tactic('')
-        self._send_proof()
+            # give the puzzle to Lean
+            self.repl.run_command(self.puzzle.generate_lean_structure())
+            
+            # create the state
+            grid: List[int | None] = [None for _ in range(self.puzzle.cell_count)]
+            eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = {}
+            self.current = SudokuState([],grid,eliminations)
+
+            # this keeps track of what level of proof we are on, it also determines how much indent there is
+            # indent is 2*proof_level
+            # any lemma or have block increases this by one, also any cases will but with the exception of the center dots
+            self.proof_level = 0
+
+            # start with any initial constraints, might just be given digits
+            # anything that I would consider part of the solution that is given gets processed here
+            for name, constraint in self.puzzle.pythonized_constraints.items():
+                match constraint[0]:
+                    case 'Given':
+                        cell = constraint[1][0]
+                        digit = constraint[1][1]
+                        self.tactic(f"lemma c{cell} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): f {cell} = {digit} := P.{name}")
                 
-        self._active_gen: Generator[str, str, None] = self.controller()
-        self.terminal_prompt = next(self._active_gen)
+                        # create elimination proofs for each
+                        self.current.grid[cell] = digit
+                        self.region_eliminate(cell,digit,f'c{cell}')
+                    case 'UniqueSet':
+                        pass
+                    case _:
+                        raise NotImplementedError(f'constraint of type {constraint[0]} has no implementation for initialization')
+            
+            # get a new line in there for spacing reasons
+            self.tactic('')
+            self._send_proof()
+                    
+            self._active_gen: Generator[str, str, None] = self.controller()
+            self.terminal_prompt = next(self._active_gen)
+        except:
+            self.close()
+            raise
 
         return self
 
@@ -148,7 +152,7 @@ class ProofEngine:
 
     def region_eliminate(self, cell: int,digit: int,proof_name:str):
         """eliminates all of digit from every cell in every region that cell is a part of"""
-        for name, constraint in self.puzzle.qualified_constraints_python.items():
+        for name, constraint in self.puzzle.pythonized_constraints.items():
             if constraint[0] != 'UniqueSet':
                 continue
             if cell in constraint[1]:
@@ -263,11 +267,11 @@ class ProofEngine:
         # one, create the hypothesis to run cases on, which has many cases
         # is there a hypothesis by that name in the context?
         qualified_region_name = None
-        if region in self.puzzle.qualified_constraints_python:
+        if region in self.puzzle.pythonized_constraints:
             # check if it is the correct size for surjective logic
-            if self.puzzle.qualified_constraints_python[region][0] != 'UniqueSet':
+            if self.puzzle.pythonized_constraints[region][0] != 'UniqueSet':
                 raise CommandError(f'Can not do support_cases on region {region}')
-            cells = self.puzzle.qualified_constraints_python[region][1]
+            cells = self.puzzle.pythonized_constraints[region][1]
 
             if len(cells) != len(self.puzzle.symbols_python):
                 raise CommandError("can't do surjective logic on a unique set that isn't the same size as symbols")
@@ -366,7 +370,7 @@ constructor -- splits into testing constraints and uniqueness
         )
         self.proof_level += 1
         # this relies on the order of .items() and values() being consistent, we can change data structures to a list or something if that ends up not being true
-        for constraint in self.puzzle.constraints.values():
+        for _, constraint in self.puzzle.top_level_constraints():
             self.place_dot()
             if re.match(r'f\s+\d+\s*=\s*\d',constraint):
                 self.tactic("decide")

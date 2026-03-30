@@ -1,7 +1,8 @@
 TEMPLATE
 lean_source "SudokuProverLogic.BaselineConstraints"
+lean_code "NormalSudoku f"
 METADATA
-name "NormalSudoku"
+name "Normal Sudoku"
 description "Normal Sudoku Rules Apply! Note that this definition does not care what type of symbols are used, could be 0-8 or 1-9, doesn't matter"
 DEFINITION
 cell_count 81
