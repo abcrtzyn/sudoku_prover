@@ -2,8 +2,9 @@ METADATA
 name "Easiest Sudoku"
 description "this is the easiest sudoku from Andrew Stuart Sudoku Wiki"
 DEFINITION
-template "Puzzles/NormalSudoku.suko"
 symbols "Symbols9"
+imported_constraints
+- base     "Puzzles/NormalSudoku.suko"
 constraints
 - given0   "f  0 = 3"
 - given3   "f  3 = 9"
