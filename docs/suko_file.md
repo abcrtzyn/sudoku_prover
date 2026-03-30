@@ -4,15 +4,15 @@ The suko file format is meant to be a human readable format that stores puzzle i
 
 Suko files can import a collection of predefined constraints for puzzles that use very similar constraints like normal 9x9 sudoku grid
 
-If you like reading the grammar, see suko.lark
+If you like reading the grammar, see [suko.lark](../suko.lark)
 
-Suko file is made up of several sections denoted with all caps headers. The sections must be in order, but not all sections are required. Most of the file is key value pairs of the form `key value` seperated by new lines. If value is a string, it must be enclosed in double quotes `key "value"`
+Suko file is made up of several sections denoted with all caps headers. The sections must be in the order defined below, but not all sections are required. Most of the file is key value pairs of the form `key value` separated by new lines. If value is a string, it must be enclosed in double quotes `key "value"`
 
 The sections are
-- TEMPLATE?
-- METADATA?
-- DEFINITION
-- PROOF?
+- TEMPLATE (required for template files, must be absent for puzzle files)
+- METADATA (optional for all files)
+- DEFINITION (required for all files)
+- PROOF (optional, must be absent for template files)
 
 ### TEMPLATE
 
@@ -23,7 +23,7 @@ Template section contains two fields:
 
 ### METADATA
 
-This section lets you put any data about the puzzle you wish. Currently the section is not required. Any keys are allowed, values must be strings. If the file is a template, currently the name field is required. Example things to store in metadata:
+This section lets you put any data about the puzzle you wish. Currently the section is not required. Any keys are allowed, values must be strings. Example things to store in metadata:
 
 ```
 METADATA
@@ -42,7 +42,7 @@ The main section, required by all files. Contains the following key value pairs:
 
 #### constraints
 
-`constraints` and `imported_constraints` are subsections. Each key value pair in these sections must have a dash before it so that the parser can find the end of the subsection. `imported_constraints` are key value pairs where the value is a the path to a template suko file where that imported constraint is defined. A template is allowed to import other templates. If the `cell_count`, `cell_layout`, and `symbols` are defined in more than one file, they must match. `constraints` are key value pairs where the value is the actual lean code that defines it. The name of the constraints can be anything as long as they are unique.
+`constraints` and `imported_constraints` are subsections. Each key value pair in these sections must have a dash before it so that the parser can find the end of the subsection. `imported_constraints` are key value pairs where the value is the path to a template suko file where that imported constraint is defined. A template is allowed to import other templates. If the `cell_count`, `cell_layout`, and `symbols` are defined in more than one file, they must match. `constraints` are key value pairs where the value is the actual lean code that defines it. The name of the constraints can be anything as long as they are unique.
 
 example imported constraint section
 ```
