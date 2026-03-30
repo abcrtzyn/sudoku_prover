@@ -41,7 +41,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self._symbols = symbols
     
     _puzzle_level_constraints: Dict[str,str]
-    _import_constraints: Dict[str,str]
+    _import_constraints: Dict[str,Tuple[str,str]]
     _imported_constraints: Dict[str,str]
 
     _lean_imports: List[str] # a list of lean modules (files) to import
@@ -60,7 +60,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self._cell_layout = None
         self._symbols = None
         self._puzzle_level_constraints: Dict[str,str] = {}
-        self._import_constraints: Dict[str,str] = {}
+        self._import_constraints = {}
         self._imported_constraints: Dict[str,str] = {}
         self._lean_imports = []
         self.seen_files = seen_files
@@ -148,6 +148,8 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
             self._add_symbols(puzzle.symbols)
         
         self._add_lean_imports(puzzle.lean_imports)
+
+        self._import_constraints[ident] = (file_name,puzzle.lean_code)
         # all puzzle_level and imported need to be added to imported, don't care about import
         for name, constraint in puzzle.qualified_constraints():
             new_name = f'{ident}.{name}'
@@ -177,7 +179,6 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
     def imported_constraint(self, tree: Tree[Any]):
         ident = cast(str,tree.children[0].value)  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
         file_path = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
-        self._import_constraints[ident] = file_path
         self._import_template(file_path,ident,tree)
 
     def imported(self, tree: Tree[Any]): # pyright: ignore[reportUnknownParameterType]

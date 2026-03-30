@@ -22,7 +22,8 @@ class Puzzle:
     symbols: str
     symbols_python: List[Any] = field(init=False)
     puzzle_level_constraints: Dict[str,str]
-    import_constraints: Dict[str,str]
+    # import constraints are keyed by the name, value[0] is the suko file name it imports from, value[1] is the lean code
+    import_constraints: Dict[str,Tuple[str,str]]
     imported_constraints: Dict[str,str]
     pythonized_constraints: Dict[str,Tuple[str,Any]] = field(init=False)
     lean_imports: List[str]
@@ -67,8 +68,8 @@ class Puzzle:
         return definition
     
     def top_level_constraints(self) -> Generator[Tuple[str,str],None,None]:
-        for constraints_dict in [self.import_constraints, self.puzzle_level_constraints]:
-            yield from constraints_dict.items()
+        yield from ((name, lean_code) for name, (_, lean_code) in self.import_constraints.items())
+        yield from self.puzzle_level_constraints.items()
     
     def qualified_constraints(self) -> Generator[Tuple[str,str],None,None]:
         for constraint_dict in [self.imported_constraints, self.puzzle_level_constraints]:
@@ -85,13 +86,13 @@ class Template:
     cell_layout: List[Tuple[int,int]] | None
     symbols: str | None
     puzzle_level_constraints: Dict[str,str]
-    import_constraints: Dict[str,str]
+    import_constraints: Dict[str,Tuple[str,str]]
     imported_constraints: Dict[str,str]
     lean_imports: List[str]
 
     def top_level_constraints(self) -> Generator[Tuple[str,str],None,None]:
-        for constraints_dict in [self.import_constraints, self.puzzle_level_constraints]:
-            yield from constraints_dict.items()
+        yield from ((name, lean_code) for name, (_, lean_code) in self.import_constraints.items())
+        yield from self.puzzle_level_constraints.items()
     
     def qualified_constraints(self) -> Generator[Tuple[str,str],None,None]:
         for constraint_dict in [self.imported_constraints, self.puzzle_level_constraints]:
