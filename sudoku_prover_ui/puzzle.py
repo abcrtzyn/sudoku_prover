@@ -81,6 +81,7 @@ class Puzzle:
 @dataclass
 class Template:
     # lean source file will be added to imports
+    metadata: Dict[str,str] = field(init=False)
     lean_code: str
     cell_count: int | None
     cell_layout: List[Tuple[int,int]] | None

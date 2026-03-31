@@ -1,19 +1,26 @@
 """Take an object from Puzzle class and export it to a suko file"""
 
 import hashlib
+from io import TextIOWrapper
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 from sudoku_prover_ui.file_parser import import_file
 from sudoku_prover_ui.puzzle import Puzzle, Template
 
 grammar_file = Path(__file__).resolve().parent.parent.joinpath('suko.lark')
 
-EXPECTED_HASH = "75cb68f4" # current version
+EXPECTED_HASH = "cbf47ddf" # current version
 
 with open(grammar_file, 'rb') as f:
     current = hashlib.md5(f.read()).hexdigest()[:8]
     if current != EXPECTED_HASH:
-        print('warning: grammar has been changed, export file may not result in the same format. new hash value {current}')
+        print(f'warning: grammar has been changed, export file may not result in the same format. new hash value {current}')
+
+
+def write_constraints(f: TextIOWrapper,constraints: Dict[str,str]):
+    for name, text in constraints.items():
+        f.write(f'- {name} "{text}"\n')
+
 
 
 def export_file(filename: str, puzzle: Puzzle | Template, is_puzzle: bool = True, *, proof: List[str] = []):
@@ -24,6 +31,7 @@ def export_file(filename: str, puzzle: Puzzle | Template, is_puzzle: bool = True
             # template section
             f.write('TEMPLATE\n')
             f.write(f'lean_source "{'todo'}\n"')
+            f.write(f'lean_code {puzzle.lean_code}')
         # metadata section
         f.write('METADATA\n')
         for key, value in puzzle.metadata.items():
@@ -33,11 +41,19 @@ def export_file(filename: str, puzzle: Puzzle | Template, is_puzzle: bool = True
         f.write(f'cell_count {puzzle.cell_count}\n')
         f.write(f'cell_layout {puzzle.cell_layout}\n')
         f.write(f'symbols "{puzzle.symbols}"\n')
-        f.write(f'imported_constraints\n')
-        print(puzzle.constraints)
-        print(puzzle.qualified_constraints)
-        exit()
+        if puzzle.import_constraints:
+            f.write(f'imported_constraints\n')
+            write_constraints(f,{key: value[0] for key, value in puzzle.import_constraints.items()})
+        if puzzle.puzzle_level_constraints:
+            f.write(f'constraints\n')
+            write_constraints(f,puzzle.puzzle_level_constraints)
+        if proof:
+            f.write('PROOF\n')
+            for line in proof:
+                f.write(f'{line}\n')
+
 
 if __name__ == '__main__':
     puzzle, proof = import_file('Puzzles/Framework/9x9Easy.suko')
-    export_file('test.suko',puzzle,proof=True)
+    proof = [x[0] for x in proof] # get rid of line number information
+    export_file('test.suko',puzzle,proof=proof)
