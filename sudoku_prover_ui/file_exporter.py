@@ -42,11 +42,11 @@ def export_file(filename: str, puzzle: Puzzle | Template, proof: List[str] | Non
                 f.write(f'{key} "{value}"\n')
         # definition section
         f.write('DEFINITION\n')
-        if puzzle.cell_count is not None:
+        if puzzle.cell_count_defined_in_file:
             f.write(f'cell_count {puzzle.cell_count}\n')
-        if puzzle.cell_layout is not None:
+        if puzzle.cell_layout_defined_in_file:
             f.write(f'cell_layout {puzzle.cell_layout}\n')
-        if puzzle.symbols is not None:
+        if puzzle.symbols_defined_in_file:
             f.write(f'symbols "{puzzle.symbols}"\n')
         if puzzle.import_constraints:
             f.write(f'imported_constraints\n')

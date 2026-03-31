@@ -26,6 +26,9 @@ class Puzzle:
     imported_constraints: Dict[str,str]
     pythonized_constraints: Dict[str,Tuple[str,Any]] = field(init=False)
     lean_imports: List[str]
+    cell_count_defined_in_file: bool
+    cell_layout_defined_in_file: bool
+    symbols_defined_in_file: bool
 
     def __post_init__(self):
         # This runs immediately after __init__
@@ -90,6 +93,9 @@ class Template:
     import_constraints: Dict[str,Tuple[str,str]]
     imported_constraints: Dict[str,str]
     lean_imports: List[str]
+    cell_count_defined_in_file: bool
+    cell_layout_defined_in_file: bool
+    symbols_defined_in_file: bool
 
     def top_level_constraints(self) -> Generator[Tuple[str,str],None,None]:
         yield from ((name, lean_code) for name, (_, lean_code) in self.import_constraints.items())

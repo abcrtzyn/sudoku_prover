@@ -64,6 +64,9 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self._import_constraints = {}
         self._imported_constraints: Dict[str,str] = {}
         self._lean_imports = []
+        self._cell_count_defined_in_file: bool = False
+        self._cell_layout_defined_in_file: bool = False
+        self._symbols_defined_in_file: bool = False
         self.seen_files = seen_files
     
     def puzzle_definition(self, tree: Tree[Any]):
@@ -105,10 +108,18 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
                 self._puzzle_level_constraints,
                 self._import_constraints,
                 self._imported_constraints,
-                self._lean_imports)
+                self._lean_imports,
+                self._cell_count_defined_in_file,
+                self._cell_layout_defined_in_file,
+                self._symbols_defined_in_file
+            )
 
         else:
             # its a template
+            # basically this means the template section didn't happen, which should never happen
+            # becasue we have checked that the file has a template before.
+            if self._lean_source is None:
+                raise ValueError('No lean_source was given in the template section')
             if self._lean_code is None:
                 raise ValueError('No lean_code was given in the template section')
 
@@ -122,7 +133,11 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
                 self._puzzle_level_constraints,
                 self._import_constraints,
                 self._imported_constraints,
-                self._lean_imports)
+                self._lean_imports,
+                self._cell_count_defined_in_file,
+                self._cell_layout_defined_in_file,
+                self._symbols_defined_in_file
+            )
 
 
     def template_section(self, tree: Tree[Any]):
@@ -166,10 +181,12 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
     def cell_count(self, tree: Tree[Any]):
         val = int(tree.children[0]) # pyright: ignore[reportArgumentType]
         self._add_cell_count(val)
+        self._cell_count_defined_in_file = True
 
     def cell_layout(self, tree: Tree[Any]):
         layout = cast(List[Tuple[int, int]],self.visit_children(tree)[0]) # pyright: ignore[reportUnknownMemberType]
         self._add_cell_layout(layout)
+        self._cell_layout_defined_in_file = True
 
     def _tuple(self, tree: Tree[Any]):
         return (int(tree.children[0]),int(tree.children[1])) # pyright: ignore[reportArgumentType]
@@ -177,6 +194,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
     def symbols(self, tree: Tree[Any]):
         symbols = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
         self._add_symbols(symbols)
+        self._symbols_defined_in_file = True
 
     def imported_constraint(self, tree: Tree[Any]):
         ident = cast(str,tree.children[0].value)  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
