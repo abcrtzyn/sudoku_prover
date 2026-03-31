@@ -32,9 +32,8 @@ def export_file(filename: str, puzzle: Puzzle | Template, proof: List[str] | Non
     with open(filename, 'w+') as f:
         if not is_puzzle:
             # template section
-            raise NotImplementedError('Can not export a template, need a field in template with the lean source file')
             f.write('TEMPLATE\n')
-            f.write(f'lean_source "{'todo'}\n"')
+            f.write(f'lean_source "{puzzle.lean_source}\n"')
             f.write(f'lean_code {puzzle.lean_code}')
         # metadata section
         if puzzle.metadata:

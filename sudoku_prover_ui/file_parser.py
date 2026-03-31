@@ -55,10 +55,11 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self.is_puzzle = is_puzzle
         self.file_name = file_name
         self._metadata: Dict[str,str] = {}
+        self._lean_source: str | None = None
         self._lean_code: str | None = None
-        self._cell_count = None
-        self._cell_layout = None
-        self._symbols = None
+        self._cell_count: int | None = None
+        self._cell_layout: List[Tuple[int,int]] | None = None
+        self._symbols: str | None = None
         self._puzzle_level_constraints: Dict[str,str] = {}
         self._import_constraints = {}
         self._imported_constraints: Dict[str,str] = {}
@@ -113,6 +114,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
 
 
             return Template(
+                self._lean_source,
                 self._lean_code,
                 self._cell_count,
                 self._cell_layout,
@@ -128,7 +130,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
             raise Exception(f"{self.file_name}:{tree.meta.line}:{tree.meta.column} Can not create a puzzle from a suko TEMPLATE")
         lean_module = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
         lean_code = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
-        
+        self._lean_source = lean_module
         self._add_lean_imports([lean_module])
         self._lean_code = lean_code
     
