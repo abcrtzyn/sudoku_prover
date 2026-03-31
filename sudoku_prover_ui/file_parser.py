@@ -1,7 +1,7 @@
 
 import codecs
 import os
-from typing import Any, Dict, List, Set, Tuple, cast
+from typing import Any, Dict, List, Literal, Set, Tuple, cast, overload
 
 from lark import Lark, Token, Tree
 from lark.exceptions import UnexpectedInput
@@ -138,7 +138,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self._metadata[key] = value
             
     def _import_template(self,file_name:str,ident:str,tree: Tree[Any]):
-        puzzle, _ = cast(Tuple[Template,Any],import_file(file_name,is_puzzle=False,seen_files=self.seen_files))
+        puzzle, _ = import_file(file_name,is_puzzle=False,seen_files=self.seen_files)
         
         if puzzle.cell_count is not None:
             self._add_cell_count(puzzle.cell_count) 
@@ -224,6 +224,12 @@ class ProofInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument
         return self.visit_children(tree) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
 
+
+@overload
+def import_file(file_name: str, is_puzzle: Literal[True] = True, seen_files: Set[str] | None = None) -> Tuple[Puzzle, List[Tuple[str, int]]]: ...
+@overload
+def import_file(file_name: str, is_puzzle: Literal[False], seen_files: Set[str] | None = None) -> Tuple[Template, List[Tuple[str,int]]]: ...
+
 def import_file(file_name: str,is_puzzle: bool = True, seen_files: Set[str] | None = None):
     # change the file to a full path for error reporting
     if file_name:
@@ -278,6 +284,6 @@ def import_file(file_name: str,is_puzzle: bool = True, seen_files: Set[str] | No
 
 
 if __name__ == "__main__":
-    puzzle, proof = import_file('Puzzles/Framework/9x9Easy.suko',True)
+    puzzle, proof = import_file('Puzzles/Framework/9x9Easy.suko')
     print(puzzle)
     print(proof)

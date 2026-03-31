@@ -23,24 +23,32 @@ def write_constraints(f: TextIOWrapper,constraints: Dict[str,str]):
 
 
 
-def export_file(filename: str, puzzle: Puzzle | Template, is_puzzle: bool = True, *, proof: List[str] = []):
+def export_file(filename: str, puzzle: Puzzle | Template, proof: List[str] | None = None):
+    proof = proof or []
+    is_puzzle = isinstance(puzzle,Puzzle)
+
     if not is_puzzle and proof:
         raise ValueError('template can not have a proof')
     with open(filename, 'w+') as f:
         if not is_puzzle:
             # template section
+            raise NotImplementedError('Can not export a template, need a field in template with the lean source file')
             f.write('TEMPLATE\n')
             f.write(f'lean_source "{'todo'}\n"')
             f.write(f'lean_code {puzzle.lean_code}')
         # metadata section
-        f.write('METADATA\n')
-        for key, value in puzzle.metadata.items():
-            f.write(f'{key} "{value}"\n')
+        if puzzle.metadata:
+            f.write('METADATA\n')
+            for key, value in puzzle.metadata.items():
+                f.write(f'{key} "{value}"\n')
         # definition section
         f.write('DEFINITION\n')
-        f.write(f'cell_count {puzzle.cell_count}\n')
-        f.write(f'cell_layout {puzzle.cell_layout}\n')
-        f.write(f'symbols "{puzzle.symbols}"\n')
+        if puzzle.cell_count is not None:
+            f.write(f'cell_count {puzzle.cell_count}\n')
+        if puzzle.cell_layout is not None:
+            f.write(f'cell_layout {puzzle.cell_layout}\n')
+        if puzzle.symbols is not None:
+            f.write(f'symbols "{puzzle.symbols}"\n')
         if puzzle.import_constraints:
             f.write(f'imported_constraints\n')
             write_constraints(f,{key: value[0] for key, value in puzzle.import_constraints.items()})

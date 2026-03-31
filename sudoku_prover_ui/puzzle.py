@@ -2,8 +2,7 @@
 
 from dataclasses import dataclass, field
 import re
-import sys
-from typing import Any, Dict, Generator, List, Tuple, cast
+from typing import Any, Dict, Generator, List, Tuple
 
 # these tell python exactly what and in what order the symbols are
 # very important
