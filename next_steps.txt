@@ -1,0 +1,17 @@
+This will be implementing proof state journaling
+
+State Machine with Transactional Rollbacks
+
+First, there will be a proof state class with grid, eliminitaion proofs, lean file code. Only the current state, and maybe entering a sub-proof are stored in full states.
+Second, there will be a list of deltas from the beginning, empty grid, empty lean file.
+Deltas will store
+- user command list (the list is for subproofs)
+- lean code generated
+- changes to the grid
+- chnages to eliminitaions
+
+Undo is simply removing the last one, (maybe adding it to a redo stack) and recalculating.
+
+Sub-proofs will know which index they start, we will keep the full state at that index
+Once the proof is complete, go back to the entry state, make one new delta with all that stuff.
+
