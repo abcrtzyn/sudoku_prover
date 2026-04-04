@@ -50,32 +50,42 @@ class ProofEngine:
         self._active_gen: Generator[str, str, None]
         self.terminal_prompt: str
         self._place_dot: bool = False
-        self.prepared_text = ''
+        # self.prepared_text = ''
 
-#     def setup(self):
-#         self.repl.open()
+    def setup(self):
+        self.repl.open()
 
-#         self.current = State()
+        self.current = State()
 
 
-#         try:
-#             # imports
-#             import_text = ''
-#             for imp in ['Mathlib.Tactic.IntervalCases','SudokuProverLogic.Basic',
-#                         f'SudokuProverLogic.{self.puzzle.symbols}','SudokuProverLogic.Tactics'] + self.puzzle.lean_imports:
-#                 import_text += f'import {imp}\n'
-#             self.repl.run_command(import_text)
+        try:
+            # imports
+            import_text = ''
+            for imp in ['Mathlib.Tactic.IntervalCases','SudokuProverLogic.Basic',
+                        f'SudokuProverLogic.{self.puzzle.symbols}','SudokuProverLogic.Tactics'] + self.puzzle.lean_imports:
+                import_text += f'import {imp}\n'
+            self.repl.run_command(import_text)
+            # checking for errors here
+            delta = Delta(['imports'],import_text,{},{})
+            self.journal.add(delta)
+            self.current.add_delta(delta)
 
-#             # set options, maybe we will format how lean wants later, but I don't care
-#             self.repl.run_command('set_option linter.style.whitespace false\nset_option linter.style.longLine false\n')
+            self.journal.protected_steps += 1
             
-#             # give the puzzle to Lean
-#             self.repl.run_command(self.puzzle.generate_lean_structure())
+            # set options, maybe we will format how lean wants later, but I don't care
+            options_text = 'set_option linter.style.whitespace false\nset_option linter.style.longLine false\n'
+            self.repl.run_command(options_text)
             
-#             # create the state
-#             grid: List[int | None] = [None for _ in range(self.puzzle.cell_count)]
-#             eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = {}
-#             self.current = SudokuState([],grid,eliminations)
+            self.journal.add(Delta(['lint options'],options_text,{},{}))
+            self.journal.protected_steps += 1
+
+            # give the puzzle to Lean
+            puzzle_text = self.puzzle.generate_lean_structure()
+            self.repl.run_command(puzzle_text)
+            
+            self.journal.add(Delta(['puzzle def'],options_text,{},{}))
+            self.journal.protected_steps += 1
+
 
 #             # this keeps track of what level of proof we are on, it also determines how much indent there is
 #             # indent is 2*proof_level
@@ -133,6 +143,23 @@ class ProofEngine:
 
 #         # print(tactic_text)
 #         self.prepared_text += tactic_text + '\n'
+
+    def record_step(self, user_command: str, lean_code: str, grid_changes: Dict[int,int], elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]]):
+        if self.is_reconstructing:
+            # if we are reconstucting, do nothing, just contine on.
+            return
+        
+        # will raise its own errors if there are any
+        goals, _ = self.repl.check_code(self.current.lean_file + lean_code)
+        # code is valid
+        
+        # make the delta 
+        delta = Delta([user_command],lean_code,grid_changes,elimination_changes)
+        self.journal.add(delta)
+        self.current.add_delta(delta,goals)
+        
+
+
 
 #     def _send_proof(self):
 #         goals, diags = self.repl.run_command(self.prepared_text)
@@ -434,79 +461,79 @@ class ProofEngine:
 #         raise Exception()
 
 
-#     def handle_input(self, cmd: str) -> Generator[str,str,None]:
-#         if cmd == '':
-#             raise CommandError("No command given")
-#         args = cmd.split()
-#         name = args[0]
-#         params = args[1:]
-#         if name == 'exit':
-#             # ignores all arguments
-#             exit(0)
-#         elif name == 'fill':
-#             if len(params) != 2:
-#                 raise CommandError("expected 'fill cell digit'")
-#             try:
-#                 cell = int(params[0])
-#                 digit = int(params[1])
-#             except ValueError:
-#                 raise CommandError('digit and cell must be integers')
-#             if not (0 <= cell < self.puzzle.cell_count):
-#                 raise CommandError(f'cell {cell} out of range')
-#             if digit not in self.puzzle.symbols_python:
-#                 raise CommandError(f'digit {digit} invalid')
-#             yield from self.fill(cell,digit)
-#         elif name == 'have':
-#             # the rest of the line is the goal
-#             goal = cmd.removeprefix('have').strip()
-#             if goal == "":
-#                 raise CommandError("expected 'have [goal]'")
-#             yield from self.have('h',goal)
-#         elif name == 'cell_cases':
-#             if len(params) != 1:
-#                 raise CommandError("expected 'cell_cases cell'")
-#             try:
-#                 cell = int(params[0])
-#             except ValueError:
-#                 raise CommandError('cell must be an integer')
-#             if not (0 <= cell < self.puzzle.cell_count):
-#                 raise CommandError(f'cell {cell} out of range')
-#             yield from self.cell_cases(cell)
-#         elif name == 'support_cases':
-#             if len(params) != 2:
-#                 raise CommandError("expected 'support_cases region digit'")
-#             region = params[0]
-#             try: 
-#                 digit = int(params[1])
-#             except ValueError:
-#                 raise CommandError('digit must be an integer')
-#             if digit not in self.puzzle.symbols_python:
-#                 raise CommandError(f'digit {digit} invalid')
-#             yield from self.support_cases_manual(digit, region)
-#         elif name == 'rfl':
-#             if len(params) != 0:
-#                 raise CommandError("expected 'rfl' with no arguments")
-#             yield from self.rfl()
-#         elif name == 'exact':
-#             if len(params) != 1:
-#                 raise CommandError("expected 'exact hypothesis'")
-#             yield from self.exact(params[0])
-#         elif name == 'naked_single':
-#             if len(params) != 1:
-#                 raise CommandError("expected 'naked_single cell")
-#             try:
-#                 cell = int(params[0])
-#             except ValueError:
-#                 raise CommandError('cell must be an integer')
-#             if not (0 <= cell < self.puzzle.cell_count):
-#                 raise CommandError(f'cell {cell} out of range')
-#             yield from self.naked_single(cell)
-#         elif name == 'finish':
-#             if len(params) != 0:
-#                 raise CommandError('finish takes no args')
-#             self.finish()
-#         else:
-#             raise CommandError(f'unknown command {name}')
+    def handle_input(self, cmd: str) -> Generator[str,str,None]:
+        if cmd == '':
+            raise CommandError("No command given")
+        args = cmd.split()
+        name = args[0]
+        params = args[1:]
+        if name == 'exit':
+            # ignores all arguments
+            exit(0)
+        elif name == 'fill':
+            if len(params) != 2:
+                raise CommandError("expected 'fill cell digit'")
+            try:
+                cell = int(params[0])
+                digit = int(params[1])
+            except ValueError:
+                raise CommandError('digit and cell must be integers')
+            if not (0 <= cell < self.puzzle.cell_count):
+                raise CommandError(f'cell {cell} out of range')
+            if digit not in self.puzzle.symbols_python:
+                raise CommandError(f'digit {digit} invalid')
+            yield from self.fill(cell,digit)
+        elif name == 'have':
+            # the rest of the line is the goal
+            goal = cmd.removeprefix('have').strip()
+            if goal == "":
+                raise CommandError("expected 'have [goal]'")
+            yield from self.have('h',goal)
+        elif name == 'cell_cases':
+            if len(params) != 1:
+                raise CommandError("expected 'cell_cases cell'")
+            try:
+                cell = int(params[0])
+            except ValueError:
+                raise CommandError('cell must be an integer')
+            if not (0 <= cell < self.puzzle.cell_count):
+                raise CommandError(f'cell {cell} out of range')
+            yield from self.cell_cases(cell)
+        elif name == 'support_cases':
+            if len(params) != 2:
+                raise CommandError("expected 'support_cases region digit'")
+            region = params[0]
+            try: 
+                digit = int(params[1])
+            except ValueError:
+                raise CommandError('digit must be an integer')
+            if digit not in self.puzzle.symbols_python:
+                raise CommandError(f'digit {digit} invalid')
+            yield from self.support_cases_manual(digit, region)
+        elif name == 'rfl':
+            if len(params) != 0:
+                raise CommandError("expected 'rfl' with no arguments")
+            yield from self.rfl()
+        elif name == 'exact':
+            if len(params) != 1:
+                raise CommandError("expected 'exact hypothesis'")
+            yield from self.exact(params[0])
+        elif name == 'naked_single':
+            if len(params) != 1:
+                raise CommandError("expected 'naked_single cell")
+            try:
+                cell = int(params[0])
+            except ValueError:
+                raise CommandError('cell must be an integer')
+            if not (0 <= cell < self.puzzle.cell_count):
+                raise CommandError(f'cell {cell} out of range')
+            yield from self.naked_single(cell)
+        elif name == 'finish':
+            if len(params) != 0:
+                raise CommandError('finish takes no args')
+            self.finish()
+        else:
+            raise CommandError(f'unknown command {name}')
 
     def controller(self) -> Generator[str,str,None]:
         """main logic loop for cli"""
@@ -519,7 +546,7 @@ class ProofEngine:
     
 
     @contextmanager
-    def subproof(self):
+    def subproof(self,grid_changes: Dict[int,int], elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]]):
         if self.is_reconstructing:
             yield
             return
@@ -531,21 +558,25 @@ class ProofEngine:
         try:
             # give control to the caller
             yield
-            # done, lets commit the subproof
+            # done
+            # we need the proof state to put as the end of this block
+            proof_state = self.current.proof_state
+            # get the sub-proof steps while also removing them from history
             steps = self.journal.pop_subproof(start_index)
-            # figure out the goal of the subproof
-            ????
             # create the delta
-            delta = Delta(list(steps.commands()),steps.lean_code_file(),)
+            delta = Delta(list(steps.commands()),steps.lean_code_file(),grid_changes,elimination_changes)
             # append it to the journal
             self.journal.add(delta)
             # update the current state
             self.current = snapshot
-            snapshot.add_delta(delta)
+            # keeping the proof state assumes that we are at the end of the sub-proof which should be true
+            self.current.add_delta(delta,proof_state)
+            
 
         except Exception as e:
             # deal with errors
             raise e
+
 
     def undo(self):
         # just get rid of the last command
@@ -556,7 +587,6 @@ class ProofEngine:
         
         # recreate the world
         self.reconstruct()
-
 
     def reconstruct(self):
         # find the latest top level snapshot
@@ -571,6 +601,15 @@ class ProofEngine:
 
         # after this proocess, _active_gen is in the correct position
         self.is_reconstructing = False
+
+        # recreate the current state
+        self.current.add_journal(self.journal)
+        # update the lean server too
+        goals, _ = self.repl.check_code(self.current.lean_file)
+        # keep the proof state
+        self.current.proof_state = goals
+
+        
 
     def command(self,cmd:str):
         # print(cmd)

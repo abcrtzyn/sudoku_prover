@@ -20,7 +20,8 @@ class State:
     lean_file: str = ''
     grid: List[int | None] = field(default_factory=list) # pyright: ignore[reportUnknownVariableType]
     eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = field(default_factory=dict) # pyright: ignore[reportUnknownVariableType]
-
+    # proof_state is the lean context. proof_state is None if unknown, [] if no goals, has items when there are goals
+    proof_state: List[str] | None = field(default=None) # pyright: ignore[reportUnknownVariableType]
 
     @classmethod
     def from_deltas(cls, jrnl: "Journal", _self: "State | None" = None) -> "State":
@@ -34,14 +35,15 @@ class State:
 
     def copy(self) -> "State":
         """Create a copy of this state"""
-        return State(self.commands_list.copy(),self.lean_file,self.grid.copy(),deepcopy(self.eliminations))
+        return State(self.commands_list.copy(),self.lean_file,self.grid.copy(),deepcopy(self.eliminations),self.proof_state)
 
     def add_journal(self, jrnl: "Journal"):
         for delta in jrnl:
             self.add_delta(delta)
+        self.proof_state = None
     
 
-    def add_delta(self, delta: Delta):
+    def add_delta(self, delta: Delta, proof_state: List[str] | None = None):
         self.commands_list += delta.user_commands
         self.lean_file += delta.lean_code
         for cell, digit in delta.grid_changes.items():
@@ -51,6 +53,7 @@ class State:
                 self.eliminations[cell] = dict()
             for digit, info in d.items():
                 self.eliminations[cell][digit] = info
+        self.proof_state = proof_state
 
 class Journal:
     _history: List[Delta] = []
