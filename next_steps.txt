@@ -16,16 +16,15 @@ Sub-proofs will know which index they start, we will keep the full state at that
 Once the proof is complete, go back to the entry state, make one new delta with all that stuff.
 
 
-I need think a bit more about this.
+Leaf commands
+- any validation checks
+- generate lean code
+- figure out grid changes and elimination changes
+- return
 
-I expect that a normal command will
-- validate that the proof can happen
-- In any order
-    - register the outcomes (grid and elimination)
-    - register the lean code
-
-A command that begins a subproof or multiple subproofs, there is a bit more of a process
-- validate that the proof can happen
-- figure out the changes
-- begin sub-proof
-- 
+Single branch commands
+- any validation checks
+- generate some header code
+- figure out changes
+- create subproof, do the subproof
+- finish
