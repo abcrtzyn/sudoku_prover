@@ -50,7 +50,9 @@ class ProofEngine:
         self._active_gen: Generator[str, str, None]
         self.terminal_prompt: str
         self._place_dot: bool = False
-        # self.prepared_text = ''
+        self.prepared_text = ''
+        self.prepared_grid_changes: Dict[int,int] = {}
+        self.prepared_elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]] = {}
 
     def setup(self):
         self.repl.open()
@@ -64,125 +66,113 @@ class ProofEngine:
             for imp in ['Mathlib.Tactic.IntervalCases','SudokuProverLogic.Basic',
                         f'SudokuProverLogic.{self.puzzle.symbols}','SudokuProverLogic.Tactics'] + self.puzzle.lean_imports:
                 import_text += f'import {imp}\n'
-            self.repl.run_command(import_text)
-            # checking for errors here
-            delta = Delta(['imports'],import_text,{},{})
-            self.journal.add(delta)
-            self.current.add_delta(delta)
-
+            self.tactic(import_text)
+            self.record_step('imports')
             self.journal.protected_steps += 1
             
             # set options, maybe we will format how lean wants later, but I don't care
             options_text = 'set_option linter.style.whitespace false\nset_option linter.style.longLine false\n'
-            self.repl.run_command(options_text)
-            
-            self.journal.add(Delta(['lint options'],options_text,{},{}))
+            self.tactic(options_text)
+            self.record_step('lint options')
             self.journal.protected_steps += 1
 
             # give the puzzle to Lean
             puzzle_text = self.puzzle.generate_lean_structure()
-            self.repl.run_command(puzzle_text)
-            
-            self.journal.add(Delta(['puzzle def'],options_text,{},{}))
+            self.tactic(puzzle_text)
+            self.record_step('puzzle def')
             self.journal.protected_steps += 1
 
 
-#             # this keeps track of what level of proof we are on, it also determines how much indent there is
-#             # indent is 2*proof_level
-#             # any lemma or have block increases this by one, also any cases will but with the exception of the center dots
-#             self.proof_level = 0
+            # this keeps track of what level of proof we are on, it also determines how much indent there is
+            # indent is 2*proof_level
+            # any lemma or have block increases this by one, also any cases will but with the exception of the center dots
+            self.proof_level = 0
 
-#             # start with any initial constraints, might just be given digits
-#             # anything that I would consider part of the solution that is given gets processed here
-#             for name, constraint in self.puzzle.pythonized_constraints.items():
-#                 match constraint[0]:
-#                     case 'Given':
-#                         cell = constraint[1][0]
-#                         digit = constraint[1][1]
-#                         self.tactic(f"lemma c{cell} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): f {cell} = {digit} := P.{name}")
+            # start with any initial constraints, might just be given digits
+            # anything that I would consider part of the solution that is given gets processed here
+            for name, constraint in self.puzzle.pythonized_constraints.items():
+                match constraint[0]:
+                    case 'Given':
+                        cell = constraint[1][0]
+                        digit = constraint[1][1]
+                        self.tactic(f"lemma c{cell} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): f {cell} = {digit} := P.{name}")
                 
-#                         # create elimination proofs for each
-#                         self.current.grid[cell] = digit
-#                         self.region_eliminate(cell,digit,f'c{cell}')
-#                     case 'UniqueSet':
-#                         pass
-#                     case _:
-#                         raise NotImplementedError(f'constraint of type {constraint[0]} has no implementation for initialization')
+                        # create elimination proofs for each
+                        self.current.grid[cell] = digit
+                        self.region_eliminate(cell,digit,f'c{cell}')
+                    case 'UniqueSet':
+                        pass
+                    case _:
+                        raise NotImplementedError(f'constraint of type {constraint[0]} has no implementation for initialization')
             
-#             # get a new line in there for spacing reasons
-#             self.tactic('')
-#             self._send_proof()
+            # get a new line in there for spacing reasons
+            self.tactic('')
+            self.record_step('initialize constraints')
                     
-#             self._active_gen = self.controller()
-#             self.terminal_prompt = next(self._active_gen)
-#         except:
-#             self.close()
-#             raise
+            self._active_gen = self.controller()
+            self.terminal_prompt = next(self._active_gen)
+        except:
+            self.close()
+            raise
 
-#         return self
+        return self
 
-#     def place_dot(self):
-#         self._place_dot = True
+    def place_dot(self):
+        self._place_dot = True
 
-#     @contextmanager
-#     def indent(self):
-#         """Increments proof level, and decrements after."""
-#         self.proof_level += 1
-#         try:
-#             yield
-#         finally:
-#             self.proof_level -= 1
+    @contextmanager
+    def indent(self):
+        """Increments proof level, and decrements after."""
+        self.proof_level += 1
+        try:
+            yield
+        finally:
+            self.proof_level -= 1
 
-#     def tactic(self, tactic: str):
-#         """helper that handles the state variables
-#         updates the proof state and returns it"""
-#         tactic_text = ''
-#         for line in tactic.splitlines(True):
-#             tactic_text += f'{'  '*(self.proof_level-self._place_dot)}{'· ' if self._place_dot else ''}{line}'
-#             self._place_dot = False
+    def tactic(self, tactic: str):
+        """adds text to the prepared text variable with a potential dot."""
 
-#         # print(tactic_text)
-#         self.prepared_text += tactic_text + '\n'
+        tactic_text = ''
+        for line in tactic.splitlines(True):
+            tactic_text += f'{'  '*(self.proof_level-self._place_dot)}{'· ' if self._place_dot else ''}{line}'
+            self._place_dot = False
 
-    def record_step(self, user_command: str, lean_code: str, grid_changes: Dict[int,int], elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]]):
+        # print(tactic_text)
+        self.prepared_text += tactic_text + '\n'
+
+    def record_step(self, user_command: str):
         if self.is_reconstructing:
             # if we are reconstucting, do nothing, just contine on.
             return
         
         # will raise its own errors if there are any
-        goals, _ = self.repl.check_code(self.current.lean_file + lean_code)
+        goals, _ = self.repl.check_code(self.current.lean_file + self.prepared_text)
         # code is valid
         
-        # make the delta 
-        delta = Delta([user_command],lean_code,grid_changes,elimination_changes)
+        # make the delta
+        delta = Delta([user_command],self.prepared_text,self.prepared_grid_changes,self.prepared_elimination_changes)
         self.journal.add(delta)
         self.current.add_delta(delta,goals)
+        self.prepared_text = ''
+        self.prepared_grid_changes = {}
+        self.prepared_elimination_changes = {}
         
 
-
-
-#     def _send_proof(self):
-#         goals, diags = self.repl.run_command(self.prepared_text)
-#         self.prepared_text = ''
-#         self.current.proof_state = goals
-#         return self.current.proof_state, diags
-
-
-#     def _execute_or_prompt(self, command: Generator[str, str, None] | None, prompt: str) -> Generator[str, str, None]:
-#         """if a command is given, run the command, else, get one from the interface and run it"""
-#         if command is not None:
-#             yield from command
-#         else:
-#             cmd = yield prompt
-#             yield from self.handle_input(cmd)
+    def _execute_or_prompt(self, command: Generator[str, str, None] | None, prompt: str) -> Generator[str, str, None]:
+        """if a command is given, run the command, else, get one from the interface and run it"""
+        if command is not None:
+            yield from command
+        else:
+            cmd = yield prompt
+            yield from self.handle_input(cmd)
     
-#     def _execute_dict_or_prompt[K](self, commands: Dict[K,Generator[str,str,None]] | None, key: K, prompt: str) -> Generator[str, str, None]:
-#         """if a command is given, run the command, else, get one from the interface and run it"""
-#         if commands is not None and key in commands:
-#             yield from commands[key]
-#         else:
-#             cmd = yield prompt
-#             yield from self.handle_input(cmd)
+    def _execute_dict_or_prompt[K](self, commands: Dict[K,Generator[str,str,None]] | None, key: K, prompt: str) -> Generator[str, str, None]:
+        """if a command is given, run the command, else, get one from the interface and run it"""
+        if commands is not None and key in commands:
+            yield from commands[key]
+        else:
+            cmd = yield prompt
+            yield from self.handle_input(cmd)
 
 #     def region_eliminate(self, cell: int,digit: int,proof_name:str):
 #         """eliminates all of digit from every cell in every region that cell is a part of"""
@@ -220,31 +210,35 @@ class ProofEngine:
 #             print(f'no elimination present for {cell} {digit}')
 #             exit(5)
 
-#     def have(self, name: str, goal: str, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
-#         """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
+    def _have(self, name: str, goal: str, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
+        """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
 
-#         # if it is a top level goal, need to start a new lemma, otherwise do a have statement
-#         if self.proof_level == 0:
-#             self.tactic(f"lemma {name} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): {goal} := by")
-#         else:
-#             self.tactic(f"have {name}: {goal} := by")
+        # begin the subproof
+        with self.subproof():
+            # if it is a top level goal, need to start a new lemma, otherwise do a have statement
+            if self.proof_level == 0:
+                self.tactic(f"lemma {name} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): {goal} := by")
+            else:
+                self.tactic(f"have {name}: {goal} := by")
+            
+            with self.indent():
+                # solve the goal using a command
+                yield from self._execute_or_prompt(command,goal)
+
+            if self.proof_level == 0:
+                # add a newline for top level goals.
+                self.tactic('')
         
-
-#         with self.indent():
-#             # solve the goal using a command
-#             yield from self._execute_or_prompt(command,goal)
-
-#         # add a newline
-#         self.tactic('')
         
+    def fill(self, cell: int, digit: int, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
+        """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
 
 
-#     def fill(self, cell: int, digit: int, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
-#         """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
-#         yield from self.have(f'c{cell}', f'f {cell} = {digit}',command)
+
+        yield from self._have(f'c{cell}', f'f {cell} = {digit}',command)
         
-#         self.current.grid[cell] = digit
-#         self.region_eliminate(cell,digit,f'c{cell}')
+        self.current.grid[cell] = digit
+        self.region_eliminate(cell,digit,f'c{cell}')
 
 #     def cell_cases(self, cell: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
 #         self.tactic(f'cases h: f {cell}')
@@ -546,7 +540,7 @@ class ProofEngine:
     
 
     @contextmanager
-    def subproof(self,grid_changes: Dict[int,int], elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]]):
+    def subproof(self):
         if self.is_reconstructing:
             yield
             return

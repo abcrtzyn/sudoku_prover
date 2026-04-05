@@ -15,3 +15,17 @@ Undo is simply removing the last one, (maybe adding it to a redo stack) and reca
 Sub-proofs will know which index they start, we will keep the full state at that index
 Once the proof is complete, go back to the entry state, make one new delta with all that stuff.
 
+
+I need think a bit more about this.
+
+I expect that a normal command will
+- validate that the proof can happen
+- In any order
+    - register the outcomes (grid and elimination)
+    - register the lean code
+
+A command that begins a subproof or multiple subproofs, there is a bit more of a process
+- validate that the proof can happen
+- figure out the changes
+- begin sub-proof
+- 
