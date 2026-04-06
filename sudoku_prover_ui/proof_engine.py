@@ -39,6 +39,7 @@ R = TypeVar("R")
 class ProofEngine:
     current: State
     journal: Journal
+    _active_gen: Generator[str,str,None]
     prepared_text: str = ''
     macro_depth: int = 0
 
@@ -51,76 +52,75 @@ class ProofEngine:
     # def __exit__(self, *args): # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
     #     self.close()
 
-    @staticmethod
-    def leaf_flow(func: Callable[Concatenate['ProofEngine',P], None]) -> Callable[Concatenate['ProofEngine',P], None]:
-        @functools.wraps(func)
-        def wrapper(_self: ProofEngine, *args: P.args, **kwargs: P.kwargs) -> None:
-            # TODO context manager for macro depth
-            _self.macro_depth += 1
-            try:
-                func(_self, *args, **kwargs)
-                if _self.macro_depth == 1:
-                    print('run _self.prepared_text here')
-                    delta = Delta(['name'],_self.prepared_text,None,None)
-                    _self.journal.add(delta)
-                    _self.current.add_delta(delta)
-                    _self.prepared_text = ''
-            finally:
-                _self.macro_depth -= 1
-        return wrapper
+    def command(self,cmd:str):
+        """user input function, given a command, gives it to the active proof generator,
+        returns with the next user propmt"""
+        try:
+            self.terminal_prompt = self._active_gen.send(cmd)
+        except Exception:
+            print('error in command processing or text creation')
+            raise
 
+        try:
+            print('run self.prepared_text here')
+        except Exception:
+            print('error in execution')
+            raise
+        # this code is good, lets commit it
+        delta = Delta([cmd],self.prepared_text,None,None)
+        self.journal.add(delta)
+        self.current.add_delta(delta)
+        self.prepared_text = ''
+
+        return self.terminal_prompt
+
+
+    def main(self) -> Generator[str,str,None]:
+        """top level proof"""
+        while True:
+            cmd = yield ''
+            yield from self.handle_input(cmd)
+            
     @staticmethod
-    def single_branch_flow(func: Callable[Concatenate['ProofEngine',P], str]) -> Callable[Concatenate['ProofEngine',P], Generator[str,str,None]]:
-        # TODO add in subtask param, takes in a callable with bound params to call in place of going to the user.
+    def generator_flow(func: Callable[Concatenate['ProofEngine',P], Generator[str,None,None]]) -> Callable[Concatenate['ProofEngine',P], Generator[str,str,None]]:
         @functools.wraps(func)
         def wrapper(_self: ProofEngine, *args: P.args, **kwargs: P.kwargs) -> Generator[str,str,None]:
-            # TODO soon, subproof context, will check macro depth itself
-            # snapshot, then start block
-            if _self.macro_depth == 0:
-                _self.journal.start_block()
-            
-            _self.macro_depth += 1
-            try:
-                prompt = func(_self, *args, **kwargs)
-                print('run _self.prepared_text here')
-                delta = Delta(['name'],_self.prepared_text,None,None)
-                _self.journal.add(delta)
-                _self.current.add_delta(delta)
-                _self.prepared_text = ''
+            # create the generator
+            gen = func(_self, *args, **kwargs)
+            # the rule is that everytime the generator yields, we begin a subproof
+            # eventually I want to be able to pass sub-command arg that will run those sub-commands on sub-proofs
+            # not yet though
+            for branch_prompt in gen:
+                # TODO put all the subproof stuff into a context manager
+                pre_subproof_state = _self.current.copy()
+                start_delta = len(_self.journal)
 
-                cmd = yield prompt
+                cmd = yield branch_prompt
                 yield from _self.handle_input(cmd)
 
-            finally:
-                _self.macro_depth -= 1
+                proof = _self.journal.pop_subproof(start_delta)
+                cmds = list(proof.commands())
+                code = proof.lean_code_file()
 
-                if _self.macro_depth == 0:
-                    subproof = _self.journal.pop_subproof()
-                    # collapse subproof
-                    _self.journal.add(Delta())
+                delta = Delta(cmds,code,None,None)
+                _self.journal.add(delta)
+                _self.current = pre_subproof_state
+                _self.current.add_delta(delta)
 
-            return
-            
+
         return wrapper
 
-    @leaf_flow
+    @generator_flow
     def rfl(self):
         self.prepared_text += 'rfl'
+        return
+        yield
 
-    @single_branch_flow
+    @generator_flow
     def have(self):
         self.prepared_text += 'have f 5 = 2'
-        return 'have'
-
-    @leaf_flow
-    def naked_single(self):
-        
-
-
-    def main(self):
-        self.have()
-
-
+        yield 'have'
+        return
 
 
 
@@ -614,15 +614,6 @@ class ProofEngine:
             self.finish()
         else:
             raise CommandError(f'unknown command {name}')
-
-#     def controller(self) -> Generator[str,str,None]:
-#         """main logic loop for cli"""
-#         while True:
-#             cmd = yield ''
-#             try:
-#                 yield from self.handle_input(cmd)
-#             except CommandError as e:
-#                 print(f'[!] {e}')
     
 
 #     @contextmanager
@@ -688,10 +679,3 @@ class ProofEngine:
 #         goals, _ = self.repl.check_code(self.current.lean_file)
 #         # keep the proof state
 #         self.current.proof_state = goals
-
-        
-
-#     def command(self,cmd:str):
-#         # print(cmd)
-#         self.terminal_prompt = self._active_gen.send(cmd)
-#         return self.terminal_prompt

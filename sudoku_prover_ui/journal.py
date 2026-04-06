@@ -57,55 +57,40 @@ class State:
         self.proof_state = proof_state
 
 class Journal:
-    _stack: List[List[Delta]] = []
+    _history: List[Delta] = []
     protected_steps = 0
 
-    def __init__(self, stack: List[List[Delta]] | None = None):
-        self._stack = stack or []
+    def __init__(self, history: List[Delta] | None):
+        self._history = history or []
 
-    @contextmanager
-    def subproof(self):
-        self._stack.append([])
-        try:
-            yield
-        except Exception:
-            print('subproof exited due to an error')
-            raise
-            
-        # if no error
-        # collapse the subproof
-
-
-    def start_block(self):
-        self._stack.append([])
-
-
-    # def __iter__(self):
-    #     return iter(self._history)
+    def __iter__(self):
+        return iter(self._history)
     
-    # def __len__(self):
-    #     return len(self._history)
+    def __len__(self):
+        return len(self._history)
 
     def add(self,delta: Delta):
-        self._stack[-1].append(delta)
+        self._history.append(delta)
     
-    # def pop(self):
-    #     if len(self._history) <= self.protected_steps:
-    #         raise ValueError('Could not pop from journal, steps are protected or list is empty')
-    #     self._history.pop()
+    def pop(self):
+        if len(self._history) <= self.protected_steps:
+            raise ValueError('Could not pop from journal, steps are protected or list is empty')
+        self._history.pop()
 
-    def pop_subproof(self):
-        return self._stack.pop()
+    def pop_subproof(self, index: int):
+        steps = self._history[index:]
+        self._history = self._history[:index]
+        return Journal(steps)
 
 
-    # def commands(self) -> Generator[str, None, None]:
-    #     for delta in self._history:
-    #         for cmds in delta.user_commands:
-    #             yield from cmds
+    def commands(self) -> Generator[str, None, None]:
+        for delta in self._history:
+            for cmds in delta.user_commands:
+                yield from cmds
     
-    # def lean_code_file(self) -> str:
-    #     code_str = ''
-    #     for delta in self._history:
-    #         code_str += delta.lean_code
+    def lean_code_file(self) -> str:
+        code_str = ''
+        for delta in self._history:
+            code_str += delta.lean_code
             
-    #     return code_str
+        return code_str
