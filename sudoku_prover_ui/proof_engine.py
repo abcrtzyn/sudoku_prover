@@ -1,7 +1,9 @@
 
 from contextlib import contextmanager
+from dataclasses import dataclass, field
+import functools
 import re
-from typing import Any, Dict, Generator, List, Tuple
+from typing import Any, Callable, Concatenate, Dict, Generator, List, ParamSpec, Tuple, TypeVar
 
 from sudoku_prover_ui.journal import Delta, Journal, State
 from sudoku_prover_ui.lean_repl import LeanLspRepl
@@ -29,18 +31,103 @@ word_to_number = {
 class CommandError(Exception):
     pass
 
-# class ProofEngine:
-#     current: State
-#     journal: Journal
 
-#     def __enter__(self):
-#         return self.setup()
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+class ProofEngine:
+    current: State
+    journal: Journal
+    prepared_text: str = ''
+    macro_depth: int = 0
+
+    # def __enter__(self):
+    #     return self.setup()
     
-#     def close(self):
-#         self.repl.close()
+    # def close(self):
+    #     self.repl.close()
 
-#     def __exit__(self, *args): # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
-#         self.close()
+    # def __exit__(self, *args): # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+    #     self.close()
+
+    @staticmethod
+    def leaf_flow(func: Callable[Concatenate['ProofEngine',P], None]) -> Callable[Concatenate['ProofEngine',P], None]:
+        @functools.wraps(func)
+        def wrapper(_self: ProofEngine, *args: P.args, **kwargs: P.kwargs) -> None:
+            # TODO context manager for macro depth
+            _self.macro_depth += 1
+            try:
+                func(_self, *args, **kwargs)
+                if _self.macro_depth == 1:
+                    print('run _self.prepared_text here')
+                    delta = Delta(['name'],_self.prepared_text,None,None)
+                    _self.journal.add(delta)
+                    _self.current.add_delta(delta)
+                    _self.prepared_text = ''
+            finally:
+                _self.macro_depth -= 1
+        return wrapper
+
+    @staticmethod
+    def single_branch_flow(func: Callable[Concatenate['ProofEngine',P], str]) -> Callable[Concatenate['ProofEngine',P], Generator[str,str,None]]:
+        # TODO add in subtask param, takes in a callable with bound params to call in place of going to the user.
+        @functools.wraps(func)
+        def wrapper(_self: ProofEngine, *args: P.args, **kwargs: P.kwargs) -> Generator[str,str,None]:
+            # TODO soon, subproof context, will check macro depth itself
+            # snapshot, then start block
+            if _self.macro_depth == 0:
+                _self.journal.start_block()
+            
+            _self.macro_depth += 1
+            try:
+                prompt = func(_self, *args, **kwargs)
+                print('run _self.prepared_text here')
+                delta = Delta(['name'],_self.prepared_text,None,None)
+                _self.journal.add(delta)
+                _self.current.add_delta(delta)
+                _self.prepared_text = ''
+
+                cmd = yield prompt
+                yield from _self.handle_input(cmd)
+
+            finally:
+                _self.macro_depth -= 1
+
+                if _self.macro_depth == 0:
+                    subproof = _self.journal.pop_subproof()
+                    # collapse subproof
+                    _self.journal.add(Delta())
+
+            return
+            
+        return wrapper
+
+    @leaf_flow
+    def rfl(self):
+        self.prepared_text += 'rfl'
+
+    @single_branch_flow
+    def have(self):
+        self.prepared_text += 'have f 5 = 2'
+        return 'have'
+
+    @leaf_flow
+    def naked_single(self):
+        
+
+
+    def main(self):
+        self.have()
+
+
+
+
+
+
+
+
+
 
 
 #     def __init__(self, puzzle: Puzzle):
@@ -454,79 +541,79 @@ class CommandError(Exception):
 # #         raise Exception()
 
 
-#     def handle_input(self, cmd: str) -> Generator[str,str,None]:
-#         if cmd == '':
-#             raise CommandError("No command given")
-#         args = cmd.split()
-#         name = args[0]
-#         params = args[1:]
-#         if name == 'exit':
-#             # ignores all arguments
-#             exit(0)
-#         elif name == 'fill':
-#             if len(params) != 2:
-#                 raise CommandError("expected 'fill cell digit'")
-#             try:
-#                 cell = int(params[0])
-#                 digit = int(params[1])
-#             except ValueError:
-#                 raise CommandError('digit and cell must be integers')
-#             if not (0 <= cell < self.puzzle.cell_count):
-#                 raise CommandError(f'cell {cell} out of range')
-#             if digit not in self.puzzle.symbols_python:
-#                 raise CommandError(f'digit {digit} invalid')
-#             yield from self.fill(cell,digit)
-#         elif name == 'have':
-#             # the rest of the line is the goal
-#             goal = cmd.removeprefix('have').strip()
-#             if goal == "":
-#                 raise CommandError("expected 'have [goal]'")
-#             yield from self.have('h',goal)
-#         elif name == 'cell_cases':
-#             if len(params) != 1:
-#                 raise CommandError("expected 'cell_cases cell'")
-#             try:
-#                 cell = int(params[0])
-#             except ValueError:
-#                 raise CommandError('cell must be an integer')
-#             if not (0 <= cell < self.puzzle.cell_count):
-#                 raise CommandError(f'cell {cell} out of range')
-#             yield from self.cell_cases(cell)
-#         elif name == 'support_cases':
-#             if len(params) != 2:
-#                 raise CommandError("expected 'support_cases region digit'")
-#             region = params[0]
-#             try: 
-#                 digit = int(params[1])
-#             except ValueError:
-#                 raise CommandError('digit must be an integer')
-#             if digit not in self.puzzle.symbols_python:
-#                 raise CommandError(f'digit {digit} invalid')
-#             yield from self.support_cases_manual(digit, region)
-#         elif name == 'rfl':
-#             if len(params) != 0:
-#                 raise CommandError("expected 'rfl' with no arguments")
-#             yield from self.rfl()
-#         elif name == 'exact':
-#             if len(params) != 1:
-#                 raise CommandError("expected 'exact hypothesis'")
-#             yield from self.exact(params[0])
-#         elif name == 'naked_single':
-#             if len(params) != 1:
-#                 raise CommandError("expected 'naked_single cell")
-#             try:
-#                 cell = int(params[0])
-#             except ValueError:
-#                 raise CommandError('cell must be an integer')
-#             if not (0 <= cell < self.puzzle.cell_count):
-#                 raise CommandError(f'cell {cell} out of range')
-#             yield from self.naked_single(cell)
-#         elif name == 'finish':
-#             if len(params) != 0:
-#                 raise CommandError('finish takes no args')
-#             self.finish()
-#         else:
-#             raise CommandError(f'unknown command {name}')
+    def handle_input(self, cmd: str) -> Generator[str,str,None]:
+        if cmd == '':
+            raise CommandError("No command given")
+        args = cmd.split()
+        name = args[0]
+        params = args[1:]
+        if name == 'exit':
+            # ignores all arguments
+            exit(0)
+        elif name == 'fill':
+            if len(params) != 2:
+                raise CommandError("expected 'fill cell digit'")
+            try:
+                cell = int(params[0])
+                digit = int(params[1])
+            except ValueError:
+                raise CommandError('digit and cell must be integers')
+            if not (0 <= cell < self.puzzle.cell_count):
+                raise CommandError(f'cell {cell} out of range')
+            if digit not in self.puzzle.symbols_python:
+                raise CommandError(f'digit {digit} invalid')
+            yield from self.fill(cell,digit)
+        elif name == 'have':
+            # the rest of the line is the goal
+            goal = cmd.removeprefix('have').strip()
+            if goal == "":
+                raise CommandError("expected 'have [goal]'")
+            yield from self.have('h',goal)
+        elif name == 'cell_cases':
+            if len(params) != 1:
+                raise CommandError("expected 'cell_cases cell'")
+            try:
+                cell = int(params[0])
+            except ValueError:
+                raise CommandError('cell must be an integer')
+            if not (0 <= cell < self.puzzle.cell_count):
+                raise CommandError(f'cell {cell} out of range')
+            yield from self.cell_cases(cell)
+        elif name == 'support_cases':
+            if len(params) != 2:
+                raise CommandError("expected 'support_cases region digit'")
+            region = params[0]
+            try: 
+                digit = int(params[1])
+            except ValueError:
+                raise CommandError('digit must be an integer')
+            if digit not in self.puzzle.symbols_python:
+                raise CommandError(f'digit {digit} invalid')
+            yield from self.support_cases_manual(digit, region)
+        elif name == 'rfl':
+            if len(params) != 0:
+                raise CommandError("expected 'rfl' with no arguments")
+            yield from self.rfl()
+        elif name == 'exact':
+            if len(params) != 1:
+                raise CommandError("expected 'exact hypothesis'")
+            yield from self.exact(params[0])
+        elif name == 'naked_single':
+            if len(params) != 1:
+                raise CommandError("expected 'naked_single cell")
+            try:
+                cell = int(params[0])
+            except ValueError:
+                raise CommandError('cell must be an integer')
+            if not (0 <= cell < self.puzzle.cell_count):
+                raise CommandError(f'cell {cell} out of range')
+            yield from self.naked_single(cell)
+        elif name == 'finish':
+            if len(params) != 0:
+                raise CommandError('finish takes no args')
+            self.finish()
+        else:
+            raise CommandError(f'unknown command {name}')
 
 #     def controller(self) -> Generator[str,str,None]:
 #         """main logic loop for cli"""
