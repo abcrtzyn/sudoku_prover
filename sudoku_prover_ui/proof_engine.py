@@ -1,14 +1,10 @@
 
 from contextlib import contextmanager
-from dataclasses import dataclass, field
-import functools
-import re
-from typing import Any, Callable, Concatenate, Dict, Generator, List, ParamSpec, Tuple, TypeVar
+from typing import Any, Dict, Generator, List, ParamSpec, Tuple, TypeVar
 
 from sudoku_prover_ui.journal import Delta, Journal, State
 from sudoku_prover_ui.lean_repl import LeanLspRepl
 from sudoku_prover_ui.puzzle import Puzzle
-from sudoku_prover_ui.sudoku_state import SudokuState
 
 from pathlib import Path
 
@@ -37,20 +33,103 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 class ProofEngine:
-    current: State
-    journal: Journal
-    _active_gen: Generator[str,str,None]
-    prepared_text: str = ''
-    macro_depth: int = 0
 
-    # def __enter__(self):
-    #     return self.setup()
+    def __enter__(self):
+        return self.setup()
     
-    # def close(self):
-    #     self.repl.close()
+    def close(self):
+        self.repl.close()
 
-    # def __exit__(self, *args): # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
-    #     self.close()
+    def __exit__(self, *args): # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
+        self.close()
+
+    def __init__(self, puzzle: Puzzle):
+        self.repl = LeanLspRepl(REPO_ROOT) # pyright: ignore[reportArgumentType]
+        self.puzzle = puzzle
+        self._active_gen: Generator[str, str, None]
+        self.terminal_prompt: str
+        self.current: State = State()
+        self.journal: Journal = Journal(None)
+        self.prepared_text = ''
+        self.prepared_grid_changes: Dict[int,int] = {}
+        self.prepared_elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]] = {}
+        # this keeps track of what level of proof we are on, it also determines how much indent there is
+        # indent is 2*proof_level
+        # any lemma or have block increases this by one, also any cases will but with the exception of the center dots
+        self.proof_level = 0
+        self._place_dot: bool = False
+
+    def setup(self):
+        self.repl.open()
+
+        self.current = State()
+
+
+        try:
+            # imports
+            import_text = ''
+            for imp in ['Mathlib.Tactic.IntervalCases','SudokuProverLogic.Basic',
+                        f'SudokuProverLogic.{self.puzzle.symbols}','SudokuProverLogic.Tactics'] + self.puzzle.lean_imports:
+                import_text += f'import {imp}\n'
+            
+            self.tactic(import_text)
+            self.command_internal('imports')
+            self.journal.protected_steps += 1
+            
+            # set options, maybe we will format how lean wants later, but I don't care
+            options_text = 'set_option linter.style.whitespace false\nset_option linter.style.longLine false\n'
+            self.tactic(options_text)
+            self.command_internal('lint options')
+            self.journal.protected_steps += 1
+
+            # give the puzzle to Lean
+            puzzle_text = self.puzzle.generate_lean_structure()
+            self.tactic(puzzle_text)
+            self.command_internal('puzzle def')
+            self.journal.protected_steps += 1
+            
+            # start with any initial constraints, might just be given digits
+            # anything that I would consider part of the solution that is given gets processed here
+            for name, constraint in self.puzzle.pythonized_constraints.items():
+                match constraint[0]:
+                    case 'Given':
+                        cell = constraint[1][0]
+                        digit = constraint[1][1]
+                        self.tactic(f"lemma c{cell} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): f {cell} = {digit} := P.{name}")
+                
+                        # create elimination proofs for each
+                        self.prepared_grid_changes[cell] = digit
+                        self.region_eliminate(cell,digit,f'c{cell}')
+                    case 'UniqueSet':
+                        pass
+                    case _:
+                        raise NotImplementedError(f'constraint of type {constraint[0]} has no implementation for initialization')
+            
+            # get a new line in there for spacing reasons
+            self.tactic('')
+            self.command_internal('intialize constraints')
+            self.journal.protected_steps += 1
+                    
+            self._active_gen = self.main()
+            self.terminal_prompt = next(self._active_gen)
+        except:
+            self.close()
+            raise
+
+        return self
+
+
+    """The functions that make this whole thing work"""
+
+    def commit(self,cmd: str, proof_state: List[str]):
+        """Commit work to the journal and update state"""
+        delta = Delta([cmd],self.prepared_text,self.prepared_grid_changes,self.prepared_elimination_changes)
+        self.journal.add(delta)
+        self.current.add_delta(delta)
+        self.current.proof_state = proof_state
+        self.prepared_text = ''
+        self.prepared_grid_changes = {}
+        self.prepared_elimination_changes = {}
 
     def command(self,cmd:str):
         """user input function, given a command, gives it to the active proof generator,
@@ -62,186 +141,69 @@ class ProofEngine:
             raise
 
         try:
-            print('run self.prepared_text here')
+            goals, _ = self.repl.check_code(self.current.lean_file + self.prepared_text)
+            
         except Exception:
             print('error in execution')
             raise
         # this code is good, lets commit it
-        delta = Delta([cmd],self.prepared_text,None,None)
-        self.journal.add(delta)
-        self.current.add_delta(delta)
-        self.prepared_text = ''
+        self.commit(cmd, goals)
 
         return self.terminal_prompt
 
+    def command_internal(self,cmd:str):
+        """internal run prepared and commit, used for setup and such"""
+        goals, _ = self.repl.check_code(self.current.lean_file + self.prepared_text)
+        self.commit(cmd,goals)
 
     def main(self) -> Generator[str,str,None]:
         """top level proof"""
         while True:
             cmd = yield ''
             yield from self.handle_input(cmd)
-            
-    @staticmethod
-    def generator_flow(func: Callable[Concatenate['ProofEngine',P], Generator[str,None,None]]) -> Callable[Concatenate['ProofEngine',P], Generator[str,str,None]]:
-        @functools.wraps(func)
-        def wrapper(_self: ProofEngine, *args: P.args, **kwargs: P.kwargs) -> Generator[str,str,None]:
-            # create the generator
-            gen = func(_self, *args, **kwargs)
-            # the rule is that everytime the generator yields, we begin a subproof
-            # eventually I want to be able to pass sub-command arg that will run those sub-commands on sub-proofs
-            # not yet though
-            for branch_prompt in gen:
-                # TODO put all the subproof stuff into a context manager
-                pre_subproof_state = _self.current.copy()
-                start_delta = len(_self.journal)
+    
+    def do_subproof(self, prompt: str) -> Generator[str,str,None]:
+        # get the starting index of the subproof
+        pre_subproof_state = self.current.copy()
+        start_delta = len(self.journal)
+        subproof_grid_changes = self.prepared_grid_changes
+        subproof_elimination_changes = self.prepared_elimination_changes
+        self.prepared_grid_changes = {}
+        self.prepared_elimination_changes = {}
+        # go get a command to run, TODO or take from parameters
+        cmd = yield prompt
+        yield from self.handle_input(cmd)
+        # proof done, collapse to one delta
+        proof = self.journal.pop_subproof(start_delta)
+        cmds = list(proof.commands())
+        code = proof.lean_code_file()
+        delta = Delta(cmds,code,subproof_grid_changes,subproof_elimination_changes)
+        self.journal.add(delta)
+        self.current = pre_subproof_state
+        self.current.add_delta(delta)
 
-                cmd = yield branch_prompt
-                yield from _self.handle_input(cmd)
+    def place_dot(self):
+        self._place_dot = True
 
-                proof = _self.journal.pop_subproof(start_delta)
-                cmds = list(proof.commands())
-                code = proof.lean_code_file()
+    @contextmanager
+    def indent(self):
+        """Increments proof level, and decrements after."""
+        self.proof_level += 1
+        try:
+            yield
+        finally:
+            self.proof_level -= 1
 
-                delta = Delta(cmds,code,None,None)
-                _self.journal.add(delta)
-                _self.current = pre_subproof_state
-                _self.current.add_delta(delta)
+    def tactic(self, tactic: str):
+        """adds text to the prepared text variable with a potential dot."""
 
+        tactic_text = ''
+        for line in tactic.splitlines(True):
+            tactic_text += f'{'  '*(self.proof_level-self._place_dot)}{'· ' if self._place_dot else ''}{line}'
+            self._place_dot = False
 
-        return wrapper
-
-    @generator_flow
-    def rfl(self):
-        self.prepared_text += 'rfl'
-        return
-        yield
-
-    @generator_flow
-    def have(self):
-        self.prepared_text += 'have f 5 = 2'
-        yield 'have'
-        return
-
-
-
-
-
-
-
-
-
-#     def __init__(self, puzzle: Puzzle):
-#         self.repl = LeanLspRepl(REPO_ROOT) # pyright: ignore[reportArgumentType]
-#         self.puzzle = puzzle
-#         self._active_gen: Generator[str, str, None]
-#         self.terminal_prompt: str
-#         self._place_dot: bool = False
-#         self.prepared_text = ''
-#         self.prepared_grid_changes: Dict[int,int] = {}
-#         self.prepared_elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]] = {}
-
-#     def setup(self):
-#         self.repl.open()
-
-#         self.current = State()
-
-
-#         try:
-#             # imports
-#             import_text = ''
-#             for imp in ['Mathlib.Tactic.IntervalCases','SudokuProverLogic.Basic',
-#                         f'SudokuProverLogic.{self.puzzle.symbols}','SudokuProverLogic.Tactics'] + self.puzzle.lean_imports:
-#                 import_text += f'import {imp}\n'
-#             self.tactic(import_text)
-#             self.record_step('imports')
-#             self.journal.protected_steps += 1
-            
-#             # set options, maybe we will format how lean wants later, but I don't care
-#             options_text = 'set_option linter.style.whitespace false\nset_option linter.style.longLine false\n'
-#             self.tactic(options_text)
-#             self.record_step('lint options')
-#             self.journal.protected_steps += 1
-
-#             # give the puzzle to Lean
-#             puzzle_text = self.puzzle.generate_lean_structure()
-#             self.tactic(puzzle_text)
-#             self.record_step('puzzle def')
-#             self.journal.protected_steps += 1
-
-
-#             # this keeps track of what level of proof we are on, it also determines how much indent there is
-#             # indent is 2*proof_level
-#             # any lemma or have block increases this by one, also any cases will but with the exception of the center dots
-#             self.proof_level = 0
-
-#             # start with any initial constraints, might just be given digits
-#             # anything that I would consider part of the solution that is given gets processed here
-#             for name, constraint in self.puzzle.pythonized_constraints.items():
-#                 match constraint[0]:
-#                     case 'Given':
-#                         cell = constraint[1][0]
-#                         digit = constraint[1][1]
-#                         self.tactic(f"lemma c{cell} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): f {cell} = {digit} := P.{name}")
-                
-#                         # create elimination proofs for each
-#                         self.current.grid[cell] = digit
-#                         self.region_eliminate(cell,digit,f'c{cell}')
-#                     case 'UniqueSet':
-#                         pass
-#                     case _:
-#                         raise NotImplementedError(f'constraint of type {constraint[0]} has no implementation for initialization')
-            
-#             # get a new line in there for spacing reasons
-#             self.tactic('')
-#             self.record_step('initialize constraints')
-                    
-#             self._active_gen = self.controller()
-#             self.terminal_prompt = next(self._active_gen)
-#         except:
-#             self.close()
-#             raise
-
-#         return self
-
-#     def place_dot(self):
-#         self._place_dot = True
-
-#     @contextmanager
-#     def indent(self):
-#         """Increments proof level, and decrements after."""
-#         self.proof_level += 1
-#         try:
-#             yield
-#         finally:
-#             self.proof_level -= 1
-
-#     def tactic(self, tactic: str):
-#         """adds text to the prepared text variable with a potential dot."""
-
-#         tactic_text = ''
-#         for line in tactic.splitlines(True):
-#             tactic_text += f'{'  '*(self.proof_level-self._place_dot)}{'· ' if self._place_dot else ''}{line}'
-#             self._place_dot = False
-
-#         # print(tactic_text)
-#         self.prepared_text += tactic_text + '\n'
-
-#     def record_step(self, user_command: str):
-#         if self.is_reconstructing:
-#             # if we are reconstucting, do nothing, just contine on.
-#             return
-        
-#         # will raise its own errors if there are any
-#         goals, _ = self.repl.check_code(self.current.lean_file + self.prepared_text)
-#         # code is valid
-        
-#         # make the delta
-#         delta = Delta([user_command],self.prepared_text,self.prepared_grid_changes,self.prepared_elimination_changes)
-#         self.journal.add(delta)
-#         self.current.add_delta(delta,goals)
-#         self.prepared_text = ''
-#         self.prepared_grid_changes = {}
-#         self.prepared_elimination_changes = {}
+        # print(tactic_text)
+        self.prepared_text += tactic_text + '\n'
         
 
 #     def _execute_or_prompt(self, command: Generator[str, str, None] | None, prompt: str) -> Generator[str, str, None]:
@@ -260,84 +222,80 @@ class ProofEngine:
 #             cmd = yield prompt
 #             yield from self.handle_input(cmd)
 
-# #     def region_eliminate(self, cell: int,digit: int,proof_name:str):
-# #         """eliminates all of digit from every cell in every region that cell is a part of"""
-# #         for name, constraint in self.puzzle.pythonized_constraints.items():
-# #             if constraint[0] != 'UniqueSet':
-# #                 continue
-# #             if cell in constraint[1]:
-# #                 for i in constraint[1]:
-# #                     if i == cell:
-# #                         continue        
-# #                     # we have a choice to override a current elimination rule, or keep the first one
-# #                     # there are pros and cons to either, but that is for future me to decide.
-# #                     # this code OVERRIDES existing elemination rules
-# #                     if i not in self.current.eliminations:
-# #                         self.current.eliminations[i] = dict()
-# #                     self.current.eliminations[i][digit] = ('digit_in_region', (cell,name,proof_name))
+    def region_eliminate(self, cell: int,digit: int,proof_name:str):
+        """eliminates all of digit from every cell in every region that cell is a part of"""
+        for name, constraint in self.puzzle.pythonized_constraints.items():
+            if constraint[0] != 'UniqueSet':
+                continue
+            if cell in constraint[1]:
+                for i in constraint[1]:
+                    if i == cell:
+                        continue        
+                    # we have a choice to override a current elimination rule, or keep the first one
+                    # there are pros and cons to either, but that is for future me to decide.
+                    # this code OVERRIDES existing elemination rules
+                    if i not in self.prepared_elimination_changes:
+                        self.prepared_elimination_changes[i] = dict()
+                    self.prepared_elimination_changes[i][digit] = ('digit_in_region', (cell,name,proof_name))
 
 
-# #     def generate_elimination_proof(self,cell: int, digit: int, hypothesis: str):
-# #         """Given the current cell and digit and hypothesis name to eliminate
-# #         eliminates this contradictory case"""
+    def generate_elimination_proof(self,cell: int, digit: int, hypothesis: str):
+        """Given the current cell and digit and hypothesis name to eliminate
+        eliminates this contradictory case"""
         
-# #         if self.current.grid[cell] is not None:
-# #             proof = f'exact digit_in_cell {hypothesis} (c{cell} P)'
-# #             self.tactic(f'exfalso; {proof}')
-# #         elif cell in self.current.eliminations and digit in self.current.eliminations[cell]:
-# #             elim = self.current.eliminations[cell][digit]
-# #             if elim[0] == 'digit_in_region':
-# #                 proof = f'exact digit_in_region {hypothesis} P.{elim[1][1]} ({elim[1][2]} P)'
-# #             else:
-# #                 print('unknown elimination reason',elim[0])
-# #                 exit(4)
-# #             self.tactic(f'exfalso; {proof}')
-# #         else:
-# #             print(f'no elimination present for {cell} {digit}')
-# #             exit(5)
+        if self.current.grid[cell] is not None:
+            proof = f'exact digit_in_cell {hypothesis} (c{cell} P)'
+            self.tactic(f'exfalso; {proof}')
+        elif cell in self.current.eliminations and digit in self.current.eliminations[cell]:
+            elim = self.current.eliminations[cell][digit]
+            if elim[0] == 'digit_in_region':
+                proof = f'exact digit_in_region {hypothesis} P.{elim[1][1]} ({elim[1][2]} P)'
+            else:
+                print('unknown elimination reason',elim[0])
+                exit(4)
+            self.tactic(f'exfalso; {proof}')
+        else:
+            print(f'no elimination present for {cell} {digit}')
+            exit(5)
 
-#     def _have(self, name: str, goal: str, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
-#         """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
+    def _have(self, name: str, goal: str) -> Generator[str,str,None]:
+        """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
+        # if it is a top level goal, need to start a new lemma, otherwise do a have statement
+        if self.proof_level == 0:
+            self.tactic(f"lemma {name} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): {goal} := by")
+        else:
+            self.tactic(f"have {name}: {goal} := by")
+        with self.indent():
 
-#         # begin the subproof
-#         with self.subproof():
-#             # if it is a top level goal, need to start a new lemma, otherwise do a have statement
-#             if self.proof_level == 0:
-#                 self.tactic(f"lemma {name} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): {goal} := by")
-#             else:
-#                 self.tactic(f"have {name}: {goal} := by")
-            
-#             with self.indent():
-#                 # solve the goal using a command
-#                 yield from self._execute_or_prompt(command,goal)
+            yield from self.do_subproof(goal)
 
-#             if self.proof_level == 0:
-#                 # add a newline for top level goals.
-#                 self.tactic('')
+        if self.proof_level == 0:
+            # add a newline for top level goals.
+            self.tactic('')
         
         
-#     def fill(self, cell: int, digit: int, command: Generator[str,str,None] | None = None) -> Generator[str,str,None]:
-#         """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
+    def fill(self, cell: int, digit: int) -> Generator[str,str,None]:
+        """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
 
+        # set up what changes will occur after the subproof
+        self.prepared_grid_changes[cell] = digit
+        self.region_eliminate(cell,digit,f'c{cell}')
 
-
-#         yield from self._have(f'c{cell}', f'f {cell} = {digit}',command)
+        yield from self._have(f'c{cell}', f'f {cell} = {digit}')
         
-#         self.current.grid[cell] = digit
-#         self.region_eliminate(cell,digit,f'c{cell}')
 
-# #     def cell_cases(self, cell: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
-# #         self.tactic(f'cases h: f {cell}')
+    def cell_cases(self, cell: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
+        self.tactic(f'cases h: f {cell}')
         
-# #         with self.indent():
-# #             # we know the order of these cases, it's exactly the order of the symbols
-# #             for digit in self.puzzle.symbols_python:
-# #                 self.place_dot()
-# #                 if cell in self.current.eliminations and digit in self.current.eliminations[cell]:
-# #                     self.generate_elimination_proof(cell,digit,'h')
-# #                     # TODO we also need to check for accepting cases, not yet
-# #                 else:
-# #                     yield from self._execute_dict_or_prompt(commands,digit,f'cell_cases {digit}')
+        with self.indent():
+            # we know the order of these cases, it's exactly the order of the symbols
+            for digit in self.puzzle.symbols_python:
+                self.place_dot()
+                if cell in self.current.eliminations and digit in self.current.eliminations[cell]:
+                    self.generate_elimination_proof(cell,digit,'h')
+                    # TODO we also need to check for accepting cases, not yet
+                else:
+                    yield from self.do_subproof(f'cell_cases {digit}')
             
         
 
@@ -402,42 +360,52 @@ class ProofEngine:
 
 # #         yield from self.support_cases('h',digit)
 
-# #     def rfl(self) -> Generator[str,str,None]:
-# #         self.tactic('rfl')
-# #         return
-# #         yield
+    def rfl(self) -> Generator[str,str,None]:
+        self.tactic('rfl')
+        return
+        yield
     
-# #     def exact(self,hypothesis: str) -> Generator[str,str,None]:
-# #         self.tactic(f'exact {hypothesis}')
-# #         return
-# #         yield
+    def exact(self,hypothesis: str) -> Generator[str,str,None]:
+        self.tactic(f'exact {hypothesis}')
+        return
+        yield
 
-# #     def naked_single(self,cell: int) -> Generator[str,str,None]:
-# #         # first find the digit to fill (check that all digits but one are eliminated)
-# #         if cell not in self.current.eliminations:
-# #             # definetely not able to eliminate the candidates
-# #             raise CommandError(f'cell {cell} has more than one candidate, can not do naked_single')
-# #         elims = self.current.eliminations[cell]
+    def naked_single(self,cell: int) -> Generator[str,str,None]:
+        # first find the digit to fill (check that all digits but one are eliminated)
+        if cell not in self.current.eliminations:
+            # definetely not able to eliminate the candidates
+            raise CommandError(f'cell {cell} has more than one candidate, can not do naked_single')
+        elims = self.current.eliminations[cell]
             
-# #         not_eliminated = None
-# #         for digit in self.puzzle.symbols_python:
-# #             if digit in elims:
-# #                 continue
-# #             # not eliminated
-# #             if not_eliminated is None:
-# #                 not_eliminated = digit
-# #             else:
-# #                 # there is more than one candidate
-# #                 # can not do naked single
-# #                 raise CommandError(f'cell {cell} has more than one candidate, can not do naked_single')
+        not_eliminated = None
+        for digit in self.puzzle.symbols_python:
+            if digit in elims:
+                continue
+            # not eliminated
+            if not_eliminated is None:
+                not_eliminated = digit
+            else:
+                # there is more than one candidate
+                # can not do naked single
+                raise CommandError(f'cell {cell} has more than one candidate, can not do naked_single')
         
-# #         if not_eliminated is None:
-# #             # this cell has no candidates, solve using cell_cases instead
-# #             raise CommandError(f'cell {cell} has no candidates, this should be solved by cell_cases')
-# #         digit = not_eliminated
+        if not_eliminated is None:
+            # this cell has no candidates, solve using cell_cases instead
+            raise CommandError(f'cell {cell} has no candidates, this should be solved by cell_cases')
+        digit = not_eliminated
         
-# #         # naked single macro. fills the cell with the digit by doing cases on that cell
-# #         yield from self.fill(cell,digit,self.cell_cases(cell,{digit: self.rfl()}))
+        # naked single macro. fills the cell with the digit by doing cases on that cell
+        # yield from self.fill(cell,digit,self.cell_cases(cell,{digit: self.rfl()}))
+        # for right now, this function has to has to handle the genartors itself
+        gen = self.fill(cell,digit)
+        _ = next(gen)
+        _ = gen.send(f'cell_cases f {cell}')
+        _ = gen.send('rfl')
+        return
+        yield
+
+
+
 
 # #     def finish(self):
 # #         """Where all the digits are known, this function finishes out the proof.
@@ -568,7 +536,7 @@ class ProofEngine:
             goal = cmd.removeprefix('have').strip()
             if goal == "":
                 raise CommandError("expected 'have [goal]'")
-            yield from self.have('h',goal)
+            yield from self._have('h',goal)
         elif name == 'cell_cases':
             if len(params) != 1:
                 raise CommandError("expected 'cell_cases cell'")
@@ -579,17 +547,17 @@ class ProofEngine:
             if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
             yield from self.cell_cases(cell)
-        elif name == 'support_cases':
-            if len(params) != 2:
-                raise CommandError("expected 'support_cases region digit'")
-            region = params[0]
-            try: 
-                digit = int(params[1])
-            except ValueError:
-                raise CommandError('digit must be an integer')
-            if digit not in self.puzzle.symbols_python:
-                raise CommandError(f'digit {digit} invalid')
-            yield from self.support_cases_manual(digit, region)
+        # elif name == 'support_cases':
+        #     if len(params) != 2:
+        #         raise CommandError("expected 'support_cases region digit'")
+        #     region = params[0]
+        #     try: 
+        #         digit = int(params[1])
+        #     except ValueError:
+        #         raise CommandError('digit must be an integer')
+        #     if digit not in self.puzzle.symbols_python:
+        #         raise CommandError(f'digit {digit} invalid')
+        #     yield from self.support_cases_manual(digit, region)
         elif name == 'rfl':
             if len(params) != 0:
                 raise CommandError("expected 'rfl' with no arguments")
@@ -608,10 +576,10 @@ class ProofEngine:
             if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
             yield from self.naked_single(cell)
-        elif name == 'finish':
-            if len(params) != 0:
-                raise CommandError('finish takes no args')
-            self.finish()
+        # elif name == 'finish':
+        #     if len(params) != 0:
+        #         raise CommandError('finish takes no args')
+        #     self.finish()
         else:
             raise CommandError(f'unknown command {name}')
     
