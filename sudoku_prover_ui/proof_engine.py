@@ -48,7 +48,6 @@ class ProofEngine:
         self.puzzle = puzzle
         self._active_gen: Generator[str, str, None]
         self.terminal_prompt: str
-        self.current: State = State()
         self.journal: Journal = Journal(None)
         self.prepared_text = ''
         self.prepared_grid_changes: Dict[int,int] = {}
@@ -58,11 +57,12 @@ class ProofEngine:
         # any lemma or have block increases this by one, also any cases will but with the exception of the center dots
         self.proof_level = 0
         self._place_dot: bool = False
+        self.no_commit_flag: int = 0
 
     def setup(self):
         self.repl.open()
 
-        self.current = State()
+        self.current = State([None] * self.puzzle.cell_count)
 
 
         try:
@@ -124,9 +124,10 @@ class ProofEngine:
     def commit(self,cmd: str, proof_state: List[str]):
         """Commit work to the journal and update state"""
         delta = Delta([cmd],self.prepared_text,self.prepared_grid_changes,self.prepared_elimination_changes)
+        print('commiting')
         self.journal.add(delta)
-        self.current.add_delta(delta)
-        self.current.proof_state = proof_state
+        self.current.add_delta(delta,proof_state)
+        print(delta)
         self.prepared_text = ''
         self.prepared_grid_changes = {}
         self.prepared_elimination_changes = {}
@@ -149,6 +150,11 @@ class ProofEngine:
         # this code is good, lets commit it
         self.commit(cmd, goals)
 
+        # go back and collapse any subproofs that need collapsing
+        while self.terminal_prompt == 'SUBPROOF FINISHED':
+            self.terminal_prompt = self._active_gen.send('')
+
+
         return self.terminal_prompt
 
     def command_internal(self,cmd:str):
@@ -162,25 +168,53 @@ class ProofEngine:
             cmd = yield ''
             yield from self.handle_input(cmd)
     
+    @contextmanager
+    def subproof(self):
+        if self.no_commit_flag > 0:
+            # I think this will just store the subproof changes
+            # run the subproof commands to get the code
+            # and then restore the changes
+            subproof_grid_changes = self.prepared_grid_changes
+            subproof_elimination_changes = self.prepared_elimination_changes
+            self.prepared_grid_changes = {}
+            self.prepared_elimination_changes = {}
+            try:
+                yield
+            finally:
+                self.prepared_grid_changes = subproof_grid_changes
+                self.prepared_elimination_changes = subproof_elimination_changes
+            # done
+        else:
+            # get the starting index of the subproof
+            pre_subproof_state = self.current.copy()
+            start_delta = len(self.journal)
+            subproof_grid_changes = self.prepared_grid_changes
+            subproof_elimination_changes = self.prepared_elimination_changes
+            self.prepared_grid_changes = {}
+            self.prepared_elimination_changes = {}
+            try:
+                yield
+            finally:
+                print('journal',self.journal._history)
+                proof = self.journal.pop_subproof(start_delta)
+                cmds = list(proof.commands())
+                code = proof.lean_code_file()
+                proof_state = self.current.proof_state
+                delta = Delta(cmds,code,subproof_grid_changes,subproof_elimination_changes)
+                print('collapse')
+                self.journal.add(delta)
+                self.current = pre_subproof_state
+                self.current.add_delta(delta,proof_state)
+                print('journal',self.journal._history)
+
+
     def do_subproof(self, prompt: str) -> Generator[str,str,None]:
-        # get the starting index of the subproof
-        pre_subproof_state = self.current.copy()
-        start_delta = len(self.journal)
-        subproof_grid_changes = self.prepared_grid_changes
-        subproof_elimination_changes = self.prepared_elimination_changes
-        self.prepared_grid_changes = {}
-        self.prepared_elimination_changes = {}
-        # go get a command to run, TODO or take from parameters
-        cmd = yield prompt
-        yield from self.handle_input(cmd)
-        # proof done, collapse to one delta
-        proof = self.journal.pop_subproof(start_delta)
-        cmds = list(proof.commands())
-        code = proof.lean_code_file()
-        delta = Delta(cmds,code,subproof_grid_changes,subproof_elimination_changes)
-        self.journal.add(delta)
-        self.current = pre_subproof_state
-        self.current.add_delta(delta)
+        with self.subproof():
+            # go get a command to run, TODO or take from parameters
+            cmd = yield prompt
+            yield from self.handle_input(cmd)
+
+            yield 'SUBPROOF FINISHED'
 
     def place_dot(self):
         self._place_dot = True
@@ -394,13 +428,20 @@ class ProofEngine:
             raise CommandError(f'cell {cell} has no candidates, this should be solved by cell_cases')
         digit = not_eliminated
         
+        self.no_commit_flag += 1
         # naked single macro. fills the cell with the digit by doing cases on that cell
         # yield from self.fill(cell,digit,self.cell_cases(cell,{digit: self.rfl()}))
         # for right now, this function has to has to handle the genartors itself
         gen = self.fill(cell,digit)
         _ = next(gen)
-        _ = gen.send(f'cell_cases f {cell}')
-        _ = gen.send('rfl')
+        _ = gen.send(f'cell_cases {cell}')
+        try:
+            _ = gen.send('rfl')
+        except StopIteration:
+            pass
+        
+        self.no_commit_flag -= 1
+
         return
         yield
 

@@ -15,16 +15,12 @@ Undo is simply removing the last one, (maybe adding it to a redo stack) and reca
 Sub-proofs will know which index they start, we will keep the full state at that index
 Once the proof is complete, go back to the entry state, make one new delta with all that stuff.
 
+A couple things
+I think error handling in do subproof is broken, if there is an error, I don't want it to collapse
+right now for cell cases, the subproof is considered to be cell_cases 5, rfl
+In the case of have, that it correct, but for a multibranch, the subproof is just rfl with no header code.
 
-Leaf commands
-- any validation checks
-- generate lean code
-- figure out grid changes and elimination changes
-- return
+we are losing text after a subproof
+After rfl, cell_cases writes more text, but this text doesn't get committed until the next command cycle
 
-Single branch commands
-- any validation checks
-- generate some header code
-- figure out changes
-- create subproof, do the subproof
-- finish
+

@@ -16,26 +16,16 @@ class Delta:
 
 @dataclass
 class State:
+    grid: List[int | None]
     commands_list: List[str] = field(default_factory=list) # pyright: ignore[reportUnknownVariableType]
     lean_file: str = ''
-    grid: List[int | None] = field(default_factory=list) # pyright: ignore[reportUnknownVariableType]
     eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = field(default_factory=dict) # pyright: ignore[reportUnknownVariableType]
     # proof_state is the lean context. proof_state is None if unknown, [] if no goals, has items when there are goals
     proof_state: List[str] | None = field(default=None) # pyright: ignore[reportUnknownVariableType]
 
-    @classmethod
-    def from_deltas(cls, jrnl: "Journal", _self: "State | None" = None) -> "State":
-        """Create a full state from a list of deltas, optionally from a state. Otherwise, from a blank state."""
-        if _self is None:
-            _self = cls()
-        
-        _self.add_journal(jrnl)
-        
-        return _self
-
     def copy(self) -> "State":
         """Create a copy of this state"""
-        return State(self.commands_list.copy(),self.lean_file,self.grid.copy(),deepcopy(self.eliminations),self.proof_state)
+        return State(self.grid.copy(),self.commands_list.copy(),self.lean_file,deepcopy(self.eliminations),self.proof_state)
 
     def add_journal(self, jrnl: "Journal"):
         for delta in jrnl:
@@ -54,6 +44,11 @@ class State:
             for digit, info in d.items():
                 self.eliminations[cell][digit] = info
         self.proof_state = proof_state
+
+    def count_goals(self):
+        if self.proof_state is None:
+            raise Exception('proof state is unknown at count_goals')
+        return len(self.proof_state)
 
 class Journal:
     _history: List[Delta] = []
@@ -84,8 +79,7 @@ class Journal:
 
     def commands(self) -> Generator[str, None, None]:
         for delta in self._history:
-            for cmds in delta.user_commands:
-                yield from cmds
+            yield from delta.user_commands
     
     def lean_code_file(self) -> str:
         code_str = ''
