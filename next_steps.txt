@@ -24,3 +24,6 @@ we are losing text after a subproof
 After rfl, cell_cases writes more text, but this text doesn't get committed until the next command cycle
 
 
+I'm okay with a ghost delta (one with no command) to finish out a subproof, 
+the delta stuff is just to make sure undo is works, 
+but since this is just about to be collapsed anyway, it will continue on just fine.
