@@ -27,3 +27,7 @@ After rfl, cell_cases writes more text, but this text doesn't get committed unti
 I'm okay with a ghost delta (one with no command) to finish out a subproof, 
 the delta stuff is just to make sure undo is works, 
 but since this is just about to be collapsed anyway, it will continue on just fine.
+
+cell cases doesn't add any changes for its own subproof because it is meant to prove the current goal in each case (or show that a case is impossible)
+you could say that the goal change made for a cell cases proof is (f 5 = x -> current goal)
+
