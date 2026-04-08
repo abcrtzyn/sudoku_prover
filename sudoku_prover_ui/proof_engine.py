@@ -640,39 +640,6 @@ apply xin"""
             raise CommandError(f'unknown command {name}')
     
 
-#     @contextmanager
-#     def subproof(self):
-#         if self.is_reconstructing:
-#             yield
-#             return
-        
-#         # get the index of where the sub-proof starts
-#         start_index = len(self.journal)
-#         snapshot = self.current.copy()
-
-#         try:
-#             # give control to the caller
-#             yield
-#             # done
-#             # we need the proof state to put as the end of this block
-#             proof_state = self.current.proof_state
-#             # get the sub-proof steps while also removing them from history
-#             steps = self.journal.pop_subproof(start_index)
-#             # create the delta
-#             delta = Delta(list(steps.commands()),steps.lean_code_file(),grid_changes,elimination_changes)
-#             # append it to the journal
-#             self.journal.add(delta)
-#             # update the current state
-#             self.current = snapshot
-#             # keeping the proof state assumes that we are at the end of the sub-proof which should be true
-#             self.current.add_delta(delta,proof_state)
-            
-
-#         except Exception as e:
-#             # deal with errors
-#             raise e
-
-
 #     def undo(self):
 #         # just get rid of the last command
 #         try:
