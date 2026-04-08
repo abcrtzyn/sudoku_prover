@@ -1,5 +1,6 @@
 
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Any, Dict, Generator, List, ParamSpec, Tuple, TypeVar
 
 from sudoku_prover_ui.journal import Delta, Journal, State
@@ -26,6 +27,14 @@ word_to_number = {
 
 class CommandError(Exception):
     pass
+
+@dataclass
+class CloseSubproofInfo:
+    start_delta: int
+    start_snapshot: State
+    grid_changes: Dict[int,int]
+    elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]]
+
 
 
 
@@ -58,6 +67,7 @@ class ProofEngine:
         self.proof_level = 0
         self._place_dot: bool = False
         self.no_commit_flag: int = 0
+        self.close_subproof: CloseSubproofInfo | None = None
 
     def setup(self):
         self.repl.open()
@@ -150,11 +160,27 @@ class ProofEngine:
         # this code is good, lets commit it
         self.commit(cmd, goals)
 
-        # go back and collapse any subproofs that need collapsing
-        while self.terminal_prompt == 'SUBPROOF FINISHED':
-            self.terminal_prompt = self._active_gen.send('')
+        # collapse any subproofs that need to be collapsed
+        if self.close_subproof is not None:
+            start_delta = self.close_subproof.start_delta
+            pre_subproof_state = self.close_subproof.start_snapshot
+            subproof_grid_changes = self.close_subproof.grid_changes
+            subproof_elimination_changes = self.close_subproof.elimination_changes
 
+            print('journal',self.journal._history)
+            proof = self.journal.pop_subproof(start_delta)
+            cmds = list(proof.commands())
+            code = proof.lean_code_file()
+            proof_state = self.current.proof_state
+            delta = Delta(cmds,code,subproof_grid_changes,subproof_elimination_changes)
+            print('collapse')
+            self.journal.add(delta)
+            self.current = pre_subproof_state
+            self.current.add_delta(delta,proof_state)
+            print('journal',self.journal._history)
 
+            self.close_subproof = None
+        
         return self.terminal_prompt
 
     def command_internal(self,cmd:str):
@@ -168,53 +194,41 @@ class ProofEngine:
             cmd = yield ''
             yield from self.handle_input(cmd)
     
-    # @contextmanager
-    # def subproof(self):
-    #     if self.no_commit_flag > 0:
-    #         # I think this will just store the subproof changes
-    #         # run the subproof commands to get the code
-    #         # and then restore the changes
-    #         subproof_grid_changes = self.prepared_grid_changes
-    #         subproof_elimination_changes = self.prepared_elimination_changes
-    #         self.prepared_grid_changes = {}
-    #         self.prepared_elimination_changes = {}
-    #         try:
-    #             yield
-    #         finally:
-    #             self.prepared_grid_changes = subproof_grid_changes
-    #             self.prepared_elimination_changes = subproof_elimination_changes
-    #         # done
-    #     else:
-    #         # get the starting index of the subproof
-    #         pre_subproof_state = self.current.copy()
-    #         start_delta = len(self.journal)
-    #         subproof_grid_changes = self.prepared_grid_changes
-    #         subproof_elimination_changes = self.prepared_elimination_changes
-    #         self.prepared_grid_changes = {}
-    #         self.prepared_elimination_changes = {}
-    #         try:
-    #             yield
-    #         finally:
-    #             print('journal',self.journal._history)
-    #             proof = self.journal.pop_subproof(start_delta)
-    #             cmds = list(proof.commands())
-    #             code = proof.lean_code_file()
-    #             proof_state = self.current.proof_state
-    #             delta = Delta(cmds,code,subproof_grid_changes,subproof_elimination_changes)
-    #             print('collapse')
-    #             self.journal.add(delta)
-    #             self.current = pre_subproof_state
-    #             self.current.add_delta(delta,proof_state)
-    #             print('journal',self.journal._history)
+    @contextmanager
+    def subproof(self):
+        if self.no_commit_flag > 0:
+            # I think this will just store the subproof changes
+            # run the subproof commands to get the code
+            # and then restore the changes
+            subproof_grid_changes = self.prepared_grid_changes
+            subproof_elimination_changes = self.prepared_elimination_changes
+            self.prepared_grid_changes = {}
+            self.prepared_elimination_changes = {}
+            try:
+                yield
+            finally:
+                self.prepared_grid_changes = subproof_grid_changes
+                self.prepared_elimination_changes = subproof_elimination_changes
+            # done
+        else:
+            # get the starting index of the subproof
+            pre_subproof_state = self.current.copy()
+            start_delta = len(self.journal)
+            subproof_grid_changes = self.prepared_grid_changes
+            subproof_elimination_changes = self.prepared_elimination_changes
+            self.prepared_grid_changes = {}
+            self.prepared_elimination_changes = {}
+            try:
+                yield
+            finally:
+                self.close_subproof = CloseSubproofInfo(start_delta,pre_subproof_state,subproof_grid_changes,subproof_elimination_changes)
 
 
-    # def do_subproof(self, prompt: str) -> Generator[str,str,None]:
-    #     with self.subproof():
-    #         # go get a command to run, TODO or take from parameters
-    #         cmd = yield prompt
-    #         yield from self.handle_input(cmd)
-
-    #         yield 'SUBPROOF FINISHED'
+    def do_subproof(self, prompt: str) -> Generator[str,str,None]:
+        with self.subproof():
+            # go get a command to run, TODO or take from parameters
+            cmd = yield prompt
+            yield from self.handle_input(cmd)
 
     def place_dot(self):
         self._place_dot = True
@@ -300,10 +314,8 @@ class ProofEngine:
         else:
             self.tactic(f"have {name}: {goal} := by")
         with self.indent():
-            # yield from self.do_subproof(goal)
-            cmd = yield goal
-            yield from self.handle_input(cmd)
-
+            yield from self.do_subproof(goal)
+            
 
         if self.proof_level == 0:
             # add a newline for top level goals.
@@ -314,8 +326,8 @@ class ProofEngine:
         """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
 
         # set up what changes will occur after the subproof
-        # self.prepared_grid_changes[cell] = digit
-        # self.region_eliminate(cell,digit,f'c{cell}')
+        self.prepared_grid_changes[cell] = digit
+        self.region_eliminate(cell,digit,f'c{cell}')
 
         yield from self._have(f'c{cell}', f'f {cell} = {digit}')
         
@@ -331,9 +343,7 @@ class ProofEngine:
                     self.generate_elimination_proof(cell,digit,'h')
                     # TODO we also need to check for accepting cases, not yet
                 else:
-                    cmd = yield f'cell_cases {digit}'
-                    yield from self.handle_input(cmd)
-                    # yield from self.do_subproof(f'cell_cases {digit}')
+                    yield from self.do_subproof(f'cell_cases {digit}')
             
         
 
