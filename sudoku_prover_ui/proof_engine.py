@@ -640,6 +640,13 @@ apply xin"""
             raise CommandError(f'unknown command {name}')
     
 
+# Undo should be within reach.
+# I belive the issue we will run into is that we still need to update state (even in collapsed subproofs)
+# so that the commands know what they are dealing with
+# This will be true for all macro commands, including naked_single, even if it doesn't matter as much
+# There will have to be commits to change grid state, and the user command level commits to change the user commands and lean code
+
+
 #     def undo(self):
 #         # just get rid of the last command
 #         try:
