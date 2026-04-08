@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import re
 from typing import Any, Dict, Generator, List, ParamSpec, Tuple, TypeVar
 
+from sudoku_prover_ui.file_exporter import export_file
 from sudoku_prover_ui.journal import Delta, Journal, State
 from sudoku_prover_ui.lean_repl import LeanLspRepl
 from sudoku_prover_ui.puzzle import Puzzle
@@ -144,6 +145,34 @@ class ProofEngine:
     def command(self,cmd:str):
         """user input function, given a command, gives it to the active proof generator,
         returns with the next user propmt"""
+        if cmd == '':
+            raise CommandError("No command given")
+        args = cmd.split()
+        name = args[0]
+        params = args[1:]
+
+        try:
+            match name:
+                case 'exit':
+                    exit(0)
+                case 'save':
+                    if len(params) != 1:
+                        raise CommandError('expected "save filepath"')
+                    
+                    export_file(params[0],self.puzzle,self.journal.export_commands())
+                    return
+                    
+                case 'undo':
+                    raise NotImplementedError('undo is not implemented yet')
+                case _:
+                    raise CommandError('unknown ui command')
+            raise Exception('known command not handled properly. Every non-proof-engine command must return early or exit or error')
+        except CommandError as e:
+            if e.args[0] == 'unknown ui command':
+                pass
+
+
+
         try:
             self.terminal_prompt = self._active_gen.send(cmd)
         except Exception:
@@ -566,10 +595,7 @@ apply xin"""
         args = cmd.split()
         name = args[0]
         params = args[1:]
-        if name == 'exit':
-            # ignores all arguments
-            exit(0)
-        elif name == 'fill':
+        if name == 'fill':
             if len(params) != 2:
                 raise CommandError("expected 'fill cell digit'")
             try:

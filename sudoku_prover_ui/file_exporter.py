@@ -3,13 +3,13 @@
 import hashlib
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Iterable
 from sudoku_prover_ui.file_parser import import_file
 from sudoku_prover_ui.puzzle import Puzzle, Template
 
 grammar_file = Path(__file__).resolve().parent.parent.joinpath('suko.lark')
 
-EXPECTED_HASH = "cbf47ddf" # current version
+EXPECTED_HASH = "06db54e2" # current version
 
 with open(grammar_file, 'rb') as f:
     current = hashlib.md5(f.read()).hexdigest()[:8]
@@ -23,7 +23,7 @@ def write_constraints(f: TextIOWrapper,constraints: Dict[str,str]):
 
 
 
-def export_file(filename: str, puzzle: Puzzle | Template, proof: List[str] | None = None):
+def export_file(filename: str, puzzle: Puzzle | Template, proof: Iterable[str] | None = None):
     proof = proof or []
     is_puzzle = isinstance(puzzle,Puzzle)
 

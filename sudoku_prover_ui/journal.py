@@ -78,9 +78,15 @@ class Journal:
 
 
     def commands(self) -> Generator[str, None, None]:
+        """commands gives the full list of commands, including all setup stuff, use export_commands to not include setup"""
         for delta in self._history:
             yield from delta.user_commands
     
+    def export_commands(self) -> Generator[str,None,None]:
+        """export_commands gives the list of user commands, not the ones created by setup"""
+        for delta in self._history[self.protected_steps:]:
+            yield from delta.user_commands
+
     def lean_code_file(self) -> str:
         code_str = ''
         for delta in self._history:
