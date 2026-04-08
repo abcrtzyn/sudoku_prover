@@ -1,0 +1,18 @@
+I'm considering a different approach to command parsing
+
+Rather than give the generator stack a string with the command to run, 
+what if the command is parsed and and found before it is given to the generator
+
+command() where callers of proof engine run commands would check every command (or pass the processing onto modules or libraries or something)
+It would do some checks on the parameters, and then the generator function would be given to the active generator.
+
+As far as error handling is concerned, macro commands should always check that they can complete before calling their functions (they dont take input from command)
+meaning that if sub commands create an error, it is the macro commands fault and should cause a crash
+
+The only places where users can give commands is in top level (main) and subproof, that should be it.
+
+
+As far as error handling for the user case, basically main and subproof need to have error handling wrappers to handle the check errors.
+Is there a way that I can enforce onto developers that checks must happen that raise command errors (that will not crash unless in user scope) and in writing, generation errors which will crash.
+
+
