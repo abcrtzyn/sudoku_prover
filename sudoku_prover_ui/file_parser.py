@@ -1,7 +1,7 @@
 
 import codecs
 import os
-from typing import Any, Dict, List, Set, Tuple, cast
+from typing import Any, Dict, List, Literal, Set, Tuple, cast, overload
 
 from lark import Lark, Token, Tree
 from lark.exceptions import UnexpectedInput
@@ -55,14 +55,18 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self.is_puzzle = is_puzzle
         self.file_name = file_name
         self._metadata: Dict[str,str] = {}
+        self._lean_source: str | None = None
         self._lean_code: str | None = None
-        self._cell_count = None
-        self._cell_layout = None
-        self._symbols = None
+        self._cell_count: int | None = None
+        self._cell_layout: List[Tuple[int,int]] | None = None
+        self._symbols: str | None = None
         self._puzzle_level_constraints: Dict[str,str] = {}
         self._import_constraints = {}
         self._imported_constraints: Dict[str,str] = {}
         self._lean_imports = []
+        self._cell_count_defined_in_file: bool = False
+        self._cell_layout_defined_in_file: bool = False
+        self._symbols_defined_in_file: bool = False
         self.seen_files = seen_files
     
     def puzzle_definition(self, tree: Tree[Any]):
@@ -104,15 +108,24 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
                 self._puzzle_level_constraints,
                 self._import_constraints,
                 self._imported_constraints,
-                self._lean_imports)
+                self._lean_imports,
+                self._cell_count_defined_in_file,
+                self._cell_layout_defined_in_file,
+                self._symbols_defined_in_file
+            )
 
         else:
             # its a template
+            # basically this means the template section didn't happen, which should never happen
+            # becasue we have checked that the file has a template before.
+            if self._lean_source is None:
+                raise ValueError('No lean_source was given in the template section')
             if self._lean_code is None:
                 raise ValueError('No lean_code was given in the template section')
 
 
             return Template(
+                self._lean_source,
                 self._lean_code,
                 self._cell_count,
                 self._cell_layout,
@@ -120,7 +133,11 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
                 self._puzzle_level_constraints,
                 self._import_constraints,
                 self._imported_constraints,
-                self._lean_imports)
+                self._lean_imports,
+                self._cell_count_defined_in_file,
+                self._cell_layout_defined_in_file,
+                self._symbols_defined_in_file
+            )
 
 
     def template_section(self, tree: Tree[Any]):
@@ -128,7 +145,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
             raise Exception(f"{self.file_name}:{tree.meta.line}:{tree.meta.column} Can not create a puzzle from a suko TEMPLATE")
         lean_module = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
         lean_code = clean_str(tree.children[1]) # pyright: ignore[reportArgumentType]
-        
+        self._lean_source = lean_module
         self._add_lean_imports([lean_module])
         self._lean_code = lean_code
     
@@ -138,7 +155,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
         self._metadata[key] = value
             
     def _import_template(self,file_name:str,ident:str,tree: Tree[Any]):
-        puzzle, _ = cast(Tuple[Template,Any],import_file(file_name,is_puzzle=False,seen_files=self.seen_files))
+        puzzle, _ = import_file(file_name,is_puzzle=False,seen_files=self.seen_files)
         
         if puzzle.cell_count is not None:
             self._add_cell_count(puzzle.cell_count) 
@@ -164,10 +181,12 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
     def cell_count(self, tree: Tree[Any]):
         val = int(tree.children[0]) # pyright: ignore[reportArgumentType]
         self._add_cell_count(val)
+        self._cell_count_defined_in_file = True
 
     def cell_layout(self, tree: Tree[Any]):
         layout = cast(List[Tuple[int, int]],self.visit_children(tree)[0]) # pyright: ignore[reportUnknownMemberType]
         self._add_cell_layout(layout)
+        self._cell_layout_defined_in_file = True
 
     def _tuple(self, tree: Tree[Any]):
         return (int(tree.children[0]),int(tree.children[1])) # pyright: ignore[reportArgumentType]
@@ -175,6 +194,7 @@ class PuzzleInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgumen
     def symbols(self, tree: Tree[Any]):
         symbols = clean_str(tree.children[0]) # pyright: ignore[reportArgumentType]
         self._add_symbols(symbols)
+        self._symbols_defined_in_file = True
 
     def imported_constraint(self, tree: Tree[Any]):
         ident = cast(str,tree.children[0].value)  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
@@ -223,6 +243,12 @@ class ProofInterpreter(Interpreter): # pyright: ignore[reportMissingTypeArgument
             raise NotImplementedError(f"section '{tree.data}' not implemented yet\n")
         return self.visit_children(tree) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
+
+
+@overload
+def import_file(file_name: str, is_puzzle: Literal[True] = True, seen_files: Set[str] | None = None) -> Tuple[Puzzle, List[Tuple[str, int]]]: ...
+@overload
+def import_file(file_name: str, is_puzzle: Literal[False], seen_files: Set[str] | None = None) -> Tuple[Template, List[Tuple[str,int]]]: ...
 
 def import_file(file_name: str,is_puzzle: bool = True, seen_files: Set[str] | None = None):
     # change the file to a full path for error reporting
@@ -278,6 +304,6 @@ def import_file(file_name: str,is_puzzle: bool = True, seen_files: Set[str] | No
 
 
 if __name__ == "__main__":
-    puzzle, proof = import_file('Puzzles/Framework/9x9Easy.suko',True)
+    puzzle, proof = import_file('Puzzles/Framework/9x9Easy.suko')
     print(puzzle)
     print(proof)
