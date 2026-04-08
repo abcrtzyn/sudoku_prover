@@ -6,11 +6,8 @@
 #     test all the ui stuff you want with fast start up 
 
 
-import re
-from typing import Any, Dict, Generator, List, Tuple
-
+from sudoku_prover_ui.journal import State
 from sudoku_prover_ui.puzzle import Puzzle
-from sudoku_prover_ui.sudoku_state import SudokuState
 
 from pathlib import Path
 
@@ -45,8 +42,6 @@ class DummyProofEngine:
         #     f'SudokuProverLogic.{self.puzzle.symbols}',
         #     'SudokuProverLogic.Tactics'
         # ],timeout=60)
-        grid: List[int | None] = [None for _ in range(self.puzzle.cell_count)]
-        eliminations: Dict[int,Dict[int,Tuple[str,Any]]] = {}
 
         # give the puzzle to Lean
         # self.server.load_definitions(self.puzzle.generate_lean_structure()) # pyright: ignore[reportUnknownMemberType]
@@ -56,10 +51,7 @@ class DummyProofEngine:
         # proof_state = self.server.goal_tactic(proof_state,  # pyright: ignore[reportUnknownMemberType]
 # """intro S H
 # have k: IsSound S [] := by intro c d h; cases h""")
-        self.current = SudokuState([],grid,eliminations)
-
-        self.undo_stack: List[SudokuState] = []
-        self.history: List[str] = []
+        self.current = State([None]*self.puzzle.cell_count,)
         
         # process the puzzle constraints
         for _, constraint in self.puzzle.pythonized_constraints.items():
