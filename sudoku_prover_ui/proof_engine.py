@@ -135,10 +135,8 @@ class ProofEngine:
     def commit(self,cmd: str, proof_state: List[str]):
         """Commit work to the journal and update state"""
         delta = Delta([cmd],self.prepared_text,self.prepared_grid_changes,self.prepared_elimination_changes)
-        print('commiting')
         self.journal.add(delta)
         self.current.add_delta(delta,proof_state)
-        print(delta)
         self.prepared_text = ''
         self.prepared_grid_changes = {}
         self.prepared_elimination_changes = {}
@@ -168,17 +166,14 @@ class ProofEngine:
             subproof_grid_changes = self.close_subproof.grid_changes
             subproof_elimination_changes = self.close_subproof.elimination_changes
 
-            print('journal',self.journal._history)
             proof = self.journal.pop_subproof(start_delta)
             cmds = list(proof.commands())
             code = proof.lean_code_file()
             proof_state = self.current.proof_state
             delta = Delta(cmds,code,subproof_grid_changes,subproof_elimination_changes)
-            print('collapse')
             self.journal.add(delta)
             self.current = pre_subproof_state
             self.current.add_delta(delta,proof_state)
-            print('journal',self.journal._history)
 
             self.close_subproof = None
         
