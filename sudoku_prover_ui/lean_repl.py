@@ -39,8 +39,8 @@ class LeanLspRepl:
 
         self._client: lc.LeanLSPClient | None = None
         self._sfc: lc.SingleFileClient | None = None
-        self.history: List[str] = []
-        self.full_text: str = ''
+        self.history: None = None
+        self.full_text: None = None
     
     @property
     def client(self) -> lc.LeanLSPClient:
@@ -75,18 +75,10 @@ class LeanLspRepl:
     def __exit__(self, exc_type, exc_val, exc_tb): # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]
         self.close()
 
-    def update_server(self):
-        self.full_text = "".join(self.history)
-        self.sfc.update_file_content(self.full_text)
-        # print('file content\n',self.sfc.get_file_content(),sep='')
-
-    def run_command(self, code: str) -> Tuple[List[str],List[Dict[str,Any]]]:
-        # code += '\n'
-        # Append the new code to history
-        self.history.append(code)
-        self.update_server()
-
-        line_num = self.full_text.count('\n')
+    def check_code(self, full_text: str) -> Tuple[List[str],List[Dict[str,Any]]]:
+        self.sfc.update_file_content(full_text)
+        
+        line_num = full_text.count('\n')
         col_num = 0
 
         if g := cast(Dict[str,Any] | None, self.sfc.get_goal(line_num,col_num)): # pyright: ignore[reportUnknownMemberType]
@@ -130,6 +122,8 @@ class LeanLspRepl:
         return (goals,real_diags) # pyright: ignore[reportUnknownVariableType]
 
 def main():
+    history: List[str] = []
+
     with LeanLspRepl(".") as repl:
         print('repl tester, exit exits and undo removes the last entered command\n')
 
@@ -137,12 +131,10 @@ def main():
             cmd = input("lean> ")
             if cmd == "exit": break
             if cmd == "undo":
-                if len(repl.history) > 2:
-                    repl.history.pop()
-                    repl.update_server()
-                continue
+                if len(history) > 2:
+                    history.pop()
 
-            repl.run_command(cmd)
+            repl.run_command('\n'.join(history))
 
 
 
