@@ -134,7 +134,7 @@ def main():
                 if len(history) > 2:
                     history.pop()
 
-            repl.run_command('\n'.join(history))
+            repl.check_code('\n'.join(history))
 
 
 
