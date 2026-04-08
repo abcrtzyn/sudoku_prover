@@ -1,6 +1,0 @@
-On this branch the most important goals are
-- actually adding the save button to the ui
-
-Other goals
-multi line strings and cell_layout list #63 and #64
-lean imports #74
