@@ -1,5 +1,4 @@
 On this branch the most important goals are
-- finding a spot to put the save command
 - actually adding the save button to the ui
 
 Other goals
