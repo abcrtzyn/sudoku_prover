@@ -1,6 +1,7 @@
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+import re
 from typing import Any, Dict, Generator, List, ParamSpec, Tuple, TypeVar
 
 from sudoku_prover_ui.journal import Delta, Journal, State
@@ -332,7 +333,7 @@ class ProofEngine:
         yield from self._have(f'c{cell}', f'f {cell} = {digit}')
         
 
-    def cell_cases(self, cell: int, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
+    def cell_cases(self, cell: int) -> Generator[str,str,None]:
         self.tactic(f'cases h: f {cell}')
         
         with self.indent():
@@ -462,106 +463,106 @@ class ProofEngine:
 
 
 
-# #     def finish(self):
-# #         """Where all the digits are known, this function finishes out the proof.
-# #         This finishes out the proof by 
-# #         - creating the function g, 
-# #         - proving it satisfies all constraints (which could need some proof help, but most of it should be automatic)
-# #         - showing that it is the only function using all the proofs of each digit that were created in the solving process"""
+    def finish(self):
+        """Where all the digits are known, this function finishes out the proof.
+        This finishes out the proof by 
+        - creating the function g, 
+        - proving it satisfies all constraints (which could need some proof help, but most of it should be automatic)
+        - showing that it is the only function using all the proofs of each digit that were created in the solving process"""
 
-# #         # going to be using it a lot, so local variable
-# #         grid = self.current.grid
+        # going to be using it a lot, so local variable
+        grid = self.current.grid
 
 
-# #         if any([x is None for x in grid]):
-# #             # not all digits are known.
-# #             raise CommandError('Not all digits are solved, can not finish proof')
+        if any([x is None for x in grid]):
+            # not all digits are known.
+            raise CommandError('Not all digits are solved, can not finish proof')
         
-# #         self.tactic(f'theorem SolvePuzzle {{S : Set (Nat → {self.puzzle.symbols})}} (H : ∀ f, f ∈ S ↔ Puzzle f): ∃! (g: Nat -> {self.puzzle.symbols}), g ∈ S := by')
-# #         self.proof_level += 1
+        self.tactic(f'theorem SolvePuzzle {{S : Set (Nat → {self.puzzle.symbols})}} (H : ∀ f, f ∈ S ↔ Puzzle f): ∃! (g: Nat -> {self.puzzle.symbols}), g ∈ S := by')
+        self.proof_level += 1
 
-# #         # create the function g and use it
-# #         # using the digits proved to create the function
-# #         self.tactic(
-# # f"""let digits: Array {self.puzzle.symbols} := #{str(grid).replace("'","")}
-# # -- for use later, say how long it is
-# # have len: digits.size = {len(grid)} := by decide
-# # -- define the function g and use it
-# # let g : Nat → {self.puzzle.symbols} := fun x => digits[x]? |>.getD {self.puzzle.symbols_python[0]}
-# # use g
-# # constructor -- splits into testing constraints and uniqueness
-# # · simp only
-# #   apply (H g).mpr""")
-# #         self.proof_level += 1
-# #         # next is to prove that obeys the constraints of the puzzle
-# #         # this is done by splitting up the structure
-# #         # at this point it is all hard coded to the specific puzzle
-# #         # later there will be functions to prove UniqueSet constraints, theromemeters, etc.
-# #         self.tactic(
-# # """constructor
-# # · -- outside the grid
-# #   intro n hn
-# #   unfold g
-# #   conv => enter [1, 1]; apply Array.getElem?_eq_none (by {rw [len]; assumption})
-# #   simp"""
-# #         )
-# #         self.proof_level += 1
-# #         # this relies on the order of .items() and values() being consistent, we can change data structures to a list or something if that ends up not being true
-# #         for _, constraint in self.puzzle.top_level_constraints():
-# #             self.place_dot()
-# #             if re.match(r'f\s+\d+\s*=\s*\d',constraint):
-# #                 self.tactic("decide")
-# #             elif constraint.startswith('UniqueSet'):
-# #                 self.tactic('apply injOn_by_card; decide')
-# #             else:
-# #                 match constraint:
-# #                     case "NormalSudoku f":
-# #                         self.tactic("constructor; iterate 27 apply injOn_by_card; decide")
-# #                     case _:
-# #                         raise ValueError(f'do not know how to prove the constraint {constraint}')
+        # create the function g and use it
+        # using the digits proved to create the function
+        self.tactic(
+f"""let digits: Array {self.puzzle.symbols} := #{str(grid).replace("'","")}
+-- for use later, say how long it is
+have len: digits.size = {len(grid)} := by decide
+-- define the function g and use it
+let g : Nat → {self.puzzle.symbols} := fun x => digits[x]? |>.getD {self.puzzle.symbols_python[0]}
+use g
+constructor -- splits into testing constraints and uniqueness
+· simp only
+  apply (H g).mpr""")
+        self.proof_level += 1
+        # next is to prove that obeys the constraints of the puzzle
+        # this is done by splitting up the structure
+        # at this point it is all hard coded to the specific puzzle
+        # later there will be functions to prove UniqueSet constraints, theromemeters, etc.
+        self.tactic(
+"""constructor
+· -- outside the grid
+  intro n hn
+  unfold g
+  conv => enter [1, 1]; apply Array.getElem?_eq_none (by {rw [len]; assumption})
+  simp"""
+        )
+        self.proof_level += 1
+        # this relies on the order of .items() and values() being consistent, we can change data structures to a list or something if that ends up not being true
+        for _, constraint in self.puzzle.top_level_constraints():
+            self.place_dot()
+            if re.match(r'f\s+\d+\s*=\s*\d',constraint):
+                self.tactic("decide")
+            elif constraint.startswith('UniqueSet'):
+                self.tactic('apply injOn_by_card; decide')
+            else:
+                match constraint:
+                    case "NormalSudoku f":
+                        self.tactic("constructor; iterate 27 apply injOn_by_card; decide")
+                    case _:
+                        raise ValueError(f'do not know how to prove the constraint {constraint}')
 
-# #         self.proof_level -= 1
-# #         # uniqueness start here
-# #         self.place_dot()
-# #         self.tactic(
-# # f"""intro h hh
-# # replace H := (H h).mp hh
-# # ext x
-# # by_cases xin: x < {len(grid)}
-# # · interval_cases x"""
-# #         )
-# #         self.proof_level += 2
-# #         # now to get the proof for each cell
-# #         for cell in range(len(grid)):
-# #             self.place_dot()
-# #             self.tactic(f'exact (c{cell} H)')
-# #         self.proof_level -= 1
-# #         # and handle the outside the grid normalization
-# #         self.place_dot()
-# #         self.tactic(
-# # f"""rw [H.outside_grid]
-# # · unfold g
-# #   simp at xin
-# #   conv => enter [2,1]; apply Array.getElem?_eq_none (by {{rw [len]; assumption}})
-# #   simp
-# # push_neg at xin
-# # apply xin"""
-# #         )
-# #         _, diags = self._send_proof()
+        self.proof_level -= 1
+        # uniqueness start here
+        self.place_dot()
+        self.tactic(
+f"""intro h hh
+replace H := (H h).mp hh
+ext x
+by_cases xin: x < {len(grid)}
+· interval_cases x"""
+        )
+        self.proof_level += 2
+        # now to get the proof for each cell
+        for cell in range(len(grid)):
+            self.place_dot()
+            self.tactic(f'exact (c{cell} H)')
+        self.proof_level -= 1
+        # and handle the outside the grid normalization
+        self.place_dot()
+        self.tactic(
+f"""rw [H.outside_grid]
+· unfold g
+  simp at xin
+  conv => enter [2,1]; apply Array.getElem?_eq_none (by {{rw [len]; assumption}})
+  simp
+push_neg at xin
+apply xin"""
+        )
 
-# #         self.proof_level -= 3
-        
-# #         # proof complete
-# #         # print(self.repl.full_text)
+        self.proof_level -= 3
 
-# #         if not diags:
-# #             return
-# #         for diag in diags:
-# #             print('Lean diag level',diag['severity'])
-# #             print(diag['fullRange'],diag['range'])
-# #             print(diag['message'])
 
-# #         raise Exception()
+        # proof complete
+        # print(self.repl.full_text)
+
+        # if not diags:
+        #     return
+        # for diag in diags:
+        #     print('Lean diag level',diag['severity'])
+        #     print(diag['fullRange'],diag['range'])
+        #     print(diag['message'])
+
+        # raise Exception()
 
 
     def handle_input(self, cmd: str) -> Generator[str,str,None]:
@@ -631,10 +632,10 @@ class ProofEngine:
             if not (0 <= cell < self.puzzle.cell_count):
                 raise CommandError(f'cell {cell} out of range')
             yield from self.naked_single(cell)
-        # elif name == 'finish':
-        #     if len(params) != 0:
-        #         raise CommandError('finish takes no args')
-        #     self.finish()
+        elif name == 'finish':
+            if len(params) != 0:
+                raise CommandError('finish takes no args')
+            self.finish()
         else:
             raise CommandError(f'unknown command {name}')
     
