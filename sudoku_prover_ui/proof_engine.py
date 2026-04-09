@@ -83,7 +83,6 @@ class ProofEngine:
 
         self.current = State([None] * self.puzzle.cell_count)
 
-
         try:
             # imports
             import_text = ''
