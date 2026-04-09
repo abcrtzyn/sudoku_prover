@@ -1,5 +1,15 @@
 I'm considering a different approach to command parsing
 
+A lot of basic error handling is done, we can recover from what we need to recover, and potentially crash where we need to crash
+Still need to move the handle input outside of generator scope, see below for details
+generators will no longer take in strings but functions/generators
+
+Then I'd like to merge onto develop, shift all (except finish maybe) tactics outside of the proof engine
+
+Once that happens, tactics really start to make modules
+
+
+
 Rather than give the generator stack a string with the command to run, 
 what if the command is parsed and and found before it is given to the generator
 
