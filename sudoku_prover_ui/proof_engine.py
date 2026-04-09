@@ -57,7 +57,7 @@ class ProofEngine:
     def __init__(self, puzzle: Puzzle):
         self.repl = LeanLspRepl(REPO_ROOT) # pyright: ignore[reportArgumentType]
         self.puzzle = puzzle
-        self._active_gen: Generator[str, str, None]
+        self._active_gen: Generator[str|CommandError, str, None]
         self.terminal_prompt: str
         self.journal: Journal = Journal(None)
         self.prepared_text = ''
@@ -130,7 +130,10 @@ class ProofEngine:
             self.journal.protected_steps += 1
                     
             self._active_gen = self.main()
-            self.terminal_prompt = next(self._active_gen)
+            result = next(self._active_gen)
+            if isinstance(result, CommandError):
+                raise result
+            self.terminal_prompt = result
         except:
             self.close()
             raise
@@ -184,7 +187,10 @@ class ProofEngine:
 
 
         try:
-            self.terminal_prompt = self._active_gen.send(cmd)
+            result = self._active_gen.send(cmd)
+            if isinstance(result, CommandError):
+                raise result
+            self.terminal_prompt = result
         except CommandError as e:
             print(e)
             # this is a safe error
@@ -227,18 +233,20 @@ class ProofEngine:
         goals, _ = self.repl.check_code(self.current.lean_file + self.prepared_text)
         self.commit(cmd,goals)
 
-    def main(self) -> Generator[str,str,None]:
+    def main(self) -> Generator[str|CommandError,str,None]:
         """top level proof"""
         while True:
             cmd = yield ''
-            try:
-                yield from self.handle_input(cmd)
-            except CommandError:
-                raise NotImplementedError('need to handle the case of CommandError in main')
+            while True:
+                try:
+                    yield from self.handle_input(cmd)
+                    break
+                except CommandError as e:
+                    cmd = yield e
             
 
     @staticmethod
-    def command_flow(func: Callable[Concatenate['ProofEngine',P], Tuple[Callable[[],None], Callable[[],Generator[str,str,None]|None]]]) -> Callable[Concatenate['ProofEngine',P],Generator[str,str,None]]:
+    def command_flow(func: Callable[Concatenate['ProofEngine',P], Tuple[Callable[[],None], Callable[[],Generator[str|CommandError,str,None]|None]]]) -> Callable[Concatenate['ProofEngine',P],Generator[str|CommandError,str,None]]:
         """command flow is the wrapper that creates a whole bunch of safety logic
         every text generating command must use this to ensure that clean rollback is possible
         I suggest looking at example functions, but basically every command must have a validate function (can be empty)
@@ -249,7 +257,7 @@ class ProofEngine:
         - validate(): check user input
         - run(): make changes to prepared variables like lean_code and grid_changes"""
         @functools.wraps(func)
-        def wrapper(_self: 'ProofEngine', *args: P.args, **kwargs: P.kwargs) -> Generator[str,str,None]:
+        def wrapper(_self: 'ProofEngine', *args: P.args, **kwargs: P.kwargs) -> Generator[str|CommandError,str,None]:
             # get the functions
             try:
                 validate, run = func(_self, *args, **kwargs)
@@ -310,14 +318,16 @@ class ProofEngine:
                 self.close_subproof = CloseSubproofInfo(start_delta,pre_subproof_state,subproof_grid_changes,subproof_elimination_changes)
 
 
-    def do_subproof(self, prompt: str) -> Generator[str,str,None]:
+    def do_subproof(self, prompt: str) -> Generator[str|CommandError,str,None]:
         with self.subproof():
             # go get a command to run, TODO or take from parameters
             cmd = yield prompt
-            try:
-                yield from self.handle_input(cmd)
-            except CommandError:
-                # need to loop back and try another command
+            while True:
+                try:
+                    yield from self.handle_input(cmd)
+                    break
+                except CommandError as e:
+                    cmd = yield e
 
     def place_dot(self):
         self._place_dot = True
@@ -398,7 +408,7 @@ class ProofEngine:
     @command_flow
     def have(self, name: str, goal: str):
         """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
-        def run() -> Generator[str,str,None]:
+        def run() -> Generator[str|CommandError,str,None]:
             # if it is a top level goal, need to start a new lemma, otherwise do a have statement
             if self.proof_level == 0:
                 self.tactic(f"lemma {name} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): {goal} := by")
@@ -417,7 +427,7 @@ class ProofEngine:
     def fill(self, cell: int, digit: int):
         """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
 
-        def run() -> Generator[str,str,None]:
+        def run() -> Generator[str|CommandError,str,None]:
             # set up what changes will occur after the subproof
             self.prepared_grid_changes[cell] = digit
             self.region_eliminate(cell,digit,f'c{cell}')
@@ -429,7 +439,7 @@ class ProofEngine:
 
     @command_flow
     def cell_cases(self, cell: int):
-        def run() -> Generator[str,str,None]:
+        def run() -> Generator[str|CommandError,str,None]:
             self.tactic(f'cases h: f {cell}')
             
             with self.indent():
@@ -677,7 +687,7 @@ apply xin"""
         return validate, run
     
 
-    def handle_input(self, cmd: str) -> Generator[str,str,None]:
+    def handle_input(self, cmd: str) -> Generator[str|CommandError,str,None]:
         if cmd == '':
             raise CommandError("No command given")
         args = cmd.split()
