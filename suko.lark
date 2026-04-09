@@ -13,7 +13,7 @@ definition_entry: "cell_count" NUMBER _NL -> cell_count
     | "imported_constraints" _NL (DASH imported_constraint _NL)+ -> imported
     | "constraints" _NL (DASH constraint _NL)+ -> local
 
-list: "[" tuple ("," tuple)* "]" -> _list
+list: "[" tuple (","* tuple)* "]" -> _list
 tuple: "(" NUMBER ","? NUMBER ")" -> _tuple
 imported_constraint: ID STRING
 constraint: ID STRING

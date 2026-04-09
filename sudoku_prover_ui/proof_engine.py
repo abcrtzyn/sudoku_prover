@@ -2,7 +2,7 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 import re
-from typing import Any, Dict, Generator, List, ParamSpec, Tuple, TypeVar
+from typing import Any, Dict, Generator, List, Tuple
 
 from sudoku_prover_ui.file_exporter import export_file
 from sudoku_prover_ui.journal import Delta, Journal, State
@@ -37,11 +37,6 @@ class CloseSubproofInfo:
     grid_changes: Dict[int,int]
     elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]]
 
-
-
-
-P = ParamSpec("P")
-R = TypeVar("R")
 
 class ProofEngine:
 
