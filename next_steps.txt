@@ -1,6 +1,30 @@
 I'm considering a different approach to command parsing
 
 A lot of basic error handling is done, we can recover from what we need to recover, and potentially crash where we need to crash
+
+Bug to handle, consider example of naked single
+If the user puts in a bad value for a cell, the code will still try to find a digit before trying to validate the cell
+
+I think basically just have a section of the function that is (if in safe mode, do this section, potentially though a context manager)
+if validate_input:
+    cell is an int and in range
+get digit and all the other error checks
+
+def run():
+    fill cell digit, rfl
+
+Naked Single called by user
+- validate that cell is proper
+- find the digit to fill the cell, raise an error if there isn't one digit to fill it
+Set to exectuing mode
+- fill cell digit, rfl
+
+Naked Single called by macro
+Already in executing mode
+- assume that cell has already been validated
+- find the digit to fill the cell, could raise a sort of runtime error (basically the calling macro didn't actually check or some other issue)
+- fill cell digit, rfl
+
 Still need to move the handle input outside of generator scope, see below for details
 generators will no longer take in strings but functions/generators
 
