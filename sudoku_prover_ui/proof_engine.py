@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 import functools
 import re
-from typing import Any, Callable, Concatenate, Dict, Generator, List, ParamSpec, Tuple
+from typing import Any, Callable, Concatenate, Dict, Generator, List, ParamSpec, Tuple, cast
 
 from sudoku_prover_ui.file_exporter import export_file
 from sudoku_prover_ui.journal import Delta, Journal, State
@@ -39,9 +39,11 @@ class CloseSubproofInfo:
     elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]]
 
 
-
-
 P = ParamSpec("P")
+ProofGenerator = Generator[str|CommandError,str,None]
+ValidateFunc = Callable[[],None]
+RunFunc = Callable[[],ProofGenerator|None]
+CommandTemplate = Generator[ValidateFunc,None,RunFunc]
 
 class ProofEngine:
 
@@ -242,47 +244,72 @@ class ProofEngine:
                     break
                 except CommandError as e:
                     cmd = yield e
-            
+
 
     @staticmethod
-    def command_flow(func: Callable[Concatenate['ProofEngine',P], Tuple[Callable[[],None], Callable[[],Generator[str|CommandError,str,None]|None]]]) -> Callable[Concatenate['ProofEngine',P],Generator[str|CommandError,str,None]]:
+    def command_flow(func: Callable[Concatenate['ProofEngine',P], CommandTemplate]) -> Callable[Concatenate['ProofEngine',P],ProofGenerator]:
         """command flow is the wrapper that creates a whole bunch of safety logic
         every text generating command must use this to ensure that clean rollback is possible
-        I suggest looking at example functions, but basically every command must have a validate function (can be empty)
-        and a run function. For the case that your text generator is being run by a macro that has already validated, the validate function will be skipped in execute mode.
+        I suggest looking at example functions, but basically every command must
+        - yield a validate function that checks that the user provided arguments are valid
+        - yield a run function that makes changes to prepared variables like lean_code and grid_changes
+        If your generator is being run by a macro that has already validated the arguments (is in generating mode), the validate function will be skipped.
         Any calculation and validation can occur in top level in the function, but it will be subject to the execution status ProofEngine.generating.
-        Think of the following form
-        - Top level code: calculating intermediate values, and checking that they are true
-        - validate(): check user input
-        - run(): make changes to prepared variables like lean_code and grid_changes"""
+        """
+
         @functools.wraps(func)
-        def wrapper(_self: 'ProofEngine', *args: P.args, **kwargs: P.kwargs) -> Generator[str|CommandError,str,None]:
-            # get the functions
+        def wrapper(_self: 'ProofEngine', *args: P.args, **kwargs: P.kwargs) -> ProofGenerator:
+            
+            setup_gen = func(_self, *args, **kwargs)
+            # get the user input validate function
             try:
-                validate, run = func(_self, *args, **kwargs)
+                validate_func = next(setup_gen)
+            except StopIteration:
+                # the developer did not yield a validate function
+                raise Exception("Command must yield a validate function.")
             except CommandError as e:
+                # if command error happened, the developer raised a command error and they shouldn't have
                 raise Exception('function should not raise a CommandError, it is reserved for internal use', e)
             except Exception as e:
+                # the top level function code raised an error, raise it as a command error if we aren't generating yet
                 if not _self.generating:
-                    # if we are safe, raise again as a command error
                     raise CommandError(e)
-                else:
-                    # if we are not safe, raise
-                    raise e
-            # validate if we need to
+                # else, raise normally
+                raise
+
+            # do user input validation
             if not _self.generating:
                 try:
-                    validate()
+                    validate_func()
                 except CommandError as e:
                     raise Exception('validate should not raise a CommandError, it is reserved for internal use', e)
                 except Exception as e:
+                    # Top-level code didn't run yet, so it's safe to wrap
                     raise CommandError(e)
-            # execute
+
+            # get the run function from the return of the generator
+            try:
+                # expecting stop iteration or any other error
+                next(setup_gen)
+            except StopIteration as e:
+                run_func = cast(RunFunc,e.value)
+            except CommandError as e:
+                # if command error happened, the developer raised a command error and they shouldn't have
+                raise Exception('function should not raise a CommandError, it is reserved for internal use', e)
+            except Exception as e:
+                # the top level function code raised an error, raise it as a command error if we aren't generating yet
+                if not _self.generating:
+                    raise CommandError(e)
+                # else, raise normally
+                raise
+            else:
+                raise RuntimeError("Command must return with the run function, not yield another value")
+
             _self.generating = True
-
-            if gen := run():
+            # execute, run the function, or yield from the generator, any errors here are passed down
+            if gen := run_func():
                 yield from gen
-
+        
         return wrapper
 
 
@@ -407,6 +434,9 @@ class ProofEngine:
     @command_flow
     def have(self, name: str, goal: str):
         """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
+ 
+        yield lambda: None
+
         def run() -> Generator[str|CommandError,str,None]:
             # if it is a top level goal, need to start a new lemma, otherwise do a have statement
             if self.proof_level == 0:
@@ -420,11 +450,13 @@ class ProofEngine:
                 # add a newline for top level goals.
                 self.tactic('')
 
-        return (lambda: None, run)
+        return run
         
     @command_flow
     def fill(self, cell: int, digit: int):
         """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
+
+        yield lambda: None
 
         def run() -> Generator[str|CommandError,str,None]:
             # set up what changes will occur after the subproof
@@ -433,11 +465,14 @@ class ProofEngine:
 
             yield from self.have(f'c{cell}', f'f {cell} = {digit}')
             
-        return (lambda: None, run)
+        return run
     
 
     @command_flow
     def cell_cases(self, cell: int):
+
+        yield lambda: None
+
         def run() -> Generator[str|CommandError,str,None]:
             self.tactic(f'cases h: f {cell}')
             
@@ -451,7 +486,7 @@ class ProofEngine:
                     else:
                         yield from self.do_subproof(f'cell_cases {digit}')
         
-        return (lambda: None, run)
+        return run
             
 
 # #     def support_cases(self, hypothesis: str, digit: int | None, commands: Dict[int,Generator[str,str,None]] | None = None) -> Generator[str,str,None]:
@@ -517,22 +552,33 @@ class ProofEngine:
 
     @command_flow
     def rfl(self):
+        yield lambda: None
+
         def run():
             self.tactic('rfl')
             return
 
-        return (lambda: None, run)
+        return run
     
     @command_flow
     def exact(self,hypothesis: str):
+        yield lambda: None
+        
         def run():
             self.tactic(f'exact {hypothesis}')
             return
 
-        return (lambda: None, run)
+        return run
 
     @command_flow
     def naked_single(self,cell: int):
+
+        def validate():
+            if not (0 <= cell < self.puzzle.cell_count):
+                raise ValueError('naked_single cell must be an index from 0 to cell_count')
+            
+        yield validate
+
         # first find the digit to fill (check that all digits but one are eliminated)
         if cell not in self.current.eliminations:
             # definetely not able to eliminate the candidates
@@ -574,7 +620,8 @@ class ProofEngine:
 
             return
         
-        return (lambda: None, run)
+        return run
+
 
 
 
@@ -593,7 +640,9 @@ class ProofEngine:
             if any([x is None for x in grid]):
                 # not all digits are known.
                 raise ValueError('Not all digits are solved, can not finish proof')
-            
+        
+        yield validate
+
         def run():
             self.tactic(f'theorem SolvePuzzle {{S : Set (Nat → {self.puzzle.symbols})}} (H : ∀ f, f ∈ S ↔ Puzzle f): ∃! (g: Nat -> {self.puzzle.symbols}), g ∈ S := by')
             self.proof_level += 1
@@ -683,7 +732,7 @@ apply xin"""
             return
 
 
-        return validate, run
+        return run
     
 
     def handle_input(self, cmd: str) -> Generator[str|CommandError,str,None]:
