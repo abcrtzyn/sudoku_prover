@@ -12,10 +12,10 @@ from sudoku_prover_app.io.file_exporter import export_file
 from sudoku_prover_app.core.journal import Delta, Journal, State
 
 # TODO, make this an environment variable I guess
-USE_DUMMY = True
+USE_DUMMY = False
 if USE_DUMMY:
     print('warning, using the dummy lean repl')
-    print('change USE_DUMMY in ProofEngine to False before commit')
+    print('change USE_DUMMY in ProofEngine to False before pull')
     from sudoku_prover_app.core.dummy_lean_repl import LeanLspRepl
 else:
     from sudoku_prover_app.core.lean_repl import LeanLspRepl
