@@ -9,7 +9,7 @@ from sudoku_prover_app.core.puzzle import Puzzle, Template
 
 grammar_file = Path(__file__).resolve().parent.parent.parent.joinpath('suko.lark')
 
-EXPECTED_HASH = "6c065871" # current version
+EXPECTED_HASH = "8584c8db" # current version
 
 with open(grammar_file, 'rb') as f:
     current = hashlib.md5(f.read()).hexdigest()[:8]
