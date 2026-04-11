@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from sudoku_prover_app.core.proof_engine import ProofEngine
 
 
-def parse_args(engine: ProofEngine, params_string: str, arg_types: List[str]):
+def parse_args(engine: 'ProofEngine', params_string: str, arg_types: List[str]):
     params = params_string.split()
     num_params = len(params)
 

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 @dataclass
 
 class CommandEntry:
-    func: Callable[Concatenate[ProofEngine,...],ProofGenerator]
+    func: Callable[Concatenate['ProofEngine',...],ProofGenerator]
     arg_type: List[str]
 
 class CommandRegistry:
@@ -23,7 +23,6 @@ class CommandRegistry:
     def register(self, name: str, arg_types: List[str]):
         """Decorator to register a tactic with expected arguments"""
         # check that all the arg types can be parsed by the parser
-
 
         def decorator(func: Callable[Concatenate[ProofEngine,...],ProofGenerator]):
             if not getattr(func, '_is_command_flow', False):
