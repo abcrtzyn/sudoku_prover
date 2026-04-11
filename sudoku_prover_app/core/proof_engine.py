@@ -200,7 +200,7 @@ class ProofEngine:
             return
         args = cmd.split(maxsplit=1)
         name = args[0]
-        params_str = args[1]
+        params_str = args[1] if len(args) > 1 else ''
         
         # find the right commamnd
         # ui commands first
