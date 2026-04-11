@@ -10,7 +10,16 @@ from sudoku_prover_app.core.registry import registry
 from sudoku_prover_app.core.types import CommandError, CommandTemplate, ProofGenerator, RunFunc
 from sudoku_prover_app.io.file_exporter import export_file
 from sudoku_prover_app.core.journal import Delta, Journal, State
-from sudoku_prover_app.core.lean_repl import LeanLspRepl
+
+# TODO, make this an environment variable I guess
+USE_DUMMY = True
+if USE_DUMMY:
+    print('warning, using the dummy lean repl')
+    print('change USE_DUMMY in ProofEngine to False before commit')
+    from sudoku_prover_app.core.dummy_lean_repl import LeanLspRepl
+else:
+    from sudoku_prover_app.core.lean_repl import LeanLspRepl
+
 from sudoku_prover_app.core.puzzle import Puzzle
 
 from pathlib import Path

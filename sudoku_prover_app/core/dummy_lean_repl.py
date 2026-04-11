@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Tuple
 
 
 
-class DummyLeanLspRepl:
+class LeanLspRepl:
     def __init__(self, project_path: str):
         self.project_path = project_path
         self.file_path = None
