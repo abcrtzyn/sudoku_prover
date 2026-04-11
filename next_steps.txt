@@ -1,9 +1,0 @@
-I'm considering a different approach to command parsing
-
-A lot of basic error handling is done, we can recover from what we need to recover, and potentially crash where we need to crash
-
-Generator templates are there, just one typing error that refuses to go away.
-
-Then I'd like to merge onto develop, shift all (except finish maybe) tactics outside of the proof engine
-
-Once that happens, tactics really start to make modules
