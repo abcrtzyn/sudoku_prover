@@ -6,12 +6,7 @@ from typing import Any, Dict, List, Tuple
 
 class LeanLspRepl:
     def __init__(self, project_path: str):
-        self.project_path = project_path
-        self.file_path = None
-
-        self.full_text: None = None
-
-
+        pass
     def open(self):
         return self
     
@@ -26,5 +21,6 @@ class LeanLspRepl:
         self.close()
 
     def check_code(self, full_text: str) -> Tuple[List[str],List[Dict[str,Any]]]:
-        
+        print(full_text)
+        print('I am dummy')
         return ([],[])
