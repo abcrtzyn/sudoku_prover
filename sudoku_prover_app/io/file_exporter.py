@@ -7,7 +7,7 @@ from typing import Dict, Iterable
 from sudoku_prover_app.io.file_parser import import_file
 from sudoku_prover_app.core.puzzle import Puzzle, Template
 
-grammar_file = Path(__file__).resolve().parent.parent.joinpath('suko.lark')
+grammar_file = Path(__file__).resolve().parent.parent.parent.joinpath('suko.lark')
 
 EXPECTED_HASH = "6c065871" # current version
 

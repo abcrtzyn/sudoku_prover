@@ -24,10 +24,8 @@ from sudoku_prover_app.core.puzzle import Puzzle
 
 from pathlib import Path
 
-# __file__ is .../sudoku_prover_app/proof_engine.py
-# .parent is .../sudoku_prover_app/
-# .parent.parent is the repo root
-REPO_ROOT = Path(__file__).resolve().parent.parent
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 
