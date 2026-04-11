@@ -2,51 +2,8 @@ I'm considering a different approach to command parsing
 
 A lot of basic error handling is done, we can recover from what we need to recover, and potentially crash where we need to crash
 
-Bug to handle, consider example of naked single
-If the user puts in a bad value for a cell, the code will still try to find a digit before trying to validate the cell
-
-I think basically just have a section of the function that is (if in safe mode, do this section, potentially though a context manager)
-if validate_input:
-    cell is an int and in range
-get digit and all the other error checks
-
-def run():
-    fill cell digit, rfl
-
-Naked Single called by user
-- validate that cell is proper
-- find the digit to fill the cell, raise an error if there isn't one digit to fill it
-Set to exectuing mode
-- fill cell digit, rfl
-
-Naked Single called by macro
-Already in executing mode
-- assume that cell has already been validated
-- find the digit to fill the cell, could raise a sort of runtime error (basically the calling macro didn't actually check or some other issue)
-- fill cell digit, rfl
-
-Still need to move the handle input outside of generator scope, see below for details
-generators will no longer take in strings but functions/generators
+Generator templates are there, just one typing error that refuses to go away.
 
 Then I'd like to merge onto develop, shift all (except finish maybe) tactics outside of the proof engine
 
 Once that happens, tactics really start to make modules
-
-
-
-Rather than give the generator stack a string with the command to run, 
-what if the command is parsed and and found before it is given to the generator
-
-command() where callers of proof engine run commands would check every command (or pass the processing onto modules or libraries or something)
-It would do some checks on the parameters, and then the generator function would be given to the active generator.
-
-As far as error handling is concerned, macro commands should always check that they can complete before calling their functions (they dont take input from command)
-meaning that if sub commands create an error, it is the macro commands fault and should cause a crash
-
-The only places where users can give commands is in top level (main) and subproof, that should be it.
-
-
-As far as error handling for the user case, basically main and subproof need to have error handling wrappers to handle the check errors.
-Is there a way that I can enforce onto developers that checks must happen that raise command errors (that will not crash unless in user scope) and in writing, generation errors which will crash.
-
-

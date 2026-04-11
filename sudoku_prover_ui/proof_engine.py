@@ -167,76 +167,79 @@ class ProofEngine:
 
         # find the right command
         proof_gen: ProofGenerator | None = None
-        
-        match name:
-            case 'exit':
-                exit(0)
-            case 'save':
-                if len(params) != 1:
-                    print('expected "save filepath"')
+        try:
+            match name:
+                case 'exit':
+                    exit(0)
+                case 'save':
+                    if len(params) != 1:
+                        print('expected "save filepath"')
+                        return
+                    export_file(params[0],self.puzzle,self.journal.export_commands())
                     return
-                export_file(params[0],self.puzzle,self.journal.export_commands())
-                return
-            case 'undo':
-                raise NotImplementedError('undo is not implemented yet')
-            # done with cli commands, now for regular commands
-            case 'fill':
-                if len(params) != 2:
-                    raise CommandError("expected 'fill cell digit'")
-                try:
-                    cell = int(params[0])
-                    digit = int(params[1])
-                except ValueError:
-                    raise CommandError('digit and cell must be integers')
-                proof_gen = self.fill(cell,digit)
-            case 'have':
-                # the rest of the line is the goal
-                goal = cmd.removeprefix('have').strip()
-                if goal == "":
-                    raise CommandError("expected 'have [goal]'")
-                proof_gen = self.have('h',goal)
-            case 'cell_cases':
-                if len(params) != 1:
-                    raise CommandError("expected 'cell_cases cell'")
-                try:
-                    cell = int(params[0])
-                except ValueError:
-                    raise CommandError('cell must be an integer')
-                proof_gen = self.cell_cases(cell)
-            # case 'support_cases':
-            #     if len(params) != 2:
-            #         raise CommandError("expected 'support_cases region digit'")
-            #     region = params[0]
-            #     try: 
-            #         digit = int(params[1])
-            #     except ValueError:
-            #         raise CommandError('digit must be an integer')
-            #     if digit not in self.puzzle.symbols_python:
-            #         raise CommandError(f'digit {digit} invalid')
-            #     self.support_cases_manual(digit, region)
-            case 'rfl':
-                if len(params) != 0:
-                    raise CommandError("expected 'rfl' with no arguments")
-                proof_gen = self.rfl()
-            case 'exact':
-                if len(params) != 1:
-                    raise CommandError("expected 'exact hypothesis'")
-                proof_gen = self.exact(params[0])
-            case 'naked_single':
-                if len(params) != 1:
-                    raise CommandError("expected 'naked_single cell")
-                try:
-                    cell = int(params[0])
-                except ValueError:
-                    raise CommandError('cell must be an integer')
-                proof_gen = self.naked_single(cell)
-            case 'finish':
-                if len(params) != 0:
-                    raise CommandError('finish takes no args')
-                proof_gen = self.finish()
-            case _:
-                    raise CommandError('unknown command')
-        
+                case 'undo':
+                    raise NotImplementedError('undo is not implemented yet')
+                # done with cli commands, now for regular commands
+                case 'fill':
+                    if len(params) != 2:
+                        raise CommandError("expected 'fill cell digit'")
+                    try:
+                        cell = int(params[0])
+                        digit = int(params[1])
+                    except ValueError:
+                        raise CommandError('digit and cell must be integers')
+                    proof_gen = self.fill(cell,digit)
+                case 'have':
+                    # the rest of the line is the goal
+                    goal = cmd.removeprefix('have').strip()
+                    if goal == "":
+                        raise CommandError("expected 'have [goal]'")
+                    proof_gen = self.have('h',goal)
+                case 'cell_cases':
+                    if len(params) != 1:
+                        raise CommandError("expected 'cell_cases cell'")
+                    try:
+                        cell = int(params[0])
+                    except ValueError:
+                        raise CommandError('cell must be an integer')
+                    proof_gen = self.cell_cases(cell)
+                # case 'support_cases':
+                #     if len(params) != 2:
+                #         raise CommandError("expected 'support_cases region digit'")
+                #     region = params[0]
+                #     try: 
+                #         digit = int(params[1])
+                #     except ValueError:
+                #         raise CommandError('digit must be an integer')
+                #     if digit not in self.puzzle.symbols_python:
+                #         raise CommandError(f'digit {digit} invalid')
+                #     self.support_cases_manual(digit, region)
+                case 'rfl':
+                    if len(params) != 0:
+                        raise CommandError("expected 'rfl' with no arguments")
+                    proof_gen = self.rfl()
+                case 'exact':
+                    if len(params) != 1:
+                        raise CommandError("expected 'exact hypothesis'")
+                    proof_gen = self.exact(params[0])
+                case 'naked_single':
+                    if len(params) != 1:
+                        raise CommandError("expected 'naked_single cell")
+                    try:
+                        cell = int(params[0])
+                    except ValueError:
+                        raise CommandError('cell must be an integer')
+                    proof_gen = cast(ProofGenerator,self.naked_single(cell)) # pyright: ignore[reportUnknownMemberType]
+                case 'finish':
+                    if len(params) != 0:
+                        raise CommandError('finish takes no args')
+                    proof_gen = self.finish()
+                case _:
+                        raise CommandError('unknown command')
+        except CommandError as e:
+            print(e)
+            return
+
         assert proof_gen is not None, 'command parsing match case passed without assigning function, it must set func, or throw an error'
 
         try:
@@ -510,9 +513,9 @@ class ProofEngine:
 
         def validate():
             if not (0 <= cell < self.puzzle.cell_count):
-                raise CommandError(f'cell {cell} out of range')
+                raise ValueError(f'cell {cell} out of range')
             if digit not in self.puzzle.symbols_python:
-                raise CommandError(f'digit {digit} invalid')
+                raise ValueError(f'digit {digit} invalid')
 
         yield validate
 
@@ -531,7 +534,7 @@ class ProofEngine:
 
         def validate():
             if not (0 <= cell < self.puzzle.cell_count):
-                raise CommandError(f'cell {cell} out of range')
+                raise ValueError(f'cell {cell} out of range')
 
         yield validate
 
@@ -807,7 +810,7 @@ apply xin"""
 #         try:
 #             self.journal.pop()
 #         except ValueError:
-#             raise CommandError('no steps to undo')
+#             raise RuntimeError('no steps to undo')
         
 #         # recreate the world
 #         self.reconstruct()
