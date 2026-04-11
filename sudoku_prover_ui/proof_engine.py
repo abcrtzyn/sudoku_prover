@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -835,18 +834,3 @@ apply xin"""
 #         goals, _ = self.repl.check_code(self.current.lean_file)
 #         # keep the proof state
 #         self.current.proof_state = goals
-
-
-    # @property
-    # def prepared_text(self) -> str:
-    #     return self._prepared_text
-
-    # @prepared_text.setter
-    # def prepared_text(self, value: str):
-    #     # If a developer tries to set this during the 'Validation' phase, it fails.
-    #     if not self._is_executing:
-    #         raise RuntimeError(
-    #             f"State Mutation Error: Attempted to modify 'prepared_text' "
-    #             f"outside of execution mode. (Current command not yet VALIDATED)"
-    #         )
-    #     self._prepared_text = value
