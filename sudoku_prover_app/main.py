@@ -6,6 +6,8 @@ import argparse
 from sudoku_prover_app.core.proof_engine import ProofEngine
 from sudoku_prover_app.io.file_parser import import_file
 
+import sudoku_prover_app.tactics # pyright: ignore[reportUnusedImport]
+
 
 def solve(file_name: str, cont: bool):
     

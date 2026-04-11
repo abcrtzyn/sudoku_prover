@@ -5,7 +5,9 @@ import functools
 import re
 from typing import Any, Callable, Concatenate, Dict, Generator, List, ParamSpec, Tuple, cast
 
-from sudoku_prover_app.tactics.basic_tactics import cell_cases, exact, fill, have, naked_single, region_eliminate, rfl
+from sudoku_prover_app.core.argument_parser import parse_args
+from sudoku_prover_app.core.registry import registry
+from sudoku_prover_app.core.types import CommandError, CommandTemplate, ProofGenerator, RunFunc
 from sudoku_prover_app.io.file_exporter import export_file
 from sudoku_prover_app.core.journal import Delta, Journal, State
 from sudoku_prover_app.core.lean_repl import LeanLspRepl
@@ -29,9 +31,6 @@ word_to_number = {
 }
 
 
-class CommandError(Exception):
-    pass
-
 @dataclass
 class CloseSubproofInfo:
     start_delta: int
@@ -41,10 +40,6 @@ class CloseSubproofInfo:
 
 
 P = ParamSpec("P")
-ProofGenerator = Generator[str | CommandError,'ProofGenerator',None]
-ValidateFunc = Callable[[],None]
-RunFunc = Callable[[],ProofGenerator|None]
-CommandTemplate = Generator[ValidateFunc,None,RunFunc]
 
 class ProofEngine:
     @property
@@ -196,86 +191,54 @@ class ProofEngine:
         if cmd == '':
             print('no command given, no action taken')
             return
-        args = cmd.split()
+        args = cmd.split(maxsplit=1)
         name = args[0]
-        params = args[1:]
+        params_str = args[1]
+        
+        # find the right commamnd
+        # ui commands first
 
-        # find the right command
-        proof_gen: ProofGenerator | None = None
-        try:
-            match name:
-                case 'exit':
-                    exit(0)
-                case 'save':
-                    if len(params) != 1:
-                        print('expected "save filepath"')
-                        return
-                    export_file(params[0],self.puzzle,self.journal.export_commands())
+        # NOTE, every single one of these ui commands must exit, return or raise an error
+        # I guess at this point, if they don't they will error because they arent in the registry
+        match name:
+            case 'exit':
+                exit(0)
+            case 'save':
+                if params_str.count(' ') > 0:
+                    print('expected "save filepath"')
                     return
-                case 'undo':
-                    raise NotImplementedError('undo is not implemented yet')
-                # done with cli commands, now for regular commands
-                case 'fill':
-                    if len(params) != 2:
-                        raise CommandError("expected 'fill cell digit'")
-                    try:
-                        cell = int(params[0])
-                        digit = int(params[1])
-                    except ValueError:
-                        raise CommandError('digit and cell must be integers')
-                    proof_gen = fill(self,cell,digit)
-                case 'have':
-                    # the rest of the line is the goal
-                    goal = cmd.removeprefix('have').strip()
-                    if goal == "":
-                        raise CommandError("expected 'have [goal]'")
-                    proof_gen = have(self,'h',goal)
-                case 'cell_cases':
-                    if len(params) != 1:
-                        raise CommandError("expected 'cell_cases cell'")
-                    try:
-                        cell = int(params[0])
-                    except ValueError:
-                        raise CommandError('cell must be an integer')
-                    proof_gen = cell_cases(self,cell)
-                # case 'support_cases':
-                #     if len(params) != 2:
-                #         raise CommandError("expected 'support_cases region digit'")
-                #     region = params[0]
-                #     try: 
-                #         digit = int(params[1])
-                #     except ValueError:
-                #         raise CommandError('digit must be an integer')
-                #     if digit not in self.puzzle.symbols_python:
-                #         raise CommandError(f'digit {digit} invalid')
-                #     self.support_cases_manual(digit, region)
-                case 'rfl':
-                    if len(params) != 0:
-                        raise CommandError("expected 'rfl' with no arguments")
-                    proof_gen = rfl(self)
-                case 'exact':
-                    if len(params) != 1:
-                        raise CommandError("expected 'exact hypothesis'")
-                    proof_gen = exact(self,params[0])
-                case 'naked_single':
-                    if len(params) != 1:
-                        raise CommandError("expected 'naked_single cell")
-                    try:
-                        cell = int(params[0])
-                    except ValueError:
-                        raise CommandError('cell must be an integer')
-                    proof_gen = cast(ProofGenerator,naked_single(self,cell))
-                case 'finish':
-                    if len(params) != 0:
-                        raise CommandError('finish takes no args')
-                    proof_gen = self.finish()
-                case _:
-                        raise CommandError('unknown command')
+
+                export_file(params_str,self.puzzle,self.journal.export_commands())
+                return
+            case 'undo':
+                raise NotImplementedError('undo is not implemented yet')
+            case _:
+                pass
+            
+        # done with cli commands, now for regular commands
+
+        if name not in registry.commands:
+            print(f'Unknown command {name}')
+            return
+        
+        entry = registry.commands[name]
+        func = entry.func
+
+        try:
+            parsed_args = parse_args(self,params_str, entry.arg_type)
+        except Exception as e:
+            print('error in argument parsing')
+            print(type(e), e)
+            return
+
+        
+        # now we have the command and the args
+        try:
+            proof_gen = func(self,*parsed_args)
         except CommandError as e:
             print(e)
             return
 
-        assert proof_gen is not None, 'command parsing match case passed without assigning function, it must set func, or throw an error'
 
         try:
             result = self._active_gen.send(proof_gen)
@@ -400,6 +363,7 @@ class ProofEngine:
             if gen := run_func():
                 yield from gen
         
+        wrapper._is_command_flow = True
         return wrapper
 
 
