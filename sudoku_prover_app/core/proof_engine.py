@@ -370,7 +370,7 @@ class ProofEngine:
             if gen := run_func():
                 yield from gen
         
-        wrapper._is_command_flow = True
+        wrapper._is_command_flow = True # pyright: ignore[reportAttributeAccessIssue]
         return wrapper
 
 
@@ -456,6 +456,7 @@ class ProofEngine:
 #             cmd = yield prompt
 #             yield from self.handle_input(cmd)
 
+    @registry.register('finish',[])
     @command_flow
     def finish(self):
         """Where all the digits are known, this function finishes out the proof.
@@ -603,3 +604,20 @@ apply xin"""
 #         goals, _ = self.repl.check_code(self.current.lean_file)
 #         # keep the proof state
 #         self.current.proof_state = goals
+
+
+def region_eliminate(engine: ProofEngine, cell: int,digit: int,proof_name:str):
+    """eliminates all of digit from every cell in every region that cell is a part of"""
+    for name, constraint in engine.puzzle.pythonized_constraints.items():
+        if constraint[0] != 'UniqueSet':
+            continue
+        if cell in constraint[1]:
+            for i in constraint[1]:
+                if i == cell:
+                    continue        
+                # we have a choice to override a current elimination rule, or keep the first one
+                # there are pros and cons to either, but that is for future me to decide.
+                # this code OVERRIDES existing elemination rules
+                if i not in engine.prepared_elimination_changes:
+                    engine.prepared_elimination_changes[i] = dict()
+                engine.prepared_elimination_changes[i][digit] = ('digit_in_region', (cell,name,proof_name))

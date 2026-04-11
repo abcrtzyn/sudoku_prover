@@ -1,23 +1,7 @@
 
 
-from sudoku_prover_app.core.proof_engine import ProofEngine, ProofGenerator
-
-
-def region_eliminate(engine: ProofEngine, cell: int,digit: int,proof_name:str):
-    """eliminates all of digit from every cell in every region that cell is a part of"""
-    for name, constraint in engine.puzzle.pythonized_constraints.items():
-        if constraint[0] != 'UniqueSet':
-            continue
-        if cell in constraint[1]:
-            for i in constraint[1]:
-                if i == cell:
-                    continue        
-                # we have a choice to override a current elimination rule, or keep the first one
-                # there are pros and cons to either, but that is for future me to decide.
-                # this code OVERRIDES existing elemination rules
-                if i not in engine.prepared_elimination_changes:
-                    engine.prepared_elimination_changes[i] = dict()
-                engine.prepared_elimination_changes[i][digit] = ('digit_in_region', (cell,name,proof_name))
+from sudoku_prover_app.core.registry import registry
+from sudoku_prover_app.core.proof_engine import ProofEngine, ProofGenerator, region_eliminate
 
 
 
@@ -40,6 +24,7 @@ def generate_elimination_proof(engine: ProofEngine,cell: int, digit: int, hypoth
         print(f'no elimination present for {cell} {digit}')
         exit(5)
 
+@registry.register('have',['term','line'])
 @ProofEngine.command_flow
 def have(engine: ProofEngine, name: str, goal: str):
     """generates a have goal in Lean, can be anything at this point, there will be rules later..."""
@@ -61,17 +46,12 @@ def have(engine: ProofEngine, name: str, goal: str):
 
     return run
     
+@registry.register('fill',['cell','symbol'])
 @ProofEngine.command_flow
 def fill(engine: ProofEngine, cell: int, digit: int):
     """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
 
-    def validate():
-        if not (0 <= cell < engine.puzzle.cell_count):
-            raise ValueError(f'cell {cell} out of range')
-        if digit not in engine.puzzle.symbols_python:
-            raise ValueError(f'digit {digit} invalid')
-
-    yield validate
+    yield lambda: None
 
     def run() -> ProofGenerator:
         # set up what changes will occur after the subproof
@@ -82,15 +62,11 @@ def fill(engine: ProofEngine, cell: int, digit: int):
         
     return run
 
-
+@registry.register('cell_cases',['cell'])
 @ProofEngine.command_flow
 def cell_cases(engine: ProofEngine, cell: int):
 
-    def validate():
-        if not (0 <= cell < engine.puzzle.cell_count):
-            raise ValueError(f'cell {cell} out of range')
-
-    yield validate
+    yield lambda: None
 
     def run() -> ProofGenerator:
         engine.tactic(f'cases h: f {cell}')
@@ -169,6 +145,7 @@ def cell_cases(engine: ProofEngine, cell: int):
 
 # #         yield from engine.support_cases('h',digit)
 
+@registry.register('rfl',[])
 @ProofEngine.command_flow
 def rfl(engine: ProofEngine):
     yield lambda: None
@@ -179,6 +156,7 @@ def rfl(engine: ProofEngine):
 
     return run
 
+@registry.register('exact',['term'])
 @ProofEngine.command_flow
 def exact(engine: ProofEngine,hypothesis: str):
     yield lambda: None
@@ -189,14 +167,11 @@ def exact(engine: ProofEngine,hypothesis: str):
 
     return run
 
+@registry.register('naked_single',['cell'])
 @ProofEngine.command_flow
 def naked_single(engine: ProofEngine,cell: int):
-
-    def validate():
-        if not (0 <= cell < engine.puzzle.cell_count):
-            raise ValueError('naked_single cell must be an index from 0 to cell_count')
         
-    yield validate
+    yield lambda: None
 
     # first find the digit to fill (check that all digits but one are eliminated)
     if cell not in engine.current.eliminations:
