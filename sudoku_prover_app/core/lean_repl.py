@@ -39,7 +39,6 @@ class LeanLspRepl:
 
         self._client: lc.LeanLSPClient | None = None
         self._sfc: lc.SingleFileClient | None = None
-        self.history: None = None
         self.full_text: None = None
     
     @property
