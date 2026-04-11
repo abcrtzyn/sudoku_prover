@@ -7,7 +7,7 @@ from lark import Lark, Token, Tree
 from lark.exceptions import UnexpectedInput
 from lark.visitors import Interpreter
 
-from sudoku_prover_ui.puzzle import Puzzle, Template
+from sudoku_prover_app.core.puzzle import Puzzle, Template
 
 class FileParseError(Exception):
     pass

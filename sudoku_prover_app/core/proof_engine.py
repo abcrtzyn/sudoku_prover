@@ -5,16 +5,16 @@ import functools
 import re
 from typing import Any, Callable, Concatenate, Dict, Generator, List, ParamSpec, Tuple, cast
 
-from sudoku_prover_ui.basic_tactics import cell_cases, exact, fill, have, naked_single, region_eliminate, rfl
-from sudoku_prover_ui.file_exporter import export_file
-from sudoku_prover_ui.journal import Delta, Journal, State
-from sudoku_prover_ui.lean_repl import LeanLspRepl
-from sudoku_prover_ui.puzzle import Puzzle
+from sudoku_prover_app.tactics.basic_tactics import cell_cases, exact, fill, have, naked_single, region_eliminate, rfl
+from sudoku_prover_app.io.file_exporter import export_file
+from sudoku_prover_app.core.journal import Delta, Journal, State
+from sudoku_prover_app.core.lean_repl import LeanLspRepl
+from sudoku_prover_app.core.puzzle import Puzzle
 
 from pathlib import Path
 
-# __file__ is .../sudoku_prover_ui/proof_engine.py
-# .parent is .../sudoku_prover_ui/
+# __file__ is .../sudoku_prover_app/proof_engine.py
+# .parent is .../sudoku_prover_app/
 # .parent.parent is the repo root
 REPO_ROOT = Path(__file__).resolve().parent.parent
 

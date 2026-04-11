@@ -35,7 +35,7 @@ Run the main program with
 uv run sudoku solve -f Puzzles/Framework/4x4FrameworkTest.suko
 ```
 
-It runs the python file in `sudoku_prover_ui/main.py`, meaning you can run it however you like.
+It runs the python file in `sudoku_prover_app/main.py`, meaning you can run it however you like.
 
 The program has a few commands
 

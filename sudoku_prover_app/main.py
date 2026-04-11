@@ -3,8 +3,8 @@
 
 import argparse
 
-from sudoku_prover_ui.proof_engine import ProofEngine
-from sudoku_prover_ui.file_parser import import_file
+from sudoku_prover_app.core.proof_engine import ProofEngine
+from sudoku_prover_app.io.file_parser import import_file
 
 
 def solve(file_name: str, cont: bool):
@@ -25,7 +25,7 @@ def solve(file_name: str, cont: bool):
                     raise e
 
         print('starting up the UI')
-        from sudoku_prover_ui import solver_ui # This keeps arcade from trying to run for other commands like verify
+        from sudoku_prover_app.ui import solver_ui # This keeps arcade from trying to run for other commands like verify
         solver_ui.main(puzzle, engine)
 
 

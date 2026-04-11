@@ -4,8 +4,8 @@ import arcade.gui as gui
 from pyglet.graphics import Batch
 import arcade
 
-from sudoku_prover_ui.proof_engine import ProofEngine
-from sudoku_prover_ui.puzzle import Puzzle
+from sudoku_prover_app.core.proof_engine import ProofEngine
+from sudoku_prover_app.core.puzzle import Puzzle
 
 NORMAL_STYLE = gui.UIFlatButton.DEFAULT_STYLE
 

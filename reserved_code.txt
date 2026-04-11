@@ -1,0 +1,132 @@
+REGISTRY
+
+registry.py
+
+from typing import Callable, Dict, Any, List, Type
+from dataclasses import dataclass
+
+@dataclass
+class CommandEntry:
+    func: Callable
+    arg_types: List[Type]  # e.g., [int, str]
+
+class CommandRegistry:
+    def __init__(self):
+        self.commands: Dict[str, CommandEntry] = {}
+
+    def register(self, name: str, arg_types: List[Type]):
+        """Decorator to register a tactic with its expected argument types."""
+        def decorator(func: Callable):
+            self.commands[name] = CommandEntry(func, arg_types)
+            return func
+        return decorator
+
+# Create a single global instance
+registry = CommandRegistry()
+
+
+
+TACTICS LOOK LIKE
+
+from ..engine.registry import registry
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..engine.proof_engine import ProofEngine
+
+@registry.register("naked_single", arg_types=[int])
+@command_flow
+def naked_single(self: 'ProofEngine', cell: int):
+    # ... your existing logic ...
+    pass
+
+@registry.register("have", arg_types=[str, str])
+@command_flow
+def have(self: 'ProofEngine', name: str, goal: str):
+    # ... your existing logic ...
+    pass
+
+
+PROOF ENGINE LOOKS LIKE
+
+from .registry import registry
+# Note: You do NOT import basic_tactics here to avoid the circle!
+
+class ProofEngine:
+    def execute_command(self, cmd_name: str, raw_args: List[str]):
+        if cmd_name not in registry.commands:
+            raise ValueError(f"Unknown command: {cmd_name}")
+
+        entry = registry.commands[cmd_name]
+        
+        # 1. Check argument count
+        if len(raw_args) != len(entry.arg_types):
+            raise ValueError(f"{cmd_name} expects {len(entry.arg_types)} args")
+
+        # 2. Automatically convert types (e.g., "5" -> 5)
+        try:
+            parsed_args = [
+                t(arg) for t, arg in zip(entry.arg_types, raw_args)
+            ]
+        except ValueError:
+            raise ValueError(f"Invalid argument types for {cmd_name}")
+
+        # 3. Run it!
+        # Since the tactic was decorated with @command_flow, 
+        # it returns the generator we need.
+        return entry.func(self, *parsed_args)
+
+
+BEFORE DYNAMIC IMPORT
+
+tactics.__init__.py
+
+import pkgutil
+import importlib
+
+# This finds all submodules in the current directory (tactics/)
+# and imports them, which triggers their @registry.register decorators.
+for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
+    # Construct the full module path
+    full_module_name = f"{__name__}.{module_name}"
+    importlib.import_module(full_module_name)
+
+in main
+import app.tactics
+
+
+DYNAMIC IMPORTING TACTIC LIBRARIES
+
+import importlib
+
+def load_tactic_library(library_name: str):
+    # Map Lean naming convention to Python file structure
+    module_path = f"sudoku_prover_app.tactics.{library_name.lower()}"
+    try:
+        # This executes the @registry.register decorators in that file
+        importlib.import_module(module_path)
+    except ImportError:
+        print(f"Warning: No Python tactics found for {library_name}")
+
+
+
+to ensure command_flow
+
+just before returning the wrapper
+wrapper._is_command_flow = True
+
+then in the registry
+
+class CommandRegistry:
+    def register(self, name: str, arg_types: List[Type]):
+        def decorator(func: Callable):
+            # Check if the function has our fingerprint
+            if not getattr(func, '_is_command_flow', False):
+                raise TypeError(
+                    f"Tactic '{func.__name__}' must be decorated with @command_flow "
+                    "BEFORE being registered. This ensures safety logic is applied."
+                )
+            
+            self.commands[name] = CommandEntry(func, arg_types)
+            return func
+        return decorator

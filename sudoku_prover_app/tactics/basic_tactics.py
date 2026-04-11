@@ -1,6 +1,6 @@
 
 
-from sudoku_prover_ui.proof_engine import ProofEngine, ProofGenerator
+from sudoku_prover_app.core.proof_engine import ProofEngine, ProofGenerator
 
 
 def region_eliminate(engine: ProofEngine, cell: int,digit: int,proof_name:str):

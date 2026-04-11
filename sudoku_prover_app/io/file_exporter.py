@@ -4,8 +4,8 @@ import hashlib
 from io import TextIOWrapper
 from pathlib import Path
 from typing import Dict, Iterable
-from sudoku_prover_ui.file_parser import import_file
-from sudoku_prover_ui.puzzle import Puzzle, Template
+from sudoku_prover_app.io.file_parser import import_file
+from sudoku_prover_app.core.puzzle import Puzzle, Template
 
 grammar_file = Path(__file__).resolve().parent.parent.joinpath('suko.lark')
 
