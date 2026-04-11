@@ -46,6 +46,37 @@ RunFunc = Callable[[],ProofGenerator|None]
 CommandTemplate = Generator[ValidateFunc,None,RunFunc]
 
 class ProofEngine:
+    @property
+    def prepared_text(self) -> str:
+        return self._prepared_text
+    @prepared_text.setter
+    def prepared_text(self, value: str):
+        if not self.generating:
+            raise RuntimeError("State Mutation Error: Attempted to modify 'prepared_text' outside of generating mode.")
+        self._prepared_text = value
+
+    @property
+    def prepared_grid_changes(self) -> Dict[int,int]:
+        return self._prepared_grid_changes
+
+    @prepared_grid_changes.setter
+    def prepared_grid_changes(self, value: Dict[int,int]):
+        
+        if not self.generating:
+            raise RuntimeError("State Mutation Error: Attempted to modify 'prepared_grid_changes' outside of generating mode.")
+        self._prepared_grid_changes = value
+
+    @property
+    def prepared_elimination_changes(self) -> Dict[int,Dict[int,Tuple[str,Any]]]:
+        return self._prepared_elimination_changes
+
+    @prepared_elimination_changes.setter
+    def prepared_elimination_changes(self, value: Dict[int,Dict[int,Tuple[str,Any]]]):
+        if not self.generating:
+            raise RuntimeError("State Mutation Error: Attempted to modify 'prepared_elimination_changes' outside of generating mode.")
+        self._prepared_elimination_changes = value
+
+
 
     def __enter__(self):
         return self.setup()
@@ -62,9 +93,6 @@ class ProofEngine:
         self._active_gen: ProofGenerator
         self.terminal_prompt: str
         self.journal: Journal = Journal(None)
-        self.prepared_text = ''
-        self.prepared_grid_changes: Dict[int,int] = {}
-        self.prepared_elimination_changes: Dict[int,Dict[int,Tuple[str,Any]]] = {}
         # this keeps track of what level of proof we are on, it also determines how much indent there is
         # indent is 2*proof_level
         # any lemma or have block increases this by one, also any cases will but with the exception of the center dots
@@ -79,6 +107,9 @@ class ProofEngine:
         # eventually it can be possible to rollback using undo reconstruct logic
         # also see command_flow
         self.generating: bool = True
+        self.prepared_text = ''
+        self.prepared_grid_changes = {}
+        self.prepared_elimination_changes = {}
 
     def setup(self):
         self.repl.open()
@@ -86,6 +117,7 @@ class ProofEngine:
         self.current = State([None] * self.puzzle.cell_count)
 
         try:
+            self.generating = True
             # imports
             import_text = ''
             for imp in ['Mathlib.Tactic.IntervalCases','SudokuProverLogic.Basic',
@@ -95,19 +127,22 @@ class ProofEngine:
             self.tactic(import_text)
             self.command_internal('imports')
             self.journal.protected_steps += 1
-            
+            self.generating = True
+
             # set options, maybe we will format how lean wants later, but I don't care
             options_text = 'set_option linter.style.whitespace false\nset_option linter.style.longLine false\n'
             self.tactic(options_text)
             self.command_internal('lint options')
             self.journal.protected_steps += 1
-
+            self.generating: bool = True
+            
             # give the puzzle to Lean
             puzzle_text = self.puzzle.generate_lean_structure()
             self.tactic(puzzle_text)
             self.command_internal('puzzle def')
             self.journal.protected_steps += 1
-            
+            self.generating: bool = True
+
             # start with any initial constraints, might just be given digits
             # anything that I would consider part of the solution that is given gets processed here
             for name, constraint in self.puzzle.pythonized_constraints.items():
