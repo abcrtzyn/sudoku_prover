@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -40,7 +41,7 @@ class CloseSubproofInfo:
 
 
 P = ParamSpec("P")
-ProofGenerator = Generator[str|CommandError,str,None]
+ProofGenerator = Generator[str | CommandError,'ProofGenerator',None]
 ValidateFunc = Callable[[],None]
 RunFunc = Callable[[],ProofGenerator|None]
 CommandTemplate = Generator[ValidateFunc,None,RunFunc]
@@ -59,7 +60,7 @@ class ProofEngine:
     def __init__(self, puzzle: Puzzle):
         self.repl = LeanLspRepl(REPO_ROOT) # pyright: ignore[reportArgumentType]
         self.puzzle = puzzle
-        self._active_gen: Generator[str|CommandError, str, None]
+        self._active_gen: ProofGenerator
         self.terminal_prompt: str
         self.journal: Journal = Journal(None)
         self.prepared_text = ''
@@ -164,31 +165,82 @@ class ProofEngine:
         name = args[0]
         params = args[1:]
 
-        try:
-            match name:
-                case 'exit':
-                    exit(0)
-                case 'save':
-                    if len(params) != 1:
-                        print('expected "save filepath"')
-                        return
-                    
-                    export_file(params[0],self.puzzle,self.journal.export_commands())
+        # find the right command
+        proof_gen: ProofGenerator | None = None
+        
+        match name:
+            case 'exit':
+                exit(0)
+            case 'save':
+                if len(params) != 1:
+                    print('expected "save filepath"')
                     return
-                    
-                case 'undo':
-                    raise NotImplementedError('undo is not implemented yet')
-                case _:
-                    raise CommandError('unknown ui command')
-            raise Exception('known command not handled properly. Every non-proof-engine command must return early or exit or error')
-        except CommandError as e:
-            if e.args[0] == 'unknown ui command':
-                pass
-
-
+                export_file(params[0],self.puzzle,self.journal.export_commands())
+                return
+            case 'undo':
+                raise NotImplementedError('undo is not implemented yet')
+            # done with cli commands, now for regular commands
+            case 'fill':
+                if len(params) != 2:
+                    raise CommandError("expected 'fill cell digit'")
+                try:
+                    cell = int(params[0])
+                    digit = int(params[1])
+                except ValueError:
+                    raise CommandError('digit and cell must be integers')
+                proof_gen = self.fill(cell,digit)
+            case 'have':
+                # the rest of the line is the goal
+                goal = cmd.removeprefix('have').strip()
+                if goal == "":
+                    raise CommandError("expected 'have [goal]'")
+                proof_gen = self.have('h',goal)
+            case 'cell_cases':
+                if len(params) != 1:
+                    raise CommandError("expected 'cell_cases cell'")
+                try:
+                    cell = int(params[0])
+                except ValueError:
+                    raise CommandError('cell must be an integer')
+                proof_gen = self.cell_cases(cell)
+            # case 'support_cases':
+            #     if len(params) != 2:
+            #         raise CommandError("expected 'support_cases region digit'")
+            #     region = params[0]
+            #     try: 
+            #         digit = int(params[1])
+            #     except ValueError:
+            #         raise CommandError('digit must be an integer')
+            #     if digit not in self.puzzle.symbols_python:
+            #         raise CommandError(f'digit {digit} invalid')
+            #     self.support_cases_manual(digit, region)
+            case 'rfl':
+                if len(params) != 0:
+                    raise CommandError("expected 'rfl' with no arguments")
+                proof_gen = self.rfl()
+            case 'exact':
+                if len(params) != 1:
+                    raise CommandError("expected 'exact hypothesis'")
+                proof_gen = self.exact(params[0])
+            case 'naked_single':
+                if len(params) != 1:
+                    raise CommandError("expected 'naked_single cell")
+                try:
+                    cell = int(params[0])
+                except ValueError:
+                    raise CommandError('cell must be an integer')
+                proof_gen = self.naked_single(cell)
+            case 'finish':
+                if len(params) != 0:
+                    raise CommandError('finish takes no args')
+                proof_gen = self.finish()
+            case _:
+                    raise CommandError('unknown command')
+        
+        assert proof_gen is not None, 'command parsing match case passed without assigning function, it must set func, or throw an error'
 
         try:
-            result = self._active_gen.send(cmd)
+            result = self._active_gen.send(proof_gen)
             if isinstance(result, CommandError):
                 raise result
             self.terminal_prompt = result
@@ -234,16 +286,16 @@ class ProofEngine:
         goals, _ = self.repl.check_code(self.current.lean_file + self.prepared_text)
         self.commit(cmd,goals)
 
-    def main(self) -> Generator[str|CommandError,str,None]:
+    def main(self) -> Generator[str|CommandError,ProofGenerator,None]:
         """top level proof"""
         while True:
-            cmd = yield ''
+            gen = yield ''
             while True:
                 try:
-                    yield from self.handle_input(cmd)
+                    yield from gen
                     break
                 except CommandError as e:
-                    cmd = yield e
+                    gen = yield e
 
 
     @staticmethod
@@ -344,16 +396,16 @@ class ProofEngine:
                 self.close_subproof = CloseSubproofInfo(start_delta,pre_subproof_state,subproof_grid_changes,subproof_elimination_changes)
 
 
-    def do_subproof(self, prompt: str) -> Generator[str|CommandError,str,None]:
+    def do_subproof(self, prompt: str) -> ProofGenerator:
         with self.subproof():
             # go get a command to run, TODO or take from parameters
-            cmd = yield prompt
+            gen = yield prompt
             while True:
                 try:
-                    yield from self.handle_input(cmd)
+                    yield from gen
                     break
                 except CommandError as e:
-                    cmd = yield e
+                    gen = yield e
 
     def place_dot(self):
         self._place_dot = True
@@ -437,7 +489,7 @@ class ProofEngine:
  
         yield lambda: None
 
-        def run() -> Generator[str|CommandError,str,None]:
+        def run() -> ProofGenerator:
             # if it is a top level goal, need to start a new lemma, otherwise do a have statement
             if self.proof_level == 0:
                 self.tactic(f"lemma {name} {{f: Nat -> {self.puzzle.symbols}}} (P: Puzzle f): {goal} := by")
@@ -456,9 +508,15 @@ class ProofEngine:
     def fill(self, cell: int, digit: int):
         """special case to fill a cell with a digit, creates the goal and after is proved, adds it to the datastructures and creates eliminations"""
 
-        yield lambda: None
+        def validate():
+            if not (0 <= cell < self.puzzle.cell_count):
+                raise CommandError(f'cell {cell} out of range')
+            if digit not in self.puzzle.symbols_python:
+                raise CommandError(f'digit {digit} invalid')
 
-        def run() -> Generator[str|CommandError,str,None]:
+        yield validate
+
+        def run() -> ProofGenerator:
             # set up what changes will occur after the subproof
             self.prepared_grid_changes[cell] = digit
             self.region_eliminate(cell,digit,f'c{cell}')
@@ -471,9 +529,13 @@ class ProofEngine:
     @command_flow
     def cell_cases(self, cell: int):
 
-        yield lambda: None
+        def validate():
+            if not (0 <= cell < self.puzzle.cell_count):
+                raise CommandError(f'cell {cell} out of range')
 
-        def run() -> Generator[str|CommandError,str,None]:
+        yield validate
+
+        def run() -> ProofGenerator:
             self.tactic(f'cases h: f {cell}')
             
             with self.indent():
@@ -603,16 +665,16 @@ class ProofEngine:
         digit = not_eliminated
         
         
-        def run():
+        def run() -> None:
             self.no_commit_flag += 1
             # naked single macro. fills the cell with the digit by doing cases on that cell
             # yield from self.fill(cell,digit,self.cell_cases(cell,{digit: self.rfl()}))
             # for right now, this function has to has to handle the genartors itself
             gen = self.fill(cell,digit)
             _ = next(gen)
-            _ = gen.send(f'cell_cases {cell}')
+            _ = gen.send(self.cell_cases(cell))
             try:
-                _ = gen.send('rfl')
+                _ = gen.send(self.rfl())
             except StopIteration:
                 pass
             
@@ -621,8 +683,6 @@ class ProofEngine:
             return
         
         return run
-
-
 
 
     @command_flow
@@ -643,7 +703,7 @@ class ProofEngine:
         
         yield validate
 
-        def run():
+        def run() -> None:
             self.tactic(f'theorem SolvePuzzle {{S : Set (Nat → {self.puzzle.symbols})}} (H : ∀ f, f ∈ S ↔ Puzzle f): ∃! (g: Nat -> {self.puzzle.symbols}), g ∈ S := by')
             self.proof_level += 1
 
@@ -733,78 +793,6 @@ apply xin"""
 
 
         return run
-    
-
-    def handle_input(self, cmd: str) -> Generator[str|CommandError,str,None]:
-        if cmd == '':
-            raise CommandError("No command given")
-        args = cmd.split()
-        name = args[0]
-        params = args[1:]
-        if name == 'fill':
-            if len(params) != 2:
-                raise CommandError("expected 'fill cell digit'")
-            try:
-                cell = int(params[0])
-                digit = int(params[1])
-            except ValueError:
-                raise CommandError('digit and cell must be integers')
-            if not (0 <= cell < self.puzzle.cell_count):
-                raise CommandError(f'cell {cell} out of range')
-            if digit not in self.puzzle.symbols_python:
-                raise CommandError(f'digit {digit} invalid')
-            yield from self.fill(cell,digit)
-        elif name == 'have':
-            # the rest of the line is the goal
-            goal = cmd.removeprefix('have').strip()
-            if goal == "":
-                raise CommandError("expected 'have [goal]'")
-            yield from self.have('h',goal)
-        elif name == 'cell_cases':
-            if len(params) != 1:
-                raise CommandError("expected 'cell_cases cell'")
-            try:
-                cell = int(params[0])
-            except ValueError:
-                raise CommandError('cell must be an integer')
-            if not (0 <= cell < self.puzzle.cell_count):
-                raise CommandError(f'cell {cell} out of range')
-            yield from self.cell_cases(cell)
-        # elif name == 'support_cases':
-        #     if len(params) != 2:
-        #         raise CommandError("expected 'support_cases region digit'")
-        #     region = params[0]
-        #     try: 
-        #         digit = int(params[1])
-        #     except ValueError:
-        #         raise CommandError('digit must be an integer')
-        #     if digit not in self.puzzle.symbols_python:
-        #         raise CommandError(f'digit {digit} invalid')
-        #     yield from self.support_cases_manual(digit, region)
-        elif name == 'rfl':
-            if len(params) != 0:
-                raise CommandError("expected 'rfl' with no arguments")
-            yield from self.rfl()
-        elif name == 'exact':
-            if len(params) != 1:
-                raise CommandError("expected 'exact hypothesis'")
-            yield from self.exact(params[0])
-        elif name == 'naked_single':
-            if len(params) != 1:
-                raise CommandError("expected 'naked_single cell")
-            try:
-                cell = int(params[0])
-            except ValueError:
-                raise CommandError('cell must be an integer')
-            if not (0 <= cell < self.puzzle.cell_count):
-                raise CommandError(f'cell {cell} out of range')
-            yield from self.naked_single(cell)
-        elif name == 'finish':
-            if len(params) != 0:
-                raise CommandError('finish takes no args')
-            self.finish()
-        else:
-            raise CommandError(f'unknown command {name}')
     
 
 # Undo should be within reach.
