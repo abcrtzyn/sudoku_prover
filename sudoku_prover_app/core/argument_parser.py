@@ -6,6 +6,9 @@ from typing import TYPE_CHECKING, Any, List
 if TYPE_CHECKING:
     from sudoku_prover_app.core.proof_engine import ProofEngine
 
+IMPLEMENTED_TYPES = {'cell','symbol','term','line'}
+
+
 
 def parse_args(engine: 'ProofEngine', params_string: str, arg_types: List[str]):
     params = params_string.split()
