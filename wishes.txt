@@ -51,3 +51,29 @@ Will I store the difference between a locked set and a unique set, or will I jus
 I would like to be able to run support cases (or hidden single) and pick any valid region
 
 
+
+
+A constraint has
+- A type
+- data like cell and such
+- lean code that is a proof, whether it is single term P.given2, a lemma c1 P, or a line digit_in_region ... with other variables
+
+Something like region eliminate will go through, find the unique regions, and use
+
+
+There will never be a case where these need to be all in one list. Let's keep grid and eliminations seperate, and just keep one variable for hypotheses.
+This will be a Dict[str,List[...]] with the type. So something like 'UniqueRegion' and have a list of each of the unique regions
+
+That way functions can iterate over the category they want easily, and functions can also iterate through all constraints.
+These could also be turned into class objects with the lean variable that it requires: UniqueRegion(cells), LockedSet(cells), LessThan(cell,digit) although less thans can also be inline based on eliminations
+grid is a special case, grid[int,int] which should look like 'filled': [Fill(cell,digit)='c1']
+eliminations is also elims[cell][digit]=proof which should look like 'elim': [Elim(cell,digit)=('info to create the elimination')]
+All under hypotheses are part of the puzzle definition or they will be proven during
+
+
+Then we can have a registry of constraints.
+
+I am already creating python objects on parsing time for each constraint, so we can turn that match case into something less progrmmed. 
+We can basically assume every constraint will look like Name f data, and every constraint can have its own from_lean_code initializer.
+Creation. Every tactic can add one of these into prepared changes. Say create a LockedSet(cells,name of lemma)
+
